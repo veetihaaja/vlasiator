@@ -479,13 +479,11 @@ void initializeDataReducers(DataReducer * outputReducer, DataReducer * diagnosti
             species::Species& species=getObjectWrapper().particleSpecies[i];
             const std::string& pop = species.name;
             outputReducer->addOperator(new DRO::DataReductionOperatorPopulations<Real>(pop + "/vg_maxdt_translation", i, offsetof(spatial_cell::Population, max_dt[0]), 1));
-            outputReducer->addMetadata(outputReducer->size()-1,"s","$\\mathrm{s}$","$\\Delta t_\\mathrm{"+pop+",R,max}$","1.0");
+	    outputReducer->addMetadata(outputReducer->size()-1,"s","$\\mathrm{s}$","$\\Delta t_\\mathrm{"+pop+",R,max}$","1.0");
          }
-         if(!P::systemWriteAllDROs) {
-            continue;
-         }
+         continue;
       }
-      if(P::systemWriteAllDROs || lowercase == "populations_energydensity" || lowercase == "populations_vg_energydensity") {
+      if(lowercase == "populations_energydensity" || lowercase == "populations_vg_energydensity") {
          // Per-population energy density in three energy ranges
          for(unsigned int i =0; i < getObjectWrapper().particleSpecies.size(); i++) {
             species::Species& species=getObjectWrapper().particleSpecies[i];

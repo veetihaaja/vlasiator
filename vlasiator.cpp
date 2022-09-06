@@ -185,6 +185,66 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
    creal meanFieldsCFL = 0.5 * (P::fieldSolverMaxCFL + P::fieldSolverMinCFL);
    Real subcycleDt;
 
+   Real localDt;
+   localDt = meanVlasovCFL * dtMaxLocal[0];
+   localDt = min(localDt,meanVlasovCFL * dtMaxLocal[1] * P::maxSlAccelerationSubcycles);
+   localDt = min(localDt,meanFieldsCFL * dtMaxLocal[2] * P::maxFieldSolverSubcycles);
+   newDt = meanVlasovCFL * dtMaxGlobal[0];
+   newDt = min(newDt,meanVlasovCFL * dtMaxGlobal[1] * P::maxSlAccelerationSubcycles);
+   newDt = min(newDt,meanFieldsCFL * dtMaxGlobal[2] * P::maxFieldSolverSubcycles);
+
+   //newDt is now the dt at max timeclass
+
+   int dtdiff = int(log2(localDt/newDt));
+   int localTimeClass = max(0,P::MaxTimeClass - dtdiff);
+   int myRank;MPI_Comm_rank(MPI_COMM_WORLD,&myRank);
+   cout << myRank<<": localTimeClass = " << localTimeClass << " for localdt " << localDt << "; globalDt " << newDt << std::endl;
+   
+
+   for (vector<CellID>::const_iterator cell_id=cells.begin(); cell_id!=cells.end(); ++cell_id) {
+      SpatialCell* cell = mpiGrid[*cell_id];
+      cell->parameters[CellParams::TIMECLASS_RANK] = localTimeClass;
+      cell->parameters[CellParams::TIMECLASSDT_RANK] = newDt*pow(2,P::MaxTimeClass-localTimeClass);
+
+      Real cellDt = min(cell->parameters[CellParams::MAXVDT]* P::maxSlAccelerationSubcycles,cell->parameters[CellParams::MAXRDT]);
+      //localDt = min(localDt,cell->parameters[CellParams::MAXFDT]* P::maxFieldSolverSubcycles);
+      dtdiff = int(log2(cellDt/newDt));
+      int cellTimeClass = max(0,P::MaxTimeClass - dtdiff);
+      cell->parameters[CellParams::TIMECLASS] = cellTimeClass;
+      cell->parameters[CellParams::TIMECLASSDT] = newDt*pow(2,P::MaxTimeClass-cellTimeClass);
+   }
+
+
+   Real localDt;
+   localDt = meanVlasovCFL * dtMaxLocal[0];
+   localDt = min(localDt,meanVlasovCFL * dtMaxLocal[1] * P::maxSlAccelerationSubcycles);
+   localDt = min(localDt,meanFieldsCFL * dtMaxLocal[2] * P::maxFieldSolverSubcycles);
+   newDt = meanVlasovCFL * dtMaxGlobal[0];
+   newDt = min(newDt,meanVlasovCFL * dtMaxGlobal[1] * P::maxSlAccelerationSubcycles);
+   newDt = min(newDt,meanFieldsCFL * dtMaxGlobal[2] * P::maxFieldSolverSubcycles);
+
+   //newDt is now the dt at max timeclass
+
+   int dtdiff = int(log2(localDt/newDt));
+   int localTimeClass = max(0,P::MaxTimeClass - dtdiff);
+   int myRank;MPI_Comm_rank(MPI_COMM_WORLD,&myRank);
+   cout << myRank<<": localTimeClass = " << localTimeClass << " for localdt " << localDt << "; globalDt " << newDt << std::endl;
+   
+
+   for (vector<CellID>::const_iterator cell_id=cells.begin(); cell_id!=cells.end(); ++cell_id) {
+      SpatialCell* cell = mpiGrid[*cell_id];
+      cell->parameters[CellParams::TIMECLASS_RANK] = localTimeClass;
+      cell->parameters[CellParams::TIMECLASSDT_RANK] = newDt*pow(2,P::MaxTimeClass-localTimeClass);
+
+      Real cellDt = min(cell->parameters[CellParams::MAXVDT]* P::maxSlAccelerationSubcycles,cell->parameters[CellParams::MAXRDT]);
+      //localDt = min(localDt,cell->parameters[CellParams::MAXFDT]* P::maxFieldSolverSubcycles);
+      dtdiff = int(log2(cellDt/newDt));
+      int cellTimeClass = max(0,P::MaxTimeClass - dtdiff);
+      cell->parameters[CellParams::TIMECLASS] = cellTimeClass;
+      cell->parameters[CellParams::TIMECLASSDT] = newDt*pow(2,P::MaxTimeClass-cellTimeClass);
+   }
+
+
    // reduce/increase dt if it is too high for any of the three propagators or too low for all propagators
    if ((P::dt > dtMaxGlobal[0] * P::vlasovSolverMaxCFL ||
         P::dt > dtMaxGlobal[1] * P::vlasovSolverMaxCFL * P::maxSlAccelerationSubcycles ||

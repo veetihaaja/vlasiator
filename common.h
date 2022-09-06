@@ -180,6 +180,11 @@ namespace CellParams {
       MAXRDT,             /*!< maximum timestep allowed in ordinary space for this cell,
                            * this is the max allowed timestep over all particle species.*/
       MAXFDT,             /*!< maximum timestep allowed in ordinary space by fieldsolver for this cell**/
+      TIMECLASS,           /*!< timeclass of this cell*/
+      TIMECLASS_RANK,           /*!< timeclass of this rank*/
+      TIMECLASSDT,           /*!< timeclass-adjusted timestep, ...*/
+      TIMECLASSDT_RANK,           /*!< timeclass-adjusted timestep, ...*/
+
       LBWEIGHTCOUNTER,    /*!< Counter for storing compute time weights needed by the load balancing**/
       ISCELLSAVINGF,      /*!< Value telling whether a cell is saving its distribution function when partial f data is written out. */
       FSGRID_RANK, /*!< Rank of this cell in the FsGrid cartesian communicator */

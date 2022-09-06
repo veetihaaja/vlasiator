@@ -65,6 +65,7 @@ Real P::t = 0;
 Real P::t_min = 0;
 Real P::t_max = LARGE_REAL;
 Real P::dt = NAN;
+int P::MaxTimeClass = 0;
 Real P::vlasovSolverMaxCFL = NAN;
 Real P::vlasovSolverMinCFL = NAN;
 Real P::fieldSolverMaxCFL = NAN;
@@ -283,6 +284,7 @@ bool P::addParameters() {
    RP::add("gridbuilder.z_length", "Number of cells in z-direction in initial grid.", 0);
 
    RP::add("gridbuilder.dt", "Initial timestep in seconds.", 0.0);
+   RP::add("gridbuilder.timeclass_max", "Maximum number of timeclasses.", 0);
 
    RP::add("gridbuilder.t_max",
            "Maximum simulation time, in seconds. If timestep_max limit is hit first this time will never be reached",
@@ -765,6 +767,7 @@ void Parameters::getParameters() {
    P::dz_ini = (P::zmax - P::zmin) / P::zcells_ini;
 
    RP::get("gridbuilder.dt", P::dt);
+   RP::get("gridbuilder.timeclass_max", P::MaxTimeClass);
 
    RP::get("gridbuilder.t_max", P::t_max);
    RP::get("gridbuilder.timestep_max", P::tstep_max);
