@@ -56,6 +56,7 @@ struct Parameters {
    static Real dt;    /*!< The value of the timestep to use in propagation. If CflLimit defined then it is dynamically
                          updated during simulation*/
    static int MaxTimeClass;
+   static int timeclassLBmantissa;
    static Real vlasovSolverMaxCFL;   /*!< The maximum CFL limit for propagation of distribution function. Used to set
                                         timestep if useCFLlimit is true. */
    static Real vlasovSolverMinCFL;   /*!< The minimum CFL limit for propagation of distribution function. Used to set

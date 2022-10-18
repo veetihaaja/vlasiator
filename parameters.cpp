@@ -136,6 +136,7 @@ int P::writeRestartAsFloat = false;
 string P::loadBalanceAlgorithm = string("");
 std::map<std::string, std::string> P::loadBalanceOptions;
 uint P::rebalanceInterval = numeric_limits<uint>::max();
+int P::timeclassLBmantissa = 2;
 
 vector<string> P::outputVariableList;
 vector<string> P::diagnosticVariableList;
@@ -340,6 +341,7 @@ bool P::addParameters() {
    RP::add("loadBalance.algorithm", "Load balancing algorithm to be used", string("RCB"));
    RP::add("loadBalance.tolerance", "Load imbalance tolerance", string("1.05"));
    RP::add("loadBalance.rebalanceInterval", "Load rebalance interval (steps)", 10);
+   RP::add("loadBalance.timeclassLBmantissa", "Effect of timeclass to load balance weight of a cell. LB_w = LW_w*loadBalance.timeclassLBmantissa^timeclass", 2);
 
    RP::addComposing("loadBalance.optionKey", "Zoltan option key. Has to be matched by loadBalance.optionValue.");
    RP::addComposing("loadBalance.optionValue", "Zoltan option value. Has to be matched by loadBalance.optionKey.");
@@ -805,6 +807,7 @@ void Parameters::getParameters() {
    loadBalanceOptions["IMBALANCE_TOL"] = "";
    RP::get("loadBalance.tolerance", loadBalanceOptions["IMBALANCE_TOL"]);
    RP::get("loadBalance.rebalanceInterval", P::rebalanceInterval);
+   RP::get("loadBalance.timeclassLBmantissa", P::timeclassLBmantissa);
 
    std::vector<std::string> loadBalanceKeys;
    std::vector<std::string> loadBalanceValues;
