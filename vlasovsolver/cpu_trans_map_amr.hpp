@@ -189,6 +189,7 @@ struct setOfPencils {
 
 bool trans_map_1d_amr(const dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
                   const std::vector<CellID>& localPropagatedCells,
+                  const std::vector<CellID>& remoteTargetCells,
                   std::vector<uint>& nPencils,
                   const uint dimension,
                   const Realv dt,

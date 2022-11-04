@@ -109,7 +109,7 @@ void calculateSpatialTranslation(
       if(P::amrMaxSpatialRefLevel == 0) {
          trans_map_1d(mpiGrid,local_propagated_cells, remoteTargetCellsz, 2, dt,popID); // map along z//
       } else {
-         trans_map_1d_amr(mpiGrid,local_propagated_cells, nPencils, 2, dt,popID); // map along z//
+         trans_map_1d_amr(mpiGrid,local_propagated_cells, remoteTargetCellsz, nPencils, 2, dt,popID); // map along z//
       }
       phiprof::stop("compute-mapping-z");
       time += MPI_Wtime() - t1;
@@ -158,7 +158,7 @@ void calculateSpatialTranslation(
       if(P::amrMaxSpatialRefLevel == 0) {
          trans_map_1d(mpiGrid,local_propagated_cells, remoteTargetCellsx, 0,dt,popID); // map along x//
       } else {
-         trans_map_1d_amr(mpiGrid,local_propagated_cells, nPencils, 0,dt,popID); // map along x//
+         trans_map_1d_amr(mpiGrid,local_propagated_cells, remoteTargetCellsx, nPencils, 0,dt,popID); // map along x//
       }
       phiprof::stop("compute-mapping-x");
       time += MPI_Wtime() - t1;
@@ -207,7 +207,7 @@ void calculateSpatialTranslation(
       if(P::amrMaxSpatialRefLevel == 0) {
          trans_map_1d(mpiGrid,local_propagated_cells, remoteTargetCellsy, 1,dt,popID); // map along y//
       } else {
-         trans_map_1d_amr(mpiGrid,local_propagated_cells, nPencils, 1,dt,popID); // map along y//
+         trans_map_1d_amr(mpiGrid,local_propagated_cells, remoteTargetCellsy, nPencils, 1,dt,popID); // map along y//
       }
       phiprof::stop("compute-mapping-y");
       time += MPI_Wtime() - t1;
@@ -260,13 +260,14 @@ void calculateSpatialLocalTranslation(
    int trans_timer;
    // Local translation, need all cell information, not just for a single direction
    bool AMRtranslationActive = false;
+   vector<CellID> nullTargetCells;
 
    trans_timer=phiprof::initializeTimer("transfer-stencil-data-all","MPI");
    phiprof::start(trans_timer);
-   updateRemoteVelocityBlockLists(mpiGrid,popID,FULL_NEIGHBORHOOD_ID); // already done in ACC under adjustVelocityBlocks, repeated just to be safe
+   //updateRemoteVelocityBlockLists(mpiGrid,popID,FULL_NEIGHBORHOOD_ID); // already done in ACC under adjustVelocityBlocks, repeated just to be safe
    SpatialCell::set_mpi_transfer_direction(0); // Local translation would use just the X flag
-   //SpatialCell::set_mpi_transfer_type(Transfer::VEL_BLOCK_DATA,false,AMRtranslationActive);
-   SpatialCell::set_mpi_transfer_type(Transfer::ALL_DATA,false,AMRtranslationActive); // all data to be safe
+   SpatialCell::set_mpi_transfer_type(Transfer::VEL_BLOCK_DATA,false,AMRtranslationActive);
+   //SpatialCell::set_mpi_transfer_type(Transfer::ALL_DATA,false,AMRtranslationActive); // all data to be safe
    mpiGrid.update_copies_of_remote_neighbors(FULL_NEIGHBORHOOD_ID);
    phiprof::stop(trans_timer);
    MPI_Barrier(MPI_COMM_WORLD);
@@ -278,7 +279,7 @@ void calculateSpatialLocalTranslation(
       if(P::amrMaxSpatialRefLevel == 0) {
          //trans_map_1d(mpiGrid,local_propagated_cells, remoteTargetCellsz, 2, dt,popID); // map along z//
       } else {
-         trans_map_1d_amr(mpiGrid,local_propagated_cells, nPencils, 2, dt,popID); // map along z//
+         trans_map_1d_amr(mpiGrid,local_propagated_cells, nullTargetCells, nPencils, 2, dt,popID); // map along z//
       }
       phiprof::stop("compute-mapping-z");
    }
@@ -289,7 +290,7 @@ void calculateSpatialLocalTranslation(
       if(P::amrMaxSpatialRefLevel == 0) {
          //trans_map_1d(mpiGrid,local_propagated_cells, remoteTargetCellsx, 0,dt,popID); // map along x//
       } else {
-         trans_map_1d_amr(mpiGrid,local_propagated_cells, nPencils, 0,dt,popID); // map along x//
+         trans_map_1d_amr(mpiGrid,local_propagated_cells, nullTargetCells, nPencils, 0,dt,popID); // map along x//
       }
       phiprof::stop("compute-mapping-x");
    }
@@ -300,18 +301,18 @@ void calculateSpatialLocalTranslation(
       if(P::amrMaxSpatialRefLevel == 0) {
          //trans_map_1d(mpiGrid,local_propagated_cells, remoteTargetCellsy, 1,dt,popID); // map along y//
       } else {
-         trans_map_1d_amr(mpiGrid,local_propagated_cells, nPencils, 1,dt,popID); // map along y//
+         trans_map_1d_amr(mpiGrid,local_propagated_cells, nullTargetCells, nPencils, 1,dt,popID); // map along y//
       }
       phiprof::stop("compute-mapping-y");
    }
 
    // Now let's update again just to be sure to get neighbour info correct for boundaries etc
-   phiprof::start(trans_timer);
-   updateRemoteVelocityBlockLists(mpiGrid,popID,FULL_NEIGHBORHOOD_ID); // already done in ACC under adjustVelocityBlocks
-   SpatialCell::set_mpi_transfer_direction(0); // Local translation uses just the X flag
-   SpatialCell::set_mpi_transfer_type(Transfer::VEL_BLOCK_DATA,false,AMRtranslationActive);
-   mpiGrid.update_copies_of_remote_neighbors(FULL_NEIGHBORHOOD_ID);
-   phiprof::stop(trans_timer);
+   // phiprof::start(trans_timer);
+   // updateRemoteVelocityBlockLists(mpiGrid,popID,FULL_NEIGHBORHOOD_ID); // already done in ACC under adjustVelocityBlocks
+   // SpatialCell::set_mpi_transfer_direction(0); // Local translation uses just the X flag
+   // SpatialCell::set_mpi_transfer_type(Transfer::VEL_BLOCK_DATA,false,AMRtranslationActive);
+   // mpiGrid.update_copies_of_remote_neighbors(FULL_NEIGHBORHOOD_ID);
+   // phiprof::stop(trans_timer);
 
    return;
 }

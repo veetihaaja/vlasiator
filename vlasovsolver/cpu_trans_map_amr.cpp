@@ -1769,12 +1769,14 @@ void prepareSeedIdsAndPencils(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Ge
  * @param [in] mpiGrid DCCRG grid object
  * @param [in] localPropagatedCells List of local cells that get propagated
  * ie. not boundary or DO_NOT_COMPUTE
+ * @param [in] remoteTargetCells List of non-local target cells
  * @param [in] dimension Spatial dimension
  * @param [in] dt Time step
  * @param [in] popId Particle population ID
  */
 bool trans_map_1d_amr(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
                       const vector<CellID>& localPropagatedCells,
+                      const vector<CellID>& remoteTargetCells,
                       std::vector<uint>& nPencils,
                       const uint dimension,
                       const Realv dt,
@@ -1790,13 +1792,17 @@ bool trans_map_1d_amr(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>&
       return false;
    }
 
-   // Vectors of pointers to the propagated cell structs
-   std::vector<SpatialCell*> propagatedCellsPointer(localPropagatedCells.size());
+   // Vector with all cell ids
+   vector<CellID> allCells(localPropagatedCells);
+   allCells.insert(allCells.end(), remoteTargetCells.begin(), remoteTargetCells.end());
 
-   // Initialize propagatedCellsPointer
+   // Vectors of pointers to the cell structs
+   std::vector<SpatialCell*> allCellsPointer(allCells.size());
+
+   // Initialize allCellsPointer
 #pragma omp parallel for
-   for(uint celli = 0; celli < localPropagatedCells.size(); celli++){
-      propagatedCellsPointer[celli] = mpiGrid[localPropagatedCells[celli]];
+   for(uint celli = 0; celli < allCells.size(); celli++){
+      allCellsPointer[celli] = mpiGrid[allCells[celli]];
    }
 
    // Fiddle indices x,y,z in VELOCITY SPACE
@@ -1859,7 +1865,7 @@ bool trans_map_1d_amr(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>&
    }
    
    // Get a pointer to the velocity mesh of the first spatial cell
-   const vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& vmesh = propagatedCellsPointer[0]->get_velocity_mesh(popID);
+   const vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& vmesh = allCellsPointer[0]->get_velocity_mesh(popID);
    
    phiprof::start("buildBlockList");
    // Get a unique sorted list of blockids that are in any of the
@@ -1867,8 +1873,6 @@ bool trans_map_1d_amr(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>&
    // be the most nice way to do this and in any case we could do it along
    // dimension for data locality reasons => copy acc map column code, TODO: FIXME
    // TODO: Do this separately for each pencil?
-   // Note: Now only considers local propagated cells, as there's no point in
-   // Propagating data which does not have an existing target block.
    std::vector<vmesh::GlobalID> unionOfBlocks;
    std::unordered_set<vmesh::GlobalID> unionOfBlocksSet;
 //   unionOfBlocks.reserve(unionOfBlocksSet.size());
@@ -1877,8 +1881,8 @@ bool trans_map_1d_amr(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>&
       std::unordered_set<vmesh::GlobalID> thread_unionOfBlocksSet;
 
 #pragma omp for
-      for(unsigned int i=0; i<propagatedCellsPointer.size(); i++) {
-         auto cell = &propagatedCellsPointer[i];
+      for(unsigned int i=0; i<allCellsPointer.size(); i++) {
+         auto cell = &allCellsPointer[i];
          vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& cvmesh = (*cell)->get_velocity_mesh(popID);
          for (vmesh::LocalID block_i=0; block_i< cvmesh.size(); ++block_i) {
             thread_unionOfBlocksSet.insert(cvmesh.getGlobalID(block_i));

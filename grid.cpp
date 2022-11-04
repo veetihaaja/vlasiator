@@ -1008,12 +1008,25 @@ void initializeStencils(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
    }
    /* Add extra face neighbors if required by AMR */
    for (int d = full_neighborhood_size+1; d <= full_neighborhood_size+addStencilDepth; d++) {
-      neighborhood.push_back({{ d, 0, 0}});
-      neighborhood.push_back({{-d, 0, 0}});
-      neighborhood.push_back({{0, d, 0}});
-      neighborhood.push_back({{0,-d, 0}});
-      neighborhood.push_back({{0, 0, d}});
-      neighborhood.push_back({{0, 0,-d}});
+      if (P::vlasovSolverLocalTranslate) {
+         for (int dd = -1; dd <= 1; dd++) {
+            for (int ddd = -1; ddd <= 1; ddd++) {        
+               neighborhood.push_back({{ d, dd, ddd}});
+               neighborhood.push_back({{-d, dd, ddd}});
+               neighborhood.push_back({{dd, d, ddd}});
+               neighborhood.push_back({{dd,-d, ddd}});
+               neighborhood.push_back({{dd, ddd, d}});
+               neighborhood.push_back({{dd, ddd,-d}});
+            }
+         }
+      } else {
+         neighborhood.push_back({{ d, 0, 0}});
+         neighborhood.push_back({{-d, 0, 0}});
+         neighborhood.push_back({{0, d, 0}});
+         neighborhood.push_back({{0,-d, 0}});
+         neighborhood.push_back({{0, 0, d}});
+         neighborhood.push_back({{0, 0,-d}});
+      }
    }
    /*all possible communication pairs*/
    mpiGrid.add_neighborhood(FULL_NEIGHBORHOOD_ID, neighborhood);
