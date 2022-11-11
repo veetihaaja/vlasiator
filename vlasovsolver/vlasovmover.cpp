@@ -264,10 +264,10 @@ void calculateSpatialLocalTranslation(
 
    trans_timer=phiprof::initializeTimer("transfer-stencil-data-all","MPI");
    phiprof::start(trans_timer);
-   //updateRemoteVelocityBlockLists(mpiGrid,popID,FULL_NEIGHBORHOOD_ID); // already done in ACC under adjustVelocityBlocks, repeated just to be safe
+   updateRemoteVelocityBlockLists(mpiGrid,popID,FULL_NEIGHBORHOOD_ID); // already done in ACC under adjustVelocityBlocks, repeated just to be safe
    SpatialCell::set_mpi_transfer_direction(0); // Local translation would use just the X flag
-   SpatialCell::set_mpi_transfer_type(Transfer::VEL_BLOCK_DATA,false,AMRtranslationActive);
-   //SpatialCell::set_mpi_transfer_type(Transfer::ALL_DATA,false,AMRtranslationActive); // all data to be safe
+   //SpatialCell::set_mpi_transfer_type(Transfer::VEL_BLOCK_DATA,false,AMRtranslationActive);
+   SpatialCell::set_mpi_transfer_type(Transfer::ALL_DATA,false,AMRtranslationActive); // all data to be safe
    mpiGrid.update_copies_of_remote_neighbors(FULL_NEIGHBORHOOD_ID);
    phiprof::stop(trans_timer);
    MPI_Barrier(MPI_COMM_WORLD);
