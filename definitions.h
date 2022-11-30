@@ -112,6 +112,7 @@ typedef Realf (*AmrVelRefinement)(const Realf* velBlock);
 #define SHIFT_M_X_NEIGHBORHOOD_ID 17 //Shift in -x direction
 #define SHIFT_M_Y_NEIGHBORHOOD_ID 18 //Shift in -y direction
 #define SHIFT_M_Z_NEIGHBORHOOD_ID 19 //Shift in -z direction
+#define VLASOV_SOLVER_GHOST_NEIGHBORHOOD_ID 12      //More extended ghost neighbourhood to cover all possible cells required by local vlasov translation
 
 //fieldsolver stencil.
 #define FS_STENCIL_WIDTH 2

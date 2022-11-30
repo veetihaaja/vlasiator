@@ -214,6 +214,6 @@ void flagSpatialCellsForAmrCommunication(const dccrg::Dccrg<SpatialCell,dccrg::C
 
 // Local translation cell lists (no interim comms)
 void prepareLocalTranslationCellLists(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
-                                      const std::vector<CellID>& localPropagatedCells);
+                                      const std::vector<CellID>& localCells);
 
 #endif
