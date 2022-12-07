@@ -59,9 +59,7 @@ int getNeighborhood(const uint dimension, const uint stencil) {
          cerr << __FILE__ << ":"<< __LINE__ << " Wrong dimension, abort"<<endl;
          abort();
       }
-   }
-
-   if (stencil > 1) {
+   } else if (stencil == VLASOV_STENCIL_WIDTH) {
       switch (dimension) {
       case 0:
          neighborhood = VLASOV_SOLVER_X_NEIGHBORHOOD_ID;
@@ -76,6 +74,24 @@ int getNeighborhood(const uint dimension, const uint stencil) {
          cerr << __FILE__ << ":"<< __LINE__ << " Wrong dimension, abort"<<endl;
          abort();
       }
+   } else if (stencil > VLASOV_STENCIL_WIDTH) {
+      switch (dimension) {
+      case 0:
+         neighborhood = VLASOV_SOLVER_EXTENDED_X_NEIGHBORHOOD_ID;
+         break;
+      case 1:
+         neighborhood = VLASOV_SOLVER_EXTENDED_Y_NEIGHBORHOOD_ID;
+         break;
+      case 2:
+         neighborhood = VLASOV_SOLVER_EXTENDED_Z_NEIGHBORHOOD_ID;
+         break;
+      default:
+         cerr << __FILE__ << ":"<< __LINE__ << " Wrong dimension, abort"<<endl;
+         abort();
+      }
+   } else {
+      cerr << __FILE__ << ":"<< __LINE__ << " Unknown stencil length, abort"<<endl;
+      abort();
    }
    
    return neighborhood;
@@ -276,6 +292,7 @@ void findNeighborhoodCells(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geome
    std::set< int > distancesminus;
    std::unordered_set<CellID> foundNeighbors;
    std::unordered_set<CellID> foundSet;
+   bool foundAtDistance = false;
 
    const auto* NbrPairs = mpiGrid.get_neighbors_of(startingCellID, neighborhood);
 
@@ -300,6 +317,7 @@ void findNeighborhoodCells(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geome
    // Iterate through positive distances starting from the smallest distance.
    for (auto it = distancesplus.begin(); it != distancesplus.end(); ++it) {
       if (iSrc < 0) break; // found enough elements
+      foundAtDistance = false; // reset
       // Check all neighbors at distance *it
       for (const auto& nbrPair : *NbrPairs) {
          SpatialCell *ncell = mpiGrid[nbrPair.first];
@@ -307,15 +325,19 @@ void findNeighborhoodCells(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geome
          int distanceInRefinedCells = nbrPair.second[dimension];
          if (distanceInRefinedCells == *it) {
             foundSet.insert(nbrPair.first);
+            foundAtDistance = true;
          }
       } // end loop over neighbors
-      iSrc--;
+      if (foundAtDistance) {
+         iSrc--; // Succesfully found neighbours
+      }
    } // end loop over positive distances
 
    iSrc = searchLength-1;
    // Iterate through negtive distances starting from the smallest distance.
    for (auto it = distancesminus.begin(); it != distancesminus.end(); ++it) {
       if (iSrc < 0) break; // found enough elements
+      foundAtDistance = false; // reset
       // Check all neighbors at distance *it
       for (const auto& nbrPair : *NbrPairs) {
          SpatialCell *ncell = mpiGrid[nbrPair.first];
@@ -323,9 +345,12 @@ void findNeighborhoodCells(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geome
          int distanceInRefinedCells = -nbrPair.second[dimension];
          if (distanceInRefinedCells == *it) {
             foundSet.insert(nbrPair.first);
+            foundAtDistance = true;
          }
       } // end loop over neighbors
-      iSrc--;
+      if (foundAtDistance) {
+         iSrc--;
+      }
    } // end loop over negative distances
    foundCells.assign(foundSet.begin(), foundSet.end());
 }
@@ -440,7 +465,10 @@ void prepareLocalTranslationCellLists(const dccrg::Dccrg<SpatialCell,dccrg::Cart
 
    /** Next, we flag which cells need to communicate their data to other tasks
        for local translation to have all necessary information. This needs to be
-       performed double-reversed, i.e. z->k->y again.!
+       performed double-reversed, i.e. z->x->y again.!
+
+       TODO: Add universal building block toy -inspired explanation figure
+
    **/
 
    std::vector<CellID> foundCellsX;
@@ -456,18 +484,20 @@ void prepareLocalTranslationCellLists(const dccrg::Dccrg<SpatialCell,dccrg::Cart
       // z-translation sources
       findNeighborhoodCells(mpiGrid, c, 2, 1+VLASOV_STENCIL_WIDTH, foundCells);
       for (uint j=0; j<foundCells.size(); j++) {
+         // If the cell is offset in the Z-direction, we only need a 3x3 domain around it
          // check if need to exit loop
          if (ccell->SpatialCell::parameters[CellParams::AMR_TRANSLATE_COMM_X] == true) {
             break;
          }
-
          CellID cz = foundCells[j];
+         SpatialCell *zcell = mpiGrid[cz];
+         if (!zcell) continue;
          if (!mpiGrid.is_local(cz)) {
             ccell->SpatialCell::parameters[CellParams::AMR_TRANSLATE_COMM_X] = true;
             break;
          }
          // x-translation sources
-         findNeighborhoodCells(mpiGrid, cz, 0, 1+VLASOV_STENCIL_WIDTH, foundCellsX);
+         findNeighborhoodCells(mpiGrid, cz, 0, 1, foundCellsX);
          for (uint k=0; k<foundCellsX.size(); k++) {
             // check if need to exit loop
             if (ccell->SpatialCell::parameters[CellParams::AMR_TRANSLATE_COMM_X] == true) {
@@ -475,19 +505,66 @@ void prepareLocalTranslationCellLists(const dccrg::Dccrg<SpatialCell,dccrg::Cart
             }
 
             CellID cx = foundCellsX[k];
+            SpatialCell *xcell = mpiGrid[cx];
+            if (!xcell) continue;
             if (!mpiGrid.is_local(cx)) {
                ccell->SpatialCell::parameters[CellParams::AMR_TRANSLATE_COMM_X] = true;
                break;
             }
             // y-translation sources
-            findNeighborhoodCells(mpiGrid, cx, 1, 1+VLASOV_STENCIL_WIDTH, foundCellsY);
+            findNeighborhoodCells(mpiGrid, cx, 1, 1, foundCellsY);
             for (uint l=0; l<foundCellsY.size(); l++) {
                CellID cy = foundCellsY[l];
+               SpatialCell *ycell = mpiGrid[cy];
+               if (!ycell) continue;
                if (!mpiGrid.is_local(cy)) {
                   ccell->SpatialCell::parameters[CellParams::AMR_TRANSLATE_COMM_X] = true;
                   break;
                }
             }
+         }
+      }
+      // Done yet?
+      if (ccell->SpatialCell::parameters[CellParams::AMR_TRANSLATE_COMM_X] == true) {
+         continue;
+      }
+
+      // x-translation sources
+      findNeighborhoodCells(mpiGrid, c, 0, 1+VLASOV_STENCIL_WIDTH, foundCellsX);
+      for (uint k=0; k<foundCellsX.size(); k++) {
+         // Now if the cell is offset in the X-direction, we only need to look for 3 cells in the Y-extent
+         // check if need to exit loop
+         if (ccell->SpatialCell::parameters[CellParams::AMR_TRANSLATE_COMM_X] == true) {
+            break;
+         }
+
+         CellID cx = foundCellsX[k];
+         if (!mpiGrid.is_local(cx)) {
+            ccell->SpatialCell::parameters[CellParams::AMR_TRANSLATE_COMM_X] = true;
+            break;
+         }
+         // y-translation sources
+         findNeighborhoodCells(mpiGrid, cx, 1, 1, foundCellsY);
+         for (uint l=0; l<foundCellsY.size(); l++) {
+            CellID cy = foundCellsY[l];
+            if (!mpiGrid.is_local(cy)) {
+               ccell->SpatialCell::parameters[CellParams::AMR_TRANSLATE_COMM_X] = true;
+               break;
+            }
+         }
+      }
+      // Done yet?
+      if (ccell->SpatialCell::parameters[CellParams::AMR_TRANSLATE_COMM_X] == true) {
+         continue;
+      }
+         
+      // y-translation sources
+      findNeighborhoodCells(mpiGrid, c, 1, 1+VLASOV_STENCIL_WIDTH, foundCellsY);
+      for (uint l=0; l<foundCellsY.size(); l++) {
+         CellID cy = foundCellsY[l];
+         if (!mpiGrid.is_local(cy)) {
+            ccell->SpatialCell::parameters[CellParams::AMR_TRANSLATE_COMM_X] = true;
+            break;
          }
       }
    }

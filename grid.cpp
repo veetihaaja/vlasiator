@@ -1136,6 +1136,30 @@ void initializeStencils(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
    mpiGrid.add_neighborhood(VLASOV_SOLVER_Z_NEIGHBORHOOD_ID, neighborhood);
 
    neighborhood.clear();
+   for (int d = -VLASOV_STENCIL_WIDTH-3; d <= VLASOV_STENCIL_WIDTH+3; d++) {
+      if (d != 0) {
+         neighborhood.push_back({{d, 0, 0}});
+      }
+   }
+   mpiGrid.add_neighborhood(VLASOV_SOLVER_EXTENDED_X_NEIGHBORHOOD_ID, neighborhood);
+
+   neighborhood.clear();
+   for (int d = -VLASOV_STENCIL_WIDTH-3; d <= VLASOV_STENCIL_WIDTH+3; d++) {
+      if (d != 0) {
+         neighborhood.push_back({{0, d, 0}});
+      }
+   }
+   mpiGrid.add_neighborhood(VLASOV_SOLVER_EXTENDED_Y_NEIGHBORHOOD_ID, neighborhood);
+
+   neighborhood.clear();
+   for (int d = -VLASOV_STENCIL_WIDTH-3; d <= VLASOV_STENCIL_WIDTH+3; d++) {
+      if (d != 0) {
+         neighborhood.push_back({{0, 0, d}});
+      }
+   }
+   mpiGrid.add_neighborhood(VLASOV_SOLVER_EXTENDED_Z_NEIGHBORHOOD_ID, neighborhood);
+
+   neighborhood.clear();
    for (int d = -1; d <= 1; d++) {
       if (d != 0) {
          neighborhood.push_back({{d, 0, 0}});
@@ -1194,10 +1218,10 @@ void initializeStencils(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
       }
    }
    for (int y = -1; y <= 1; y++) {
-      for (int x = 1; x <= 2; x++) {
+      for (int x = -2; x <= 2; x++) {
          for (int z = 1; z <= VLASOV_STENCIL_WIDTH+4; z++) {
             neighborhood.push_back({{ x, y, z}});
-            neighborhood.push_back({{-x, y,-z}});
+            neighborhood.push_back({{ x, y,-z}});
          }
       }
    }
