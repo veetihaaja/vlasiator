@@ -106,10 +106,14 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
    */
    Real dtMaxLocal[3];
    Real dtMaxGlobal[3];
-
-   dtMaxLocal[0] = numeric_limits<Real>::max();
-   dtMaxLocal[1] = numeric_limits<Real>::max();
-   dtMaxLocal[2] = numeric_limits<Real>::max();
+   Real dtMinMaxGlobal[3];
+   
+   dtMaxLocal[0]=numeric_limits<Real>::max();
+   dtMaxLocal[1]=numeric_limits<Real>::max();
+   dtMaxLocal[2]=numeric_limits<Real>::max();
+   dtMinMaxGlobal[0]=numeric_limits<Real>::min();
+   dtMinMaxGlobal[1]=numeric_limits<Real>::min();
+   dtMinMaxGlobal[2]=numeric_limits<Real>::min();
 
    for (vector<CellID>::const_iterator cell_id = cells.begin(); cell_id != cells.end(); ++cell_id) {
       SpatialCell* cell = mpiGrid[*cell_id];
@@ -185,36 +189,54 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
    creal meanFieldsCFL = 0.5 * (P::fieldSolverMaxCFL + P::fieldSolverMinCFL);
    Real subcycleDt;
 
-   Real localDt;
+   Real localDt, baseDt;
+
+   // localDt: max dt in the local MPI domain
    localDt = meanVlasovCFL * dtMaxLocal[0];
    localDt = min(localDt,meanVlasovCFL * dtMaxLocal[1] * P::maxSlAccelerationSubcycles);
    localDt = min(localDt,meanFieldsCFL * dtMaxLocal[2] * P::maxFieldSolverSubcycles);
+
+   // newDt: max dt globally, at the highest timeclass
    newDt = meanVlasovCFL * dtMaxGlobal[0];
    newDt = min(newDt,meanVlasovCFL * dtMaxGlobal[1] * P::maxSlAccelerationSubcycles);
    newDt = min(newDt,meanFieldsCFL * dtMaxGlobal[2] * P::maxFieldSolverSubcycles);
+
+   // baseDt: longest max dt of any rank
+   baseDt = meanVlasovCFL * dtMinMaxGlobal[0];
+   baseDt = min(baseDt,meanVlasovCFL * dtMinMaxGlobal[1] * P::maxSlAccelerationSubcycles);
+   baseDt = min(baseDt,meanFieldsCFL * dtMinMaxGlobal[2] * P::maxFieldSolverSubcycles);   
+
+   // we have dt in this sort of a range of timeclasses
+   int dtrange = int(log2(baseDt/newDt));
+
+   int myRank;MPI_Comm_rank(MPI_COMM_WORLD,&myRank);
+
+   // ... and we need to clamp that with the parameter for number of MaxTimeClasses
+   int MaxTC = min(P::MaxTimeClass-1, dtrange);
+   if (myRank == MASTER_RANK) cout << "dtrange: " << dtrange << ", newDt = " << newDt << ", baseDt = " << baseDt << std::endl;
+   baseDt = newDt*pow(2, MaxTC);
+   if (myRank == MASTER_RANK) cout << "for new baseDt = " << baseDt << std::endl;
    
 
-   // TODO: Communicate global minimum dt
+   // We need dts and timeclasses relative to the shortest viable maxDt:
+   int dtdiff = int(log2(localDt/baseDt));
 
-   //newDt is now the dt at max timeclass
-
-   int dtdiff = int(log2(localDt/newDt));
-   int localTimeClass = max(0,P::MaxTimeClass - dtdiff);
-   int myRank;MPI_Comm_rank(MPI_COMM_WORLD,&myRank);
-   cout << myRank<<": localTimeClass = " << localTimeClass << " for localdt " << localDt << "; globalDt " << newDt << std::endl;
+   int localTimeClass = MaxTC - max(0, dtdiff); // this shouldn't actually matter anymore?
+   
+   cout << myRank<<": localTimeClass = " << localTimeClass << " for localdt " << localDt << " and dtdiff "<< dtdiff << " to tc dt = " << newDt*pow(2,MaxTC - localTimeClass) << "; globalDt " << newDt << "; global longest dt "<< baseDt << std::endl;
    
 
    for (vector<CellID>::const_iterator cell_id=cells.begin(); cell_id!=cells.end(); ++cell_id) {
       SpatialCell* cell = mpiGrid[*cell_id];
       cell->parameters[CellParams::TIMECLASS_RANK] = localTimeClass;
-      cell->parameters[CellParams::TIMECLASSDT_RANK] = newDt*pow(2,P::MaxTimeClass-localTimeClass);
+      cell->parameters[CellParams::TIMECLASSDT_RANK] = newDt*pow(2,MaxTC - localTimeClass);
 
       Real cellDt = min(cell->parameters[CellParams::MAXVDT]* P::maxSlAccelerationSubcycles,cell->parameters[CellParams::MAXRDT]);
       //localDt = min(localDt,cell->parameters[CellParams::MAXFDT]* P::maxFieldSolverSubcycles);
-      dtdiff = int(log2(cellDt/newDt));
-      int cellTimeClass = max(0,P::MaxTimeClass - dtdiff);
+      dtdiff = int(log2(baseDt/cellDt));
+      int cellTimeClass = MaxTC - max(0, dtdiff);
       cell->parameters[CellParams::TIMECLASS] = cellTimeClass;
-      cell->parameters[CellParams::TIMECLASSDT] = newDt*pow(2,P::MaxTimeClass-cellTimeClass);
+      cell->parameters[CellParams::TIMECLASSDT] = newDt*pow(2,MaxTC - cellTimeClass);
    }
 
 
