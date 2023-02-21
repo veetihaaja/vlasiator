@@ -192,6 +192,9 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
    newDt = meanVlasovCFL * dtMaxGlobal[0];
    newDt = min(newDt,meanVlasovCFL * dtMaxGlobal[1] * P::maxSlAccelerationSubcycles);
    newDt = min(newDt,meanFieldsCFL * dtMaxGlobal[2] * P::maxFieldSolverSubcycles);
+   
+
+   // TODO: Communicate global minimum dt
 
    //newDt is now the dt at max timeclass
 
