@@ -54,8 +54,16 @@ struct Parameters {
    static Real t_min; /*!< Initial simulation time. */
    static Real t_max; /*!< Maximum simulation time. */
    static Real dt;    /*!< The value of the timestep to use in propagation. If CflLimit defined then it is dynamically
-                         updated during simulation*/
-   static int MaxTimeClass;
+                         updated during simulation
+                         Choosing this now to be the shortest TC timestep
+                         */
+                         
+   static std::vector<Real> timeclassDt;
+   static std::vector<Real> timeclassTime;
+   static int fractionalTimestep;
+   static int myTimeclass; // hrm. The timeclass of this rank - not a great place for this.
+   static int currentMaxTimeclass;
+   static int maxTimeclass;
    static int timeclassLBmantissa;
    static Real vlasovSolverMaxCFL;   /*!< The maximum CFL limit for propagation of distribution function. Used to set
                                         timestep if useCFLlimit is true. */

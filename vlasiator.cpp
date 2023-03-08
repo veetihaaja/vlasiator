@@ -91,7 +91,8 @@ void addTimedBarrier(string name){
 }
 
 void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
-			FsGrid< fsgrids::technical, FS_STENCIL_WIDTH> & technicalGrid, Real &newDt, bool &isChanged) {
+			FsGrid< fsgrids::technical, FS_STENCIL_WIDTH> & technicalGrid, Real &newDt, bool &isChanged,
+         std::vector<Real>& newTimeclassDts) {
 
    phiprof::Timer computeTimestepTimer {"compute-timestep"};
    // Compute maximum time step. This cannot be done at the first step as the solvers compute the limits for each cell.
@@ -211,30 +212,39 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
 
    int myRank;MPI_Comm_rank(MPI_COMM_WORLD,&myRank);
 
-   // ... and we need to clamp that with the parameter for number of MaxTimeClasses
-   int MaxTC = min(P::MaxTimeClass-1, dtrange);
-   if (myRank == MASTER_RANK) cout << "dtrange: " << dtrange << ", newDt = " << newDt << ", baseDt = " << baseDt << std::endl;
-   baseDt = newDt*pow(2, MaxTC);
+   // ... and we need to clamp that with the parameter for number of MaxTimeclasses
+   P::currentMaxTimeclass = min(P::maxTimeclass, dtrange);
+   
+   if (myRank == MASTER_RANK) cout << "dtrange: " << dtrange << ", newDt = " << newDt <<
+    ", baseDt = " << baseDt << ", current max tc "<< P::currentMaxTimeclass<< std::endl;
+   baseDt = newDt*pow(2, P::currentMaxTimeclass);
    if (myRank == MASTER_RANK) cout << "for new baseDt = " << baseDt << std::endl;
    
 
    // We need dts and timeclasses relative to the shortest viable maxDt:
-   int dtdiff = int(log2(localDt/baseDt));
+   int dtdiff = int(log2(localDt/newDt));
 
-   int localTimeClass = MaxTC - max(0, dtdiff); // this shouldn't actually matter anymore?
+   int localTimeClass = max(0,P::currentMaxTimeclass - max(0, dtdiff)); // this shouldn't actually matter anymore?
    
-   cout << myRank<<": localTimeClass = " << localTimeClass << " for localdt " << localDt << " and dtdiff "<< dtdiff << " to tc dt = " << newDt*pow(2,MaxTC - localTimeClass) << "; globalDt " << newDt << "; global longest dt "<< baseDt << std::endl;
+   // cout << myRank<<": localTimeClass = " << localTimeClass << " for localdt " << localDt << " and dtdiff "<< dtdiff << 
+   // " to tc dt = " << newDt*pow(2,P::currentMaxTimeclass - localTimeClass) << "; globalDt " << newDt << "; global longest dt "<< baseDt << std::endl;
    
 
    for (vector<CellID>::const_iterator cell_id=cells.begin(); cell_id!=cells.end(); ++cell_id) {
       SpatialCell* cell = mpiGrid[*cell_id];
       cell->parameters[CellParams::TIMECLASS_RANK] = localTimeClass;
-      cell->parameters[CellParams::TIMECLASSDT_RANK] = newDt*pow(2,MaxTC - localTimeClass);
+      cell->parameters[CellParams::TIMECLASSDT_RANK] = newDt*pow(2,P::currentMaxTimeclass - localTimeClass);
 
-      Real cellDt = min(cell->parameters[CellParams::MAXVDT]* P::maxSlAccelerationSubcycles,cell->parameters[CellParams::MAXRDT]);
+      Real cellDt;
+      if( cell->parameters[CellParams::MAXVDT] > 0) {
+         cellDt = min(cell->parameters[CellParams::MAXVDT]* P::maxSlAccelerationSubcycles,cell->parameters[CellParams::MAXRDT]);
+      }
+      else{
+         cellDt = cell->parameters[CellParams::MAXRDT];
+      }
       //localDt = min(localDt,cell->parameters[CellParams::MAXFDT]* P::maxFieldSolverSubcycles);
-      dtdiff = int(log2(baseDt/cellDt));
-      int cellTimeClass = MaxTC - max(0, dtdiff);
+      dtdiff = int(log2(cellDt/newDt));
+      int cellTimeClass = max(0,P::currentMaxTimeclass - max(0, dtdiff));
       cell->parameters[CellParams::TIMECLASS] = cellTimeClass;
       cell->parameters[CellParams::TIMECLASSDT] = newDt*pow(2,MaxTC - cellTimeClass);
    }
@@ -266,7 +276,7 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
       dtdiff = int(log2(cellDt/newDt));
       int cellTimeClass = max(0,P::MaxTimeClass - dtdiff);
       cell->parameters[CellParams::TIMECLASS] = cellTimeClass;
-      cell->parameters[CellParams::TIMECLASSDT] = newDt*pow(2,P::MaxTimeClass-cellTimeClass);
+      cell->parameters[CellParams::TIMECLASSDT] = newDt*pow(2,P::currentMaxTimeclass - cellTimeClass);
    }
 
 
@@ -285,6 +295,11 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
       newDt = meanVlasovCFL * dtMaxGlobal[0];
       newDt = min(newDt, meanVlasovCFL * dtMaxGlobal[1] * P::maxSlAccelerationSubcycles);
       newDt = min(newDt, meanFieldsCFL * dtMaxGlobal[2] * P::maxFieldSolverSubcycles);
+      newTimeclassDts = std::vector<Real>(P::maxTimeclass+1);
+      for(int i = 0; i < P::maxTimeclass; ++i){
+         newTimeclassDts[i] = newDt*pow(2,P::currentMaxTimeclass - min(i,P::currentMaxTimeclass));
+      }
+         
 
       logFile << "(TIMESTEP) New dt = " << newDt << " computed on step " << P::tstep << " at " << P::t
               << "s   Maximum possible dt (not including  vlasovsolver CFL " << P::vlasovSolverMinCFL << "-"
@@ -776,13 +791,26 @@ int main(int argn,char* args[]) {
       P::systemWriteFsGrid.pop_back();
    }
 
+   // For the MPI-rank based timeclasses. Implement to CellParams if cell-based.
+   // Move to params.
+   std::vector<Real> timeclassDt[P::maxTimeclass+1];
+   std::vector<uint> localTimeClass[P::maxTimeclass+1];
+   std::vector<Real> localTime[P::maxTimeclass+1];
+
    if (P::isRestart == false) {
       //compute new dt
       phiprof::Timer computeDtimer {"compute-dt"};
-      computeNewTimeStep(mpiGrid, technicalGrid, newDt, dtIsChanged);
+      computeNewTimeStep(mpiGrid, technicalGrid, newDt, dtIsChanged, P::timeclassDt);
       if (P::dynamicTimestep == true && dtIsChanged == true) {
          // Only actually update the timestep if dynamicTimestep is on
          P::dt=newDt;
+      }
+      if(myRank == MASTER_RANK){
+         std::cout << "timeclass dts = ";
+         for(int i = 0; i < P::maxTimeclass; ++i){
+            std::cout << P::timeclassDt[i] << ", ";
+         }
+         std::cout << endl;
       }
       computeDtimer.stop();
       
@@ -1111,9 +1139,25 @@ int main(int argn,char* args[]) {
       //Check if dt needs to be changed, and propagate V back a half-step to change dt and set up new situation
       //do not compute new dt on first step (in restarts dt comes from file, otherwise it was initialized before we entered
       //simulation loop
-      // FIXME what if dt changes at a restart??
+      // FIXME what if dt changes at a restart?? ---- dunno about this, but...
+      //
+      // TODO timeclasses: We need to check for a new timestep at each smallest timestep - might very well
+      // change, 4 levels -> smallest does 16 steps to one long step
+      // This redefines TCs actually everywhere
+      // WHAT IF THIS MEANS SLOWER REGION CHANGES TC, instead of having just an adjusted timestep?
+      // -make sure TC is immutable during slowest step
+      // -calculate the back-step+new-half-step correction only when about to propagate slower cells
+      //   -> no need to redo acceleration each time fastest class changes dt
+      std::vector<Real> newTimeclassDts;
       if(P::dynamicTimestep  && P::tstep > P::tstep_min) {
-         computeNewTimeStep(mpiGrid, technicalGrid, newDt, dtIsChanged);
+         computeNewTimeStep(mpiGrid, technicalGrid, newDt, dtIsChanged, P::timeclassDt);
+         if(myRank == MASTER_RANK){
+            std::cout << "timeclass dts = ";
+            for(int i = 0; i < P::maxTimeclass; ++i){
+               std::cout << P::timeclassDt[i] << ", ";
+            }
+            std::cout << endl;
+         }
          addTimedBarrier("barrier-check-dt");
          if(dtIsChanged) {
             phiprof::Timer updateDtimer {"update-dt"};
@@ -1311,7 +1355,11 @@ int main(int argn,char* args[]) {
       //Move forward in time
       P::meshRepartitioned = false;
       globalflags::ionosphereJustSolved = false;
-      ++P::tstep;
+      ++P::fractionalTimestep;
+      if(P::fractionalTimestep % pow(2,P::currentMaxTimeclass) == 0){
+         ++P::tstep;
+         P::fractionalTimestep = 0;
+      }
       P::t += P::dt;
 
    }

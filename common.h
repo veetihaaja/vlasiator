@@ -181,8 +181,17 @@ namespace CellParams {
                            * this is the max allowed timestep over all particle species.*/
       MAXFDT,             /*!< maximum timestep allowed in ordinary space by fieldsolver for this cell**/
       TIMECLASS,           /*!< timeclass of this cell*/
-      TIMECLASS_RANK,           /*!< timeclass of this rank*/
       TIMECLASSDT,           /*!< timeclass-adjusted timestep, ...*/
+      TIME_R,           /*!< Current time of the cell due to timeclass timestepping*/
+      TIMESTEP_R,           /*!< Current timestep of the cell due to timeclass timestepping - obs float precision*/
+      TIMESTEP_FRACTIONAL_R,           /*!< Current timestep of the cell due to timeclass timestepping;
+                                             0..2^number_of_timeclasses - 1; increments by 
+                                             2^(max_timeclass-timeclass)*/
+      TIME_V,           /*!< Current time of the cell due to timeclass timestepping*/
+      TIMESTEP_V,           /*!< Current timestep of the cell due to timeclass timestepping - obs float precision*/
+      TIMESTEP_FRACTIONAL_V,           /*!< Current timestep of the cell due to timeclass timestepping*/
+
+      TIMECLASS_RANK,           /*!< timeclass of this rank*/
       TIMECLASSDT_RANK,           /*!< timeclass-adjusted timestep, ...*/
 
       LBWEIGHTCOUNTER,    /*!< Counter for storing compute time weights needed by the load balancing**/

@@ -65,7 +65,12 @@ Real P::t = 0;
 Real P::t_min = 0;
 Real P::t_max = LARGE_REAL;
 Real P::dt = NAN;
-int P::MaxTimeClass = 0;
+int P::maxTimeclass = 0;
+int P::currentMaxTimeclass = 0;
+vector<Real> P::timeclassDt;
+vector<Real> P::timeclassTime;
+
+
 Real P::vlasovSolverMaxCFL = NAN;
 Real P::vlasovSolverMinCFL = NAN;
 Real P::fieldSolverMaxCFL = NAN;
@@ -769,7 +774,10 @@ void Parameters::getParameters() {
    P::dz_ini = (P::zmax - P::zmin) / P::zcells_ini;
 
    RP::get("gridbuilder.dt", P::dt);
-   RP::get("gridbuilder.timeclass_max", P::MaxTimeClass);
+   RP::get("gridbuilder.timeclass_max", P::maxTimeclass);
+
+   P::timeclassDt = std::vector<Real>(P::maxTimeclass+1);
+   P::timeclassTime = std::vector<Real>(P::maxTimeclass+1);
 
    RP::get("gridbuilder.t_max", P::t_max);
    RP::get("gridbuilder.timestep_max", P::tstep_max);
