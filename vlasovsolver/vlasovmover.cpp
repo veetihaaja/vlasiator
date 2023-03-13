@@ -420,7 +420,7 @@ void calculateAcceleration(const uint popID,const uint globalMaxSubcycles,const 
 /** Accelerate all particle populations to new time t+dt. 
  * This function is AMR safe.
  * @param mpiGrid Parallel grid library.
- * @param dt Time step.*/
+ * @param dt Time step factor: cells will propagated by dt*CellParams[CellParams::CELLDT] if needed.*/
 void calculateAcceleration(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
                            Real dt
                           ) {    
@@ -455,20 +455,32 @@ void calculateAcceleration(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& 
          // volume) do not need to be propagated:
          vector<CellID> propagatedCells;
          for (size_t c=0; c<cells.size(); ++c) {
+
+            Real dt_cell;
+            if(dt < 0.0) {
+                  dt_cell = SC->parameters[CellParams::TIME_R] - P::t;
+               }
+               else {
+                  dt_cell = dt*SC->parameters[CellParams::];
+               }
             SpatialCell* SC = mpiGrid[cells[c]];
             const vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& vmesh = SC->get_velocity_mesh(popID);
             // disregard boundary cells, in preparation for acceleration
             if (  (SC->sysBoundaryFlag == sysboundarytype::NOT_SYSBOUNDARY) ||
                   // Include inflow-Maxwellian
                   (P::vlasovAccelerateMaxwellianBoundaries && (SC->sysBoundaryFlag == sysboundarytype::SET_MAXWELLIAN)) ) {
-               if (vmesh.size() != 0){
+               if (vmesh.size() != 0 || 
+                     (false)
+                  ){
                   //do not propagate spatial cells with no blocks
+                  //propagate only those cells that have 
                   propagatedCells.push_back(cells[c]);
                }
                //prepare for acceleration, updates max dt for each cell, it
-               //needs to be set to somthing sensible for _all_ cells, even if
+               //needs to be set to something sensible for _all_ cells, even if
                //they are not propagated
                prepareAccelerateCell(SC, popID);
+
                //update max subcycles for all cells in this process
                maxSubcycles = max((int)getAccelerationSubcycles(SC, dt, popID), maxSubcycles);
                spatial_cell::Population& pop = SC->get_population(popID);

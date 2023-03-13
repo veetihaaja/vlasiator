@@ -558,6 +558,22 @@ namespace spatial_cell {
       return populations[popID].max_dt[species::MAXVDT];
    }
 
+   /** Get the current timeclass dt of this cell
+    * @return local dt
+   */
+   const Real& get_tc_dt() const {
+      return this->CellParams[CELLPARAMS::TIMECLASSDT];
+   }
+
+//// hmmmm
+   const bool get_timeclass_turn_v() const {
+      return P::fractionalTimestep % pow(2,P::currentMaxTimeclass - this->CellParams[CellParams::TIMECLASS]) == 0;
+   }
+
+   const bool get_timeclass_turn_r() const {
+      return (P::fractionalTimestep+int(pow(2,P::currentMaxTimeclass)/2)) % pow(2,P::currentMaxTimeclass - this->CellParams[CellParams::TIMECLASS]) == 0;
+   }
+
    /** Get MPI datatype for sending the cell data.
     * @param cellID Spatial cell (dccrg) ID.
     * @param sender_rank Rank of the MPI process sending data from this cell.

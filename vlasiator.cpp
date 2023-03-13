@@ -1145,16 +1145,17 @@ int main(int argn,char* args[]) {
       // change, 4 levels -> smallest does 16 steps to one long step
       // This redefines TCs actually everywhere
       // WHAT IF THIS MEANS SLOWER REGION CHANGES TC, instead of having just an adjusted timestep?
-      // -make sure TC is immutable during slowest step
+      // -make sure TC is immutable during slowest step - this is a no-go, since the fastest steps can explode in between
       // -calculate the back-step+new-half-step correction only when about to propagate slower cells
-      //   -> no need to redo acceleration each time fastest class changes dt
-      std::vector<Real> newTimeclassDts;
+      //   -> no need to redo acceleration each time fastest class changes dt?
+      //      ... but updated V moments needed?
+      std::vector<Real> newTimeclassDts = std::vector<Real>(P::maxTimeclass+1);
       if(P::dynamicTimestep  && P::tstep > P::tstep_min) {
-         computeNewTimeStep(mpiGrid, technicalGrid, newDt, dtIsChanged, P::timeclassDt);
+         computeNewTimeStep(mpiGrid, technicalGrid, newDt, dtIsChanged, newTimeclassDts);
          if(myRank == MASTER_RANK){
             std::cout << "timeclass dts = ";
             for(int i = 0; i < P::maxTimeclass; ++i){
-               std::cout << P::timeclassDt[i] << ", ";
+               std::cout << newTimeclassDts[i] << ", ";
             }
             std::cout << endl;
          }
@@ -1164,7 +1165,8 @@ int main(int argn,char* args[]) {
             //propagate velocity space back to real-time
             if( P::propagateVlasovAcceleration ) {
                // Back half dt to real time, forward by new half dt
-               calculateAcceleration(mpiGrid,-0.5*P::dt + 0.5*newDt);
+               calculateAcceleration(mpiGrid,-0.5); //This sets cells back to previous TIME_R
+               calculateAcceleration(mpiGrid, 0.5); //This propagates by 0.5 
             }
             else {
                //zero step to set up moments _v
@@ -1172,6 +1174,7 @@ int main(int argn,char* args[]) {
             }
             
             P::dt=newDt;
+            P::timeclassDts = newTimeclassDts;
             
             logFile <<" dt changed to "<<P::dt <<"s, distribution function was half-stepped to real-time and back"<<endl<<writeVerbose;
             updateDtimer.stop();
@@ -1308,7 +1311,8 @@ int main(int argn,char* args[]) {
       
       phiprof::Timer vspaceTimer {"Velocity-space"};
       if ( P::propagateVlasovAcceleration ) {
-         calculateAcceleration(mpiGrid,P::dt);
+         // calculateAcceleration(mpiGrid,P::dt);
+         calculateAcceleration(mpiGrid,1.0);
          addTimedBarrier("barrier-after-ad just-blocks");
       } else {
          //zero step to set up moments _v

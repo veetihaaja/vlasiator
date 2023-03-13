@@ -61,6 +61,7 @@ void prepareAccelerateCell(
 
 uint getAccelerationSubcycles(SpatialCell* spatial_cell, Real dt, const uint popID)
 {
+   //return max( convert<uint>(ceil(dt*spatial_cell->CellParams[CELLPARAMS::TIMECLASSDT] / spatial_cell->get_max_v_dt(popID))), 1u);
    return max( convert<uint>(ceil(dt / spatial_cell->get_max_v_dt(popID))), 1u);
 }
 
