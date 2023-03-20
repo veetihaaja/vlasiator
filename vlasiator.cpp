@@ -1149,6 +1149,7 @@ int main(int argn,char* args[]) {
       // -calculate the back-step+new-half-step correction only when about to propagate slower cells
       //   -> no need to redo acceleration each time fastest class changes dt?
       //      ... but updated V moments needed?
+      //   -> do the acc shuffle for all cells to begin with
       std::vector<Real> newTimeclassDts = std::vector<Real>(P::maxTimeclass+1);
       if(P::dynamicTimestep  && P::tstep > P::tstep_min) {
          computeNewTimeStep(mpiGrid, technicalGrid, newDt, dtIsChanged, newTimeclassDts);
