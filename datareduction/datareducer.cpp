@@ -481,9 +481,61 @@ void initializeDataReducers(DataReducer * outputReducer, DataReducer * diagnosti
             outputReducer->addOperator(new DRO::DataReductionOperatorPopulations<Real>(pop + "/vg_maxdt_translation", i, offsetof(spatial_cell::Population, max_dt[0]), 1));
 	    outputReducer->addMetadata(outputReducer->size()-1,"s","$\\mathrm{s}$","$\\Delta t_\\mathrm{"+pop+",R,max}$","1.0");
          }
-         continue;
+         if(!P::systemWriteAllDROs) {
+            continue;
+         }
       }
-      if(lowercase == "populations_energydensity" || lowercase == "populations_vg_energydensity") {
+      if(P::systemWriteAllDROs || lowercase == "vg_maxdt_fieldsolver") {
+         // per-rank timeclass 
+         outputReducer->addOperator(new DRO::DataReductionOperatorCellParams("vg_maxdt_fieldsolver",CellParams::MAXFDT,1));
+	      outputReducer->addMetadata(outputReducer->size()-1,"s","$\\mathrm{s}$","$\\Delta t_mathrm{fs}$","1.0");
+         if(!P::systemWriteAllDROs) {
+            continue;
+         }
+      }
+      if(P::systemWriteAllDROs || lowercase == "timeclass" || lowercase == "vg_timeclass") {
+         // per-rank timeclass 
+         outputReducer->addOperator(new DRO::DataReductionOperatorCellParams("vg_timeclass",CellParams::TIMECLASS,1));
+	      outputReducer->addMetadata(outputReducer->size()-1,"","","$\\mathrm{Timeclass}$","");
+         if(!P::systemWriteAllDROs) {
+            continue;
+         }
+      }
+      if(P::systemWriteAllDROs || lowercase == "timeclass_rank" || lowercase == "vg_timeclass_rank") {
+         // per-rank timeclass 
+         outputReducer->addOperator(new DRO::DataReductionOperatorCellParams("vg_timeclass_rank",CellParams::TIMECLASS_RANK,1));
+	      outputReducer->addMetadata(outputReducer->size()-1,"","","$\\mathrm{Timeclass}$","");
+         if(!P::systemWriteAllDROs) {
+            continue;
+         }
+      }
+      if(P::systemWriteAllDROs || lowercase == "timeclass_dt" || lowercase == "vg_timeclass_dt") {
+         // per-rank timeclass 
+         outputReducer->addOperator(new DRO::DataReductionOperatorCellParams("vg_timeclass_dt",CellParams::TIMECLASSDT,1));
+	      outputReducer->addMetadata(outputReducer->size()-1,"s","$\\mathrm{s}$","$\\Delta t_mathrm{tc}$","1.0");
+         if(!P::systemWriteAllDROs) {
+            continue;
+         }
+      }
+      if(P::systemWriteAllDROs || lowercase == "timeclass_dt_rank" || lowercase == "vg_timeclass_dt_rank") {
+         // per-rank timeclass 
+         outputReducer->addOperator(new DRO::DataReductionOperatorCellParams("vg_timeclass_dt_rank",CellParams::TIMECLASSDT_RANK,1));
+	      outputReducer->addMetadata(outputReducer->size()-1,"s","$\\mathrm{s}$","$\\Delta t_mathrm{tc}$","1.0");
+         if(!P::systemWriteAllDROs) {
+            continue;
+         }
+      }
+      if(P::systemWriteAllDROs || lowercase == "timeclass_t" || lowercase == "vg_timeclass_t") {
+         // per-rank timeclass 
+         outputReducer->addOperator(new DRO::DataReductionOperatorCellParams("vg_timeclass_t_r",CellParams::TIME_R,1));
+	      outputReducer->addMetadata(outputReducer->size()-1,"s","$\\mathrm{s}$","$\\t_mathrm{tc,r}$","1.0");
+         outputReducer->addOperator(new DRO::DataReductionOperatorCellParams("vg_timeclass_t_v",CellParams::TIME_V,1));
+	      outputReducer->addMetadata(outputReducer->size()-1,"s","$\\mathrm{s}$","$\\t_mathrm{tc,v}$","1.0");
+         if(!P::systemWriteAllDROs) {
+            continue;
+         }
+      }
+      if(P::systemWriteAllDROs || lowercase == "populations_energydensity" || lowercase == "populations_vg_energydensity") {
          // Per-population energy density in three energy ranges
          for(unsigned int i =0; i < getObjectWrapper().particleSpecies.size(); i++) {
             species::Species& species=getObjectWrapper().particleSpecies[i];

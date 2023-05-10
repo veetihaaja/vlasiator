@@ -1175,7 +1175,7 @@ int main(int argn,char* args[]) {
             }
             
             P::dt=newDt;
-            P::timeclassDts = newTimeclassDts;
+            //P::timeclassDts = newTimeclassDts;
             
             logFile <<" dt changed to "<<P::dt <<"s, distribution function was half-stepped to real-time and back"<<endl<<writeVerbose;
             updateDtimer.stop();
@@ -1361,7 +1361,7 @@ int main(int argn,char* args[]) {
       P::meshRepartitioned = false;
       globalflags::ionosphereJustSolved = false;
       ++P::fractionalTimestep;
-      if(P::fractionalTimestep % pow(2,P::currentMaxTimeclass) == 0){
+      if(P::fractionalTimestep % (2 << P::currentMaxTimeclass) == 0){
          ++P::tstep;
          P::fractionalTimestep = 0;
       }

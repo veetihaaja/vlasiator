@@ -69,6 +69,7 @@ int P::maxTimeclass = 0;
 int P::currentMaxTimeclass = 0;
 vector<Real> P::timeclassDt;
 vector<Real> P::timeclassTime;
+int P::fractionalTimestep = 0;
 
 
 Real P::vlasovSolverMaxCFL = NAN;
@@ -776,6 +777,7 @@ void Parameters::getParameters() {
    RP::get("gridbuilder.dt", P::dt);
    RP::get("gridbuilder.timeclass_max", P::maxTimeclass);
 
+   
    P::timeclassDt = std::vector<Real>(P::maxTimeclass+1);
    P::timeclassTime = std::vector<Real>(P::maxTimeclass+1);
 

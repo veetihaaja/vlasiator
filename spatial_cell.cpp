@@ -561,18 +561,24 @@ namespace spatial_cell {
    /** Get the current timeclass dt of this cell
     * @return local dt
    */
-   const Real& get_tc_dt() const {
-      return this->CellParams[CELLPARAMS::TIMECLASSDT];
+   const Real& SpatialCell::get_tc_dt() const {
+      return this->parameters[CellParams::TIMECLASSDT];
    }
 
 //// hmmmm
-   const bool get_timeclass_turn_v() const {
-      return P::fractionalTimestep % pow(2,P::currentMaxTimeclass - this->CellParams[CellParams::TIMECLASS]) == 0;
+   const bool SpatialCell::get_timeclass_turn() const {
+      // If on max timeclass, we propagate on each loop.
+      return P::fractionalTimestep % (2 << (P::currentMaxTimeclass - (int)this->parameters[CellParams::TIMECLASS])) == 0;
+      
    }
 
-   const bool get_timeclass_turn_r() const {
-      return (P::fractionalTimestep+int(pow(2,P::currentMaxTimeclass)/2)) % pow(2,P::currentMaxTimeclass - this->CellParams[CellParams::TIMECLASS]) == 0;
-   }
+   // const bool get_timeclass_turn_r() const {
+   //    if (this->CellParams[CellParams::TIMECLASS] == P::currentMaxTimeclass) {
+   //       return true;
+   //    }
+   //    return P::fractionalTimestep % pow(2,P::currentMaxTimeclass - this->CellParams[CellParams::TIMECLASS]) == 0;
+   //    //return (P::fractionalTimestep+int(pow(2,P::currentMaxTimeclass)/2)) % pow(2,P::currentMaxTimeclass - this->CellParams[CellParams::TIMECLASS]) == 0;
+   // }
 
    /** Get MPI datatype for sending the cell data.
     * @param cellID Spatial cell (dccrg) ID.
