@@ -566,19 +566,21 @@ namespace spatial_cell {
    }
 
 //// hmmmm
-   const bool SpatialCell::get_timeclass_turn() const {
+   const bool SpatialCell::get_timeclass_turn_v() const {
       // If on max timeclass, we propagate on each loop.
       return P::fractionalTimestep % (2 << (P::currentMaxTimeclass - (int)this->parameters[CellParams::TIMECLASS])) == 0;
       
    }
 
-   // const bool get_timeclass_turn_r() const {
-   //    if (this->CellParams[CellParams::TIMECLASS] == P::currentMaxTimeclass) {
-   //       return true;
-   //    }
-   //    return P::fractionalTimestep % pow(2,P::currentMaxTimeclass - this->CellParams[CellParams::TIMECLASS]) == 0;
-   //    //return (P::fractionalTimestep+int(pow(2,P::currentMaxTimeclass)/2)) % pow(2,P::currentMaxTimeclass - this->CellParams[CellParams::TIMECLASS]) == 0;
-   // }
+   const bool SpatialCell::get_timeclass_turn_r() const {
+      if (this->parameters[CellParams::TIMECLASS] == P::currentMaxTimeclass) {
+         return true;
+      }
+      else {
+         return P::fractionalTimestep % ((int)(2 << (P::currentMaxTimeclass - (int)this->parameters[CellParams::TIMECLASS]))/2+1) == 0;
+      }
+      //return (P::fractionalTimestep+int(pow(2,P::currentMaxTimeclass)/2)) % pow(2,P::currentMaxTimeclass - this->CellParams[CellParams::TIMECLASS]) == 0;
+   }
 
    /** Get MPI datatype for sending the cell data.
     * @param cellID Spatial cell (dccrg) ID.

@@ -1406,7 +1406,7 @@ bool trans_map_1d_amr(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>&
    unsigned char  cellid_transpose[WID3]; /*< defines the transpose for the solver internal (transposed) id: i + j*WID + k*WID2 to actual one*/
    // return if there's no cells to propagate
    if(localPropagatedCells.size() == 0) {
-      cout << "Returning because of no cells" << endl;
+      //cout << "Returning because of no cells" << endl;
       return false;
    }
 

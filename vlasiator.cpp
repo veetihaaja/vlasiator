@@ -247,6 +247,8 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
       int cellTimeClass = max(0,P::currentMaxTimeclass - max(0, dtdiff));
       cell->parameters[CellParams::TIMECLASS] = cellTimeClass;
       cell->parameters[CellParams::TIMECLASSDT] = newDt*pow(2,MaxTC - cellTimeClass);
+      cell->parameters[CellParams::TIMECLASS] = cell->parameters[CellParams::TIMECLASS_RANK]; // = cellTimeClass;
+      cell->parameters[CellParams::TIMECLASSDT] =cell->parameters[CellParams::TIMECLASSDT_RANK]; //= newDt*pow(2,P::currentMaxTimeclass - cellTimeClass);
    }
 
 
@@ -818,7 +820,7 @@ int main(int argn,char* args[]) {
       //the distribution function is already propagated forward in time by dt/2
       phiprof::Timer propagateHalfTimer {"propagate-velocity-space-dt/2"};
       if (P::propagateVlasovAcceleration) {
-         calculateAcceleration(mpiGrid, 0.5*P::dt);
+         calculateAcceleration(mpiGrid, 0.5);
       } else {
          //zero step to set up moments _v
          calculateAcceleration(mpiGrid, 0.0);
@@ -1201,7 +1203,7 @@ int main(int argn,char* args[]) {
       
       phiprof::Timer spatialSpaceTimer {"Spatial-space"};
       if( P::propagateVlasovTranslation) {
-         calculateSpatialTranslation(mpiGrid,P::dt);
+         calculateSpatialTranslation(mpiGrid,1.0);
       } else {
          calculateSpatialTranslation(mpiGrid,0.0);
       }

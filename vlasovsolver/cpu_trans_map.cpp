@@ -61,7 +61,7 @@ bool do_translate_cell(SpatialCell* SC){
       (SC->sysBoundaryLayer != 1 && SC->sysBoundaryFlag != sysboundarytype::NOT_SYSBOUNDARY))
       return false;
    else // Check if it is our timeclasses turn to translate
-      if(SC->get_timeclass_turn() == true){
+      if(SC->get_timeclass_turn_r() == true){
          return true;
       }
       else{

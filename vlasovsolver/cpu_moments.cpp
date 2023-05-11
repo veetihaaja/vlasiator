@@ -353,7 +353,7 @@ void calculateMoments_V(
          cell->parameters[CellParams::RHOQ_V  ] += array[0]*charge;
       } // for-loop over spatial cells
    } // for-loop over particle species
-   
+      
    #pragma omp parallel for
    for (size_t c=0; c<cells.size(); ++c) {
       SpatialCell* cell = mpiGrid[cells[c]];
@@ -364,12 +364,12 @@ void calculateMoments_V(
       cell->parameters[CellParams::VY_V] = divideIfNonZero(cell->parameters[CellParams::VY_V], cell->parameters[CellParams::RHOM_V]);
       cell->parameters[CellParams::VZ_V] = divideIfNonZero(cell->parameters[CellParams::VZ_V], cell->parameters[CellParams::RHOM_V]);
    }
-
+   
    // Compute second moments only if requested
    if (computeSecond == false) {
       return;
    }
-
+   
    for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
       #pragma omp parallel for
       for (size_t c=0; c<cells.size(); ++c) {

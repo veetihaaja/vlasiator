@@ -210,8 +210,8 @@ namespace spatial_cell {
       const Real& get_max_v_dt(const uint popID) const;
 
       const Real& get_tc_dt() const;
-      const bool get_timeclass_turn() const;
-      //const bool get_timeclass_turn_v() const;
+      const bool get_timeclass_turn_r() const;
+      const bool get_timeclass_turn_v() const;
 
       const vmesh::LocalID* get_velocity_grid_length(const uint popID,const uint8_t& refLevel=0);
       const Real* get_velocity_grid_block_size(const uint popID,const uint8_t& refLevel=0);
