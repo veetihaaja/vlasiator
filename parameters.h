@@ -65,6 +65,7 @@ struct Parameters {
    static int currentMaxTimeclass;
    static int maxTimeclass;
    static int timeclassLBmantissa;
+   static bool tc_leapfrog_init;
    static Real vlasovSolverMaxCFL;   /*!< The maximum CFL limit for propagation of distribution function. Used to set
                                         timestep if useCFLlimit is true. */
    static Real vlasovSolverMinCFL;   /*!< The minimum CFL limit for propagation of distribution function. Used to set

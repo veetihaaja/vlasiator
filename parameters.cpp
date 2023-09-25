@@ -86,6 +86,7 @@ uint P::tstep_max = 0;
 uint P::diagnosticInterval = numeric_limits<uint>::max();
 bool P::writeInitialState = true;
 bool P::writeFullBGB = false;
+bool P::tc_leapfrog_init = false;
 
 bool P::meshRepartitioned = true;
 bool P::prepareForRebalance = false;
@@ -792,6 +793,8 @@ void Parameters::getParameters() {
    P::t = P::t_min;
    P::tstep_min = 0;
    P::tstep = P::tstep_min;
+
+   P::tc_leapfrog_init = false;
 
    // Get field solver parameters
    RP::get("fieldsolver.maxWaveVelocity", P::maxWaveVelocity);

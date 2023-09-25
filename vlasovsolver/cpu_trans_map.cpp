@@ -56,17 +56,23 @@ using namespace spatial_cell;
 #define i_trans_pt_blockv(planeVectorIndex, planeIndex, blockIndex)  ( planeVectorIndex + planeIndex * VEC_PER_PLANE + (blockIndex + 1) * VEC_PER_BLOCK)
 
 //Is cell translated? It is not translated if DO_NO_COMPUTE or if it is sysboundary cell and not in first sysboundarylayer
-bool do_translate_cell(SpatialCell* SC){
+bool do_translate_cell(SpatialCell* SC, bool tc){
    if(SC->sysBoundaryFlag == sysboundarytype::DO_NOT_COMPUTE ||
-      (SC->sysBoundaryLayer != 1 && SC->sysBoundaryFlag != sysboundarytype::NOT_SYSBOUNDARY))
+      (SC->sysBoundaryLayer != 1 && SC->sysBoundaryFlag != sysboundarytype::NOT_SYSBOUNDARY)){
       return false;
-   else // Check if it is our timeclasses turn to translate
+   }
+   else if(tc) {// Check if it is our timeclasses turn to translate
       if(SC->get_timeclass_turn_r() == true){
          return true;
       }
       else{
          return false;
       }
+   }
+   else
+   {
+      return false;
+   }
 }
 
 /*

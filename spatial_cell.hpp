@@ -169,6 +169,12 @@ namespace spatial_cell {
                                                                       * in this spatial cell. Cells are identified by their unique 
                                                                       * global IDs.*/
       vmesh::VelocityBlockContainer<vmesh::LocalID> blockContainer;  /**< Velocity block data.*/
+
+      vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID> vmesh_ghost;     /**< Velocity mesh timeghost. Contains all velocity blocks that exist 
+                                                                            * in this spatial cell. Cells are identified by their unique 
+                                                                            * global IDs.*/
+      vmesh::VelocityBlockContainer<vmesh::LocalID> blockContainer_ghost;  /**< Velocity block data for the timeghost.*/
+
    };
 
    class SpatialCell {
@@ -177,6 +183,8 @@ namespace spatial_cell {
       // SpatialCell(const SpatialCell& other);
       // const SpatialCell& operator=(const SpatialCell& other);
 
+      // Null vmesh to check against null data
+      static vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID> null_vmesh;
       // Following functions return velocity grid metadata //
       template<int PAD> void fetch_data(const vmesh::GlobalID& blockGID,const vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& vmesh,
                                         const Realf* src,Realf* array);
@@ -288,6 +296,10 @@ namespace spatial_cell {
                 vmesh::VelocityBlockContainer<vmesh::LocalID>& blockContainer,const uint popID);
       vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& get_velocity_mesh(const size_t& popID);
       vmesh::VelocityBlockContainer<vmesh::LocalID>& get_velocity_blocks(const size_t& popID);
+
+      vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& get_velocity_mesh_ghost(const size_t& popID);
+      vmesh::VelocityBlockContainer<vmesh::LocalID>& get_velocity_blocks_ghost(const size_t& popID);
+
       vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& get_velocity_mesh_temporary();
       vmesh::VelocityBlockContainer<vmesh::LocalID>& get_velocity_blocks_temporary();
 
@@ -1520,6 +1532,31 @@ namespace spatial_cell {
       return populations[popID].blockContainer;
    }
 
+   inline vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& SpatialCell::get_velocity_mesh_ghost(const size_t& popID) {
+      #ifdef DEBUG_SPATIAL_CELL
+      if (popID >= populations.size()) {
+         std::cerr << "ERROR, popID " << popID << " exceeds populations.size() " << populations.size() << " in ";
+         std::cerr << __FILE__ << ":" << __LINE__ << std::endl;             
+         exit(1);
+      }
+      #endif
+
+      return populations[popID].vmesh;
+   }
+
+   inline vmesh::VelocityBlockContainer<vmesh::LocalID>& SpatialCell::get_velocity_blocks_ghost(const size_t& popID) {
+      #ifdef DEBUG_SPATIAL_CELL
+      if (popID >= populations.size()) {
+         std::cerr << "ERROR, popID " << popID << " exceeds populations.size() " << populations.size() << " in ";
+         std::cerr << __FILE__ << ":" << __LINE__ << std::endl;             
+         exit(1);
+      }
+      #endif
+      
+      return populations[popID].blockContainer;
+   }
+
+
    inline vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& SpatialCell::get_velocity_mesh_temporary() {
       return vmeshTemp;
    }
@@ -1901,6 +1938,7 @@ namespace spatial_cell {
       #endif
       return populations[popID].vmesh.hasGrandParent(blockGID);
    }
+
 
 } // namespaces
 

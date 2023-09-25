@@ -35,7 +35,8 @@ void cpu_accelerate_cell(
         spatial_cell::SpatialCell* spatial_cell,
         const uint popID,
         uint map_order,
-        const Real& dt);
+        const Real& dt,
+        vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& vmesh = spatial_cell::SpatialCell::null_vmesh);
 
 #endif
 

@@ -39,6 +39,9 @@ namespace spatial_cell {
    bool SpatialCell::mpiTransferInAMRTranslation = false;
    int SpatialCell::mpiTransferXYZTranslation = 0;
 
+   vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID> SpatialCell::null_vmesh = vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>();
+
+
    SpatialCell::SpatialCell() {
       // Block list and cache always have room for all blocks
       this->sysBoundaryLayer=0; // Default value, layer not yet initialized
@@ -568,16 +571,29 @@ namespace spatial_cell {
 //// hmmmm
    const bool SpatialCell::get_timeclass_turn_v() const {
       // If on max timeclass, we propagate on each loop.
-      return P::fractionalTimestep % (2 << (P::currentMaxTimeclass - (int)this->parameters[CellParams::TIMECLASS])) == 0;
+      int mod = 1 << (P::currentMaxTimeclass - (int)this->parameters[CellParams::TIMECLASS]);
+      bool ret = ((P::fractionalTimestep % mod) == 0);
+
+
+      // if (this->parameters[CellParams::CELLID] == 9 || this->parameters[CellParams::CELLID] == 11 || this->parameters[CellParams::CELLID] == 12)
+      //    std::cout << ret << " on V on tc  " << this->parameters[CellParams::TIMECLASS] << " on ftstep " << P::fractionalTimestep << ", t " << P::tstep << " modulo " << mod <<"\n";
+      return ret;
       
    }
 
    const bool SpatialCell::get_timeclass_turn_r() const {
+      return this->get_timeclass_turn_v();
       if (this->parameters[CellParams::TIMECLASS] == P::currentMaxTimeclass) {
          return true;
       }
       else {
-         return P::fractionalTimestep % ((int)(2 << (P::currentMaxTimeclass - (int)this->parameters[CellParams::TIMECLASS]))/2+1) == 0;
+         int mod = 1 << (P::currentMaxTimeclass - (int)this->parameters[CellParams::TIMECLASS]);
+         int mod2 = 1 << (P::currentMaxTimeclass - (int)this->parameters[CellParams::TIMECLASS] - 1);
+         mod2 = max(0,mod2);
+         bool ret = ((P::fractionalTimestep % mod) == mod2);
+         if (ret && (this->parameters[CellParams::CELLID] == 11 || this->parameters[CellParams::CELLID] == 12)){}
+            // std::cout << "R on tc  " << this->parameters[CellParams::TIMECLASS] << " ftstep " << P::fractionalTimestep <<", t " << P::tstep <<"\n";
+         return ret;
       }
       //return (P::fractionalTimestep+int(pow(2,P::currentMaxTimeclass)/2)) % pow(2,P::currentMaxTimeclass - this->CellParams[CellParams::TIMECLASS]) == 0;
    }
