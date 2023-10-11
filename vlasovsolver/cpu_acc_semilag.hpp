@@ -36,7 +36,8 @@ void cpu_accelerate_cell(
         const uint popID,
         uint map_order,
         const Real& dt,
-        vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& vmesh = spatial_cell::SpatialCell::null_vmesh);
+        bool doGhost = false
+        );
 
 #endif
 

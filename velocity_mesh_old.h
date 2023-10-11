@@ -45,6 +45,8 @@ namespace vmesh {
       VelocityMesh();
       ~VelocityMesh();
 
+      VelocityMesh(const VelocityMesh& other);
+
       size_t capacityInBytes() const;
       bool check() const;
       void clear();
@@ -126,6 +128,17 @@ namespace vmesh {
    
    template<typename GID,typename LID> inline
    VelocityMesh<GID,LID>::~VelocityMesh() { }
+
+   template<typename GID,typename LID> inline VelocityMesh<GID,LID>::VelocityMesh(const VelocityMesh& other) {
+      meshID = other.meshID;
+      globalToLocalMap = OpenBucketHashtable<vmesh::GlobalID,vmesh::LocalID>(other.globalToLocalMap);
+      if (other.localToGlobalMap.size() > 0) {
+         localToGlobalMap = std::vector<vmesh::GlobalID>(other.localToGlobalMap);
+      } else {
+         localToGlobalMap = std::vector<vmesh::GlobalID>(1);
+         localToGlobalMap.clear();
+      }
+   }
 
    template<typename GID,typename LID> inline
    size_t VelocityMesh<GID,LID>::capacityInBytes() const {

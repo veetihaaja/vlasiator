@@ -308,7 +308,7 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
       newDt = min(newDt, meanVlasovCFL * dtMaxGlobal[1] * P::maxSlAccelerationSubcycles);
       newDt = min(newDt, meanFieldsCFL * dtMaxGlobal[2] * P::maxFieldSolverSubcycles);
       newTimeclassDts = std::vector<Real>(P::maxTimeclass+1);
-      for(int i = 0; i < P::maxTimeclass; ++i){
+      for(int i = 0; i <= P::maxTimeclass; ++i){
          newTimeclassDts[i] = newDt*pow(2,P::currentMaxTimeclass - min(i,P::currentMaxTimeclass));
       }
          
@@ -813,9 +813,7 @@ int main(int argn,char* args[]) {
 
    // For the MPI-rank based timeclasses. Implement to CellParams if cell-based.
    // Move to params.
-   std::vector<Real> timeclassDt[P::maxTimeclass+1];
-   std::vector<uint> localTimeClass[P::maxTimeclass+1];
-   std::vector<Real> localTime[P::maxTimeclass+1];
+
    P::tc_leapfrog_init = false;
    if (P::isRestart == false) {
       //compute new dt
@@ -827,8 +825,8 @@ int main(int argn,char* args[]) {
       }
       if(myRank == MASTER_RANK){
          std::cout << "timeclass dts = ";
-         for(int i = 0; i < P::maxTimeclass; ++i){
-            std::cout << P::timeclassDt[i] << ", ";
+         for(int i = 0; i <= P::maxTimeclass; ++i){
+            std::cout << i <<": "<<P::timeclassDt[i] << "s, ";
          }
          std::cout << endl;
       }
@@ -839,7 +837,7 @@ int main(int argn,char* args[]) {
       phiprof::Timer propagateHalfTimer {"propagate-velocity-space-dt/2"};
       if (P::propagateVlasovAcceleration) {
          calculateAcceleration(mpiGrid, 0.5);
-         P::tc_leapfrog_init = true;
+         P::tc_leapfrog_init = false;
       } else {
          //zero step to set up moments _v
          calculateAcceleration(mpiGrid, 0.0);
@@ -1176,8 +1174,8 @@ int main(int argn,char* args[]) {
          computeNewTimeStep(mpiGrid, technicalGrid, newDt, dtIsChanged, newTimeclassDts);
          if(myRank == MASTER_RANK){
             std::cout << "timeclass dts = ";
-            for(int i = 0; i < P::maxTimeclass; ++i){
-               std::cout << newTimeclassDts[i] << ", ";
+            for(int i = 0; i <= P::maxTimeclass; ++i){
+               std::cout << i <<": " << newTimeclassDts[i] << "s, ";
             }
             std::cout << endl;
          }

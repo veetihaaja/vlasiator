@@ -71,7 +71,7 @@ bool do_translate_cell(SpatialCell* SC, bool tc){
    }
    else
    {
-      return false;
+      return true;
    }
 }
 
@@ -352,6 +352,11 @@ bool trans_map_1d(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
    std::vector<SpatialCell*> sourceNeighbors(localPropagatedCells.size() * nSourceNeighborsPerCell);
    std::vector<SpatialCell*> targetNeighbors(3 * localPropagatedCells.size() );
    
+   int maxTimeclass = 0;
+   for(uint celli = 0; celli < localPropagatedCells.size(); celli++){
+      maxTimeclass = max((int)mpiGrid[localPropagatedCells[celli]]->parameters[CellParams::TIMECLASS], maxTimeclass);
+   }
+
 #pragma omp parallel for
    for(uint celli = 0; celli < allCells.size(); celli++){
       allCellsPointer[celli] = mpiGrid[allCells[celli]];

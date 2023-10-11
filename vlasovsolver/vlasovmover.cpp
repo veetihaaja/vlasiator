@@ -81,6 +81,12 @@ void calculateSpatialTranslation(
     if (P::amrMaxSpatialRefLevel > 0) AMRtranslationActive = true;
 
     double t1;
+std::cout << "foo " << dt << " " << local_propagated_cells.size()  << " \n";
+    for(CellID c : local_propagated_cells)
+   {
+      std::cout << c << " at TIME_R " << mpiGrid[c]->parameters[CellParams::TIME_R] << " + " << dt <<"\n";
+      mpiGrid[c]->parameters[CellParams::TIME_R] += dt;
+   }
     
     int myRank;
     MPI_Comm_rank(MPI_COMM_WORLD,&myRank);
@@ -254,7 +260,10 @@ void calculateSpatialTranslation(
    vector<CellID> remoteTargetCellsy;
    vector<CellID> remoteTargetCellsz;
    vector<CellID> local_propagated_cells;
+   vector<vector<CellID>> tc_propagated_cells = vector<vector<CellID>>();
    vector<CellID> local_target_cells;
+   vector<vector<CellID>> tc_target_cells = vector<vector<CellID>>();
+
    vector<uint> nPencils;
    Real time=0.0;
    
@@ -264,20 +273,45 @@ void calculateSpatialTranslation(
       calculateMoments_R(mpiGrid,localCells,true);
       return;
    }
+   // TC propagation lists, TODO move out of here somewhere sensible and less often called
+   for (int tc = 0; tc <= P::maxTimeclass; tc++)
+   {
+      std::cout << "initing up tc " << tc << " vectors \n";
+      tc_propagated_cells.push_back(vector<CellID>());
+      tc_target_cells.push_back(vector<CellID>());
+   }
    
    phiprof::Timer computeTimer {"compute_cell_lists"};
    remoteTargetCellsx = mpiGrid.get_remote_cells_on_process_boundary(VLASOV_SOLVER_TARGET_X_NEIGHBORHOOD_ID);
    remoteTargetCellsy = mpiGrid.get_remote_cells_on_process_boundary(VLASOV_SOLVER_TARGET_Y_NEIGHBORHOOD_ID);
    remoteTargetCellsz = mpiGrid.get_remote_cells_on_process_boundary(VLASOV_SOLVER_TARGET_Z_NEIGHBORHOOD_ID);
-   
+
+   std::cout << "setting up tc cell vectors \n";
+   for (size_t c=0; c<localCells.size(); ++c) {
+      int cellTC = (int)mpiGrid[localCells[c]]->parameters[CellParams::TIMECLASS];
+      
+      if (do_translate_cell(mpiGrid[localCells[c]],false)) {
+         tc_propagated_cells[cellTC].push_back(localCells[c]);
+      }
+      if (do_translate_cell(mpiGrid[localCells[c]],false) &&
+          mpiGrid[localCells[c]]->sysBoundaryFlag == sysboundarytype::NOT_SYSBOUNDARY) {
+            tc_target_cells[cellTC].push_back(localCells[c]);
+      }
+   }
+   for (int tc = 0; tc <= P::maxTimeclass; tc++)
+   {
+      std::cout << "" << tc << " cellvector size "<< tc_propagated_cells[tc].size()<<" \n";
+      
+   }
    // Figure out which spatial cells are translated,
    // result independent of particle species.
+   std::cout << __FILE__<<":"<<__LINE__ <<"\n";
    for (size_t c=0; c<localCells.size(); ++c) {
       if (do_translate_cell(mpiGrid[localCells[c]],true)) {
          local_propagated_cells.push_back(localCells[c]);
       }
    }
-   
+   std::cout << __FILE__<<":"<<__LINE__ <<"\n";
    // Figure out target spatial cells, result
    // independent of particle species.
    for (size_t c=0; c<localCells.size(); ++c) {
@@ -286,6 +320,7 @@ void calculateSpatialTranslation(
          local_target_cells.push_back(localCells[c]);
       }
    }
+   std::cout << __FILE__<<":"<<__LINE__ <<"\n";
    if (P::prepareForRebalance == true && P::amrMaxSpatialRefLevel != 0) {
       // One more element to count the sums
       for (size_t c=0; c<local_propagated_cells.size()+1; c++) {
@@ -300,19 +335,25 @@ void calculateSpatialTranslation(
       phiprof::Timer timer {profName};
       SpatialCell::setCommunicatedSpecies(popID);
       //      std::cout << "I am at line " << __LINE__ << " of " << __FILE__ << std::endl;
-      calculateSpatialTranslation(
-         mpiGrid,
-         localCells,
-         local_propagated_cells,
-         local_target_cells,
-         remoteTargetCellsx,
-         remoteTargetCellsy,
-         remoteTargetCellsz,
-         nPencils,
-         dt,
-         popID,
-         time
-      );
+      for(int tc = 0; tc <= P::currentMaxTimeclass; tc++){
+         std::cout << "calculateSpatialTranslation tc " << tc << " by dt " << P::timeclassDt[tc] <<"\n";
+         int mod = 1 << (P::currentMaxTimeclass - tc);
+         if((P::fractionalTimestep % mod) == 0){
+            calculateSpatialTranslation(
+               mpiGrid,
+               localCells,
+               tc_propagated_cells[tc], //local_propagated_cells,
+               tc_target_cells[tc], //local_target_cells,
+               remoteTargetCellsx,
+               remoteTargetCellsy,
+               remoteTargetCellsz,
+               nPencils,
+               P::timeclassDt[tc],//dt,
+               popID,
+               time
+            );
+         }
+      }
    }
    
    if (Parameters::prepareForRebalance == true) {
