@@ -1245,7 +1245,7 @@ int main(int argn,char* args[]) {
       }
       
       phiprof::Timer momentsTimer {"Compute interp moments"};
-      std::cout << "for dt2 in main loop\n";
+      std::cout << "for dt2 in main loop at t="<<P::t<<"\n";
       calculateInterpolatedVelocityMoments(
          mpiGrid,
          CellParams::RHOM_DT2,
@@ -1256,7 +1256,7 @@ int main(int argn,char* args[]) {
          CellParams::P_11_DT2,
          CellParams::P_22_DT2,
          CellParams::P_33_DT2,
-         P::t+P::dt/4
+         P::t+P::dt
       );
       momentsTimer.stop();
       
