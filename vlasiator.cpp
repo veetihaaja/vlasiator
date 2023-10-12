@@ -218,21 +218,27 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
    baseDt = min(baseDt,meanFieldsCFL * dtMinMaxGlobal[2] * P::maxFieldSolverSubcycles);   
    if (myRank == MASTER_RANK) cout << "baseDt " << baseDt <<"\n";
 
+   Real fsdt;
+   if (P::dynamicTimestep) {
+      fsdt = newDt;
+   }else{
+      fsdt = P::dt;
+   }
    // we have dt in this sort of a range of timeclasses
-   int dtrange = int(log2(baseDt/newDt));
+   int dtrange = int(log2(baseDt/fsdt));
 
 
    // ... and we need to clamp that with the parameter for number of MaxTimeclasses
    P::currentMaxTimeclass = min(P::maxTimeclass, dtrange);
    
    if (myRank == MASTER_RANK) cout << "dtrange: " << dtrange << ", newDt = " << newDt <<
-    ", baseDt = " << baseDt << ", current max tc "<< P::currentMaxTimeclass<< std::endl;
-   baseDt = newDt*pow(2, P::currentMaxTimeclass);
+    ", baseDt = " << baseDt << ", fsdt " << fsdt << ", current max tc "<< P::currentMaxTimeclass<< std::endl;
+   baseDt = fsdt*pow(2, P::currentMaxTimeclass);
    if (myRank == MASTER_RANK) cout << "for new baseDt = " << baseDt << std::endl;
    
 
    // We need dts and timeclasses relative to the shortest viable maxDt:
-   int dtdiff = int(log2(localDt/newDt));
+   int dtdiff = int(log2(localDt/fsdt));
 
    int localTimeClass = max(0,P::currentMaxTimeclass - max(0, dtdiff)); // this shouldn't actually matter anymore?
    
@@ -243,7 +249,7 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
    for (vector<CellID>::const_iterator cell_id=cells.begin(); cell_id!=cells.end(); ++cell_id) {
       SpatialCell* cell = mpiGrid[*cell_id];
       cell->parameters[CellParams::TIMECLASS_RANK] = localTimeClass;
-      cell->parameters[CellParams::TIMECLASSDT_RANK] = newDt*pow(2,P::currentMaxTimeclass - localTimeClass);
+      cell->parameters[CellParams::TIMECLASSDT_RANK] = fsdt*pow(2,P::currentMaxTimeclass - localTimeClass);
 
       Real cellDt;
       if( cell->parameters[CellParams::MAXVDT] > 0) {
@@ -288,10 +294,14 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
       dtdiff = int(log2(cellDt/newDt));
       int cellTimeClass = max(0,P::MaxTimeClass - dtdiff);
       cell->parameters[CellParams::TIMECLASS] = cellTimeClass;
-      cell->parameters[CellParams::TIMECLASSDT] = newDt*pow(2,P::currentMaxTimeclass - cellTimeClass);
+      cell->parameters[CellParams::TIMECLASSDT] = fsdt*pow(2,P::currentMaxTimeclass - cellTimeClass);
    }
-
-
+   //this yoinked from within the below loop to set the timeclassDts anyway
+   newTimeclassDts = std::vector<Real>(P::maxTimeclass+1);
+   for(int i = 0; i <= P::maxTimeclass; ++i){
+      newTimeclassDts[i] = fsdt*pow(2,P::currentMaxTimeclass - min(i,P::currentMaxTimeclass));
+   }
+   //!TODO this needs to go before the above
    // reduce/increase dt if it is too high for any of the three propagators or too low for all propagators
    if ((P::dt > dtMaxGlobal[0] * P::vlasovSolverMaxCFL ||
         P::dt > dtMaxGlobal[1] * P::vlasovSolverMaxCFL * P::maxSlAccelerationSubcycles ||
@@ -307,7 +317,6 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
       newDt = meanVlasovCFL * dtMaxGlobal[0];
       newDt = min(newDt, meanVlasovCFL * dtMaxGlobal[1] * P::maxSlAccelerationSubcycles);
       newDt = min(newDt, meanFieldsCFL * dtMaxGlobal[2] * P::maxFieldSolverSubcycles);
-      newTimeclassDts = std::vector<Real>(P::maxTimeclass+1);
       for(int i = 0; i <= P::maxTimeclass; ++i){
          newTimeclassDts[i] = newDt*pow(2,P::currentMaxTimeclass - min(i,P::currentMaxTimeclass));
       }
@@ -853,6 +862,7 @@ int main(int argn,char* args[]) {
       }
       // Also update all moments. They won't be transmitted to FSgrid until the field solver is called, though.
       phiprof::Timer computeMomentsTimer {"Compute interp moments"};
+      std::cout << "for initial interpolated moments\n";
       calculateInterpolatedVelocityMoments(
          mpiGrid,
          CellParams::RHOM,
@@ -863,7 +873,7 @@ int main(int argn,char* args[]) {
          CellParams::P_11,
          CellParams::P_22,
          CellParams::P_33,
-         P::t+P::dt/2 // CHECK
+         P::t+P::dt/4
          );
    }
 
@@ -1235,6 +1245,7 @@ int main(int argn,char* args[]) {
       }
       
       phiprof::Timer momentsTimer {"Compute interp moments"};
+      std::cout << "for dt2 in main loop\n";
       calculateInterpolatedVelocityMoments(
          mpiGrid,
          CellParams::RHOM_DT2,
@@ -1245,7 +1256,7 @@ int main(int argn,char* args[]) {
          CellParams::P_11_DT2,
          CellParams::P_22_DT2,
          CellParams::P_33_DT2,
-         P::t+P::dt/2
+         P::t+P::dt/4
       );
       momentsTimer.stop();
       
@@ -1355,6 +1366,7 @@ int main(int argn,char* args[]) {
       momentsTimer.start();
       // *here we compute rho and rho_v for timestep t + dt, so next
       // timestep * //
+      std::cout << "for timestep t+dt\n";
       calculateInterpolatedVelocityMoments(
          mpiGrid,
          CellParams::RHOM,
@@ -1365,7 +1377,7 @@ int main(int argn,char* args[]) {
          CellParams::P_11,
          CellParams::P_22,
          CellParams::P_33,
-         P::t+P::dt
+         P::t+P::dt/2
       );
       momentsTimer.stop();
 
@@ -1385,7 +1397,7 @@ int main(int argn,char* args[]) {
       P::meshRepartitioned = false;
       globalflags::ionosphereJustSolved = false;
       ++P::fractionalTimestep;
-      if(P::fractionalTimestep % (2 << (P::currentMaxTimeclass-1)) == 0){
+      if(P::fractionalTimestep % (1 << (P::currentMaxTimeclass)) == 0){
          ++P::tstep;
          P::fractionalTimestep = 0;
       }

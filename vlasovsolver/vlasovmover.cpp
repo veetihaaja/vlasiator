@@ -607,6 +607,7 @@ void calculateInterpolatedVelocityMoments(
       const double tr = SC->parameters[CellParams::TIME_R];
       const double tv = SC->parameters[CellParams::TIME_V];
       const double a = (t - tr)/(tv - tr);
+      if(cellID == 16) std::cout << "target t = " << t << " (tr,tv)=("<<tr << ", "<<tv<<")" << " for a =" << a <<  "\n";
       SC->parameters[cp_rhom  ] = (1-a) * SC->parameters[CellParams::RHOM_R] + a * SC->parameters[CellParams::RHOM_V];
       SC->parameters[cp_vx] =     (1-a) * SC->parameters[CellParams::VX_R]   + a * SC->parameters[CellParams::VX_V];
       SC->parameters[cp_vy] =     (1-a) * SC->parameters[CellParams::VY_R]   + a * SC->parameters[CellParams::VY_V];
@@ -617,7 +618,7 @@ void calculateInterpolatedVelocityMoments(
       SC->parameters[cp_p33]   =  (1-a) * SC->parameters[CellParams::P_33_R] + a * SC->parameters[CellParams::P_33_V];
 
       // SC->parameters[cp_rhom  ] = 0.5* ( SC->parameters[CellParams::RHOM_R] + SC->parameters[CellParams::RHOM_V] );
-      // SC->parameters[cp_vx] = 0.5* ( SC->parameters[CellParams::VX_R] + SC->parameters[CellParams::VX_V] );
+      // SC->parameters[cp_vx]   = 0.5* ( SC->parameters[CellParams::VX_R] + SC->parameters[CellParams::VX_V] );
       // SC->parameters[cp_vy] = 0.5* ( SC->parameters[CellParams::VY_R] + SC->parameters[CellParams::VY_V] );
       // SC->parameters[cp_vz] = 0.5* ( SC->parameters[CellParams::VZ_R] + SC->parameters[CellParams::VZ_V] );
       // SC->parameters[cp_rhoq  ] = 0.5* ( SC->parameters[CellParams::RHOQ_R] + SC->parameters[CellParams::RHOQ_V] );
@@ -627,7 +628,8 @@ void calculateInterpolatedVelocityMoments(
 
       for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
          spatial_cell::Population& pop = SC->get_population(popID);
-         pop.RHO = 0.5 * ( pop.RHO_R + pop.RHO_V );
+         //pop.RHO = 0.5 * ( pop.RHO_R + pop.RHO_V );
+         pop.RHO = (1-a) * pop.RHO_R + a * pop.RHO_V ;
          for(int i=0; i<3; i++) {
             pop.V[i] = (1-a) * pop.V_R[i] + a * pop.V_V[i];
             pop.P[i] = (1-a) * pop.P_R[i] + a * pop.P_V[i];
