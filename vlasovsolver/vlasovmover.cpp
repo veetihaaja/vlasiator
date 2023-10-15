@@ -449,6 +449,8 @@ void calculateAcceleration(const uint popID,const uint globalMaxSubcycles,const 
       phiprof::Timer semilagAccTimer {"cell-semilag-acc"};
       cpu_accelerate_cell(mpiGrid[cellID],popID,map_order,subcycleDt);
       mpiGrid[cellID]->parameters[CellParams::TIME_V] += subcycleDt;
+      if (subcycleDt < 4)
+         std::cout<< "Cellid " << cellID << ": subcycledt " << subcycleDt << " maxvdt "<< maxVdt << " step " << step << " globalmax " <<  globalMaxSubcycles << " step: " << step << "\n";
 
       semilagAccTimer.stop();
    }
@@ -526,9 +528,9 @@ void calculateAcceleration(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& 
                   prepareAccelerateCell(SC, popID);
 
                   //update max subcycles for all cells in this process
-                  maxSubcycles = max((int)getAccelerationSubcycles(SC, dt, popID), maxSubcycles);
+                  maxSubcycles = max((int)getAccelerationSubcycles(SC, dt_cell, popID), maxSubcycles);
                   spatial_cell::Population& pop = SC->get_population(popID);
-                  pop.ACCSUBCYCLES = getAccelerationSubcycles(SC, dt, popID);
+                  pop.ACCSUBCYCLES = getAccelerationSubcycles(SC, dt_cell, popID);
                }
          }
          // Compute global maximum for number of subcycles
@@ -540,7 +542,7 @@ void calculateAcceleration(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& 
                // prune list of cells to propagate to only contained those which are now subcycled
                vector<CellID> temp;
                for (const auto& cell: propagatedCells) {
-                  if (step < getAccelerationSubcycles(mpiGrid[cell], dt, popID) ) {
+                  if (step < getAccelerationSubcycles(mpiGrid[cell], dt*mpiGrid[cell]->parameters[CellParams::TIMECLASSDT], popID) ) {
                      temp.push_back(cell);
                   }
                }
@@ -548,7 +550,7 @@ void calculateAcceleration(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& 
                propagatedCells.swap(temp);
             }
             // Accelerate population over one subcycle step
-            calculateAcceleration(popID,(uint)globalMaxSubcycles,step,mpiGrid,propagatedCells,dt);
+            calculateAcceleration(popID,(uint)globalMaxSubcycles,step,mpiGrid,propagatedCells,dt*mpiGrid[cell]->parameters[CellParams::TIMECLASSDT]);
          } // for-loop over acceleration substeps
          
          // final adjust for all cells, also fixing remote cells.
@@ -570,12 +572,12 @@ void calculateAcceleration(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& 
       }
       if(abs(cell->parameters[CellParams::XCRD]+cell->parameters[CellParams::DX]/2) < 6*P::dx_ini)
          {
-            cell->parameters[CellParams::MAXVDT] /= 2;
+            //cell->parameters[CellParams::MAXVDT] /= 2;
             // cout << "maxvdt \n";
          }
       if(abs(cell->parameters[CellParams::XCRD]+cell->parameters[CellParams::DX]/2) < 2*P::dx_ini)
          {
-            cell->parameters[CellParams::MAXVDT] /= 2;
+            //cell->parameters[CellParams::MAXVDT] /= 2;
             // cout << "maxvdt \n";
          }
    }
