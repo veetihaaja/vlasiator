@@ -90,6 +90,18 @@ void addTimedBarrier(string name){
    MPI_Barrier(MPI_COMM_WORLD);
 }
 
+inline bool isDtTooLarge(Real dt, Real rdt, Real vdt, Real fsdt){
+   return (dt > rdt * P::vlasovSolverMaxCFL ||
+           dt > vdt * P::vlasovSolverMaxCFL * P::maxSlAccelerationSubcycles ||
+           dt > fsdt * P::fieldSolverMaxCFL * P::maxFieldSolverSubcycles);
+}
+
+inline bool isDtTooSmall(Real dt, Real rdt, Real vdt, Real fsdt){
+   return (dt < rdt * P::vlasovSolverMinCFL &&
+           dt < vdt * P::vlasovSolverMinCFL * P::maxSlAccelerationSubcycles &&
+           dt < fsdt * P::fieldSolverMinCFL * P::maxFieldSolverSubcycles);
+}
+
 void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
 			FsGrid< fsgrids::technical, FS_STENCIL_WIDTH> & technicalGrid, Real &newDt, bool &isChanged,
          std::vector<Real>& newTimeclassDts) {
@@ -218,20 +230,34 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
    baseDt = min(baseDt,meanFieldsCFL * dtMinMaxGlobal[2] * P::maxFieldSolverSubcycles);   
    if (myRank == MASTER_RANK) cout << "baseDt " << baseDt <<"\n";
 
-   Real fsdt;
+   Real fsdt; // newDt/new field solver timestep
    if (P::dynamicTimestep) {
+      // reduce/increase dt if it is too high for any of the three propagators or too low for all propagators
+      if (isDtTooLarge(P::timeclassDt[P::currentMaxTimeclass], dtMaxGlobal[0],dtMaxGlobal[1],dtMaxGlobal[2]) ||
+          isDtTooSmall(P::timeclassDt[P::currentMaxTimeclass], dtMaxGlobal[0],dtMaxGlobal[1],dtMaxGlobal[2])) {
+
+         // new dt computed
+         isChanged = true;
+
+         // set new timestep to the lowest one of all interval-midpoints
+         newDt = meanVlasovCFL * dtMaxGlobal[0];
+         newDt = min(newDt, meanVlasovCFL * dtMaxGlobal[1] * P::maxSlAccelerationSubcycles);
+         newDt = min(newDt, meanFieldsCFL * dtMaxGlobal[2] * P::maxFieldSolverSubcycles);
+      }
       fsdt = newDt;
    }else{
       fsdt = P::dt;
    }
-   // we have dt in this sort of a range of timeclasses
-   int dtrange = int(log2(baseDt/fsdt));
-
+   // This is the full range of timeclasses
+   int timeclassRange = int(log2(baseDt/fsdt));
 
    // ... and we need to clamp that with the parameter for number of MaxTimeclasses
-   P::currentMaxTimeclass = min(P::maxTimeclass, dtrange);
-   
-   if (myRank == MASTER_RANK) cout << "dtrange: " << dtrange << ", newDt = " << newDt <<
+   P::currentMaxTimeclass = min(P::maxTimeclass, timeclassRange);
+   for(int i = 0; i <= P::maxTimeclass; ++i){
+      newTimeclassDts[i] = fsdt*pow(2,P::currentMaxTimeclass - min(i,P::currentMaxTimeclass));
+   }
+
+   if (myRank == MASTER_RANK) cout << "dtrange: " << timeclassRange << ", newDt = " << newDt <<
     ", baseDt = " << baseDt << ", fsdt " << fsdt << ", current max tc "<< P::currentMaxTimeclass<< std::endl;
    baseDt = fsdt*pow(2, P::currentMaxTimeclass);
    if (myRank == MASTER_RANK) cout << "for new baseDt = " << baseDt << std::endl;
@@ -239,13 +265,8 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
 
    // We need dts and timeclasses relative to the shortest viable maxDt:
    int dtdiff = int(log2(localDt/fsdt));
-
    int localTimeClass = max(0,P::currentMaxTimeclass - max(0, dtdiff)); // this shouldn't actually matter anymore?
    
-   // cout << myRank<<": localTimeClass = " << localTimeClass << " for localdt " << localDt << " and dtdiff "<< dtdiff << 
-   // " to tc dt = " << newDt*pow(2,P::currentMaxTimeclass - localTimeClass) << "; globalDt " << newDt << "; global longest dt "<< baseDt << std::endl;
-   
-
    for (vector<CellID>::const_iterator cell_id=cells.begin(); cell_id!=cells.end(); ++cell_id) {
       SpatialCell* cell = mpiGrid[*cell_id];
       cell->parameters[CellParams::TIMECLASS_RANK] = localTimeClass;
@@ -301,26 +322,8 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
    for(int i = 0; i <= P::maxTimeclass; ++i){
       newTimeclassDts[i] = fsdt*pow(2,P::currentMaxTimeclass - min(i,P::currentMaxTimeclass));
    }
-   //!TODO this needs to go before the above
-   // reduce/increase dt if it is too high for any of the three propagators or too low for all propagators
-   if ((P::dt > dtMaxGlobal[0] * P::vlasovSolverMaxCFL ||
-        P::dt > dtMaxGlobal[1] * P::vlasovSolverMaxCFL * P::maxSlAccelerationSubcycles ||
-        P::dt > dtMaxGlobal[2] * P::fieldSolverMaxCFL * P::maxFieldSolverSubcycles) ||
-       (P::dt < dtMaxGlobal[0] * P::vlasovSolverMinCFL &&
-        P::dt < dtMaxGlobal[1] * P::vlasovSolverMinCFL * P::maxSlAccelerationSubcycles &&
-        P::dt < dtMaxGlobal[2] * P::fieldSolverMinCFL * P::maxFieldSolverSubcycles)) {
 
-      // new dt computed
-      isChanged = true;
-
-      // set new timestep to the lowest one of all interval-midpoints
-      newDt = meanVlasovCFL * dtMaxGlobal[0];
-      newDt = min(newDt, meanVlasovCFL * dtMaxGlobal[1] * P::maxSlAccelerationSubcycles);
-      newDt = min(newDt, meanFieldsCFL * dtMaxGlobal[2] * P::maxFieldSolverSubcycles);
-      for(int i = 0; i <= P::maxTimeclass; ++i){
-         newTimeclassDts[i] = newDt*pow(2,P::currentMaxTimeclass - min(i,P::currentMaxTimeclass));
-      }
-         
+   if (isChanged){
 
       logFile << "(TIMESTEP) New dt = " << newDt << " computed on step " << P::tstep << " at " << P::t
               << "s   Maximum possible dt (not including  vlasovsolver CFL " << P::vlasovSolverMinCFL << "-"
@@ -331,7 +334,7 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
               << writeVerbose;
 
       std::stringstream tcdts;
-      for(int i = 0; i < P::maxTimeclass; ++i){
+      for(int i = 0; i <= P::maxTimeclass; ++i){
          tcdts << newTimeclassDts[i] << " ";
       }
       tcdts << endl;
@@ -872,8 +875,7 @@ int main(int argn,char* args[]) {
          CellParams::RHOQ,
          CellParams::P_11,
          CellParams::P_22,
-         CellParams::P_33,
-         P::t+P::dt/4
+         CellParams::P_33
          );
    }
 
@@ -1255,8 +1257,7 @@ int main(int argn,char* args[]) {
          CellParams::RHOQ_DT2,
          CellParams::P_11_DT2,
          CellParams::P_22_DT2,
-         CellParams::P_33_DT2,
-         P::t+P::dt
+         CellParams::P_33_DT2
       );
       momentsTimer.stop();
       
@@ -1376,8 +1377,7 @@ int main(int argn,char* args[]) {
          CellParams::RHOQ,
          CellParams::P_11,
          CellParams::P_22,
-         CellParams::P_33,
-         P::t+P::dt/2
+         CellParams::P_33
       );
       momentsTimer.stop();
 
