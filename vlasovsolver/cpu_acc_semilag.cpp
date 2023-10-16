@@ -90,14 +90,14 @@ void cpu_accelerate_cell(SpatialCell* spatial_cell,
    //double t1 = MPI_Wtime();
    vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& vmesh = spatial_cell->get_velocity_mesh(popID);
 
-    if(doGhost == false){
-       cpu_accelerate_cell(spatial_cell, popID, map_order, dt, true);
-    }
-    else {
-       spatial_cell->set_velocity_mesh_ghost(popID);
-       spatial_cell->set_velocity_blocks_ghost(popID);
-       vmesh = vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>(spatial_cell->get_velocity_mesh_ghost(popID));
-    }
+   //  if(doGhost == false){
+   //     cpu_accelerate_cell(spatial_cell, popID, map_order, dt, true);
+   //  }
+   //  else {
+   //     spatial_cell->set_velocity_mesh_ghost(popID);
+   //     spatial_cell->set_velocity_blocks_ghost(popID);
+   //     vmesh = vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>(spatial_cell->get_velocity_mesh_ghost(popID));
+   //  }
    
    //vmesh::VelocityBlockContainer<vmesh::LocalID>& blockContainer = spatial_cell->get_velocity_blocks(popID);
 
