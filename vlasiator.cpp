@@ -250,7 +250,7 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
    }
    // This is the full range of timeclasses
    int timeclassRange = int(log2(baseDt/fsdt));
-
+   
    // ... and we need to clamp that with the parameter for number of MaxTimeclasses
    P::currentMaxTimeclass = min(P::maxTimeclass, timeclassRange);
    for(int i = 0; i <= P::maxTimeclass; ++i){
@@ -1195,7 +1195,7 @@ int main(int argn,char* args[]) {
          if(dtIsChanged) {
             phiprof::Timer updateDtimer {"update-dt"};
             //propagate velocity space back to real-time
-            if( P::propagateVlasovAcceleration ) {
+            if( P::propagateVlasovAcceleration && false) {
                // Back half dt to real time, forward by new half dt
                calculateAcceleration(mpiGrid,-0.5); //This sets cells back to previous TIME_R
                calculateAcceleration(mpiGrid, 0.5); //This propagates by 0.5 

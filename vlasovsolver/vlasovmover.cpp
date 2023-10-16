@@ -412,6 +412,8 @@ void calculateAcceleration(const uint popID,const uint globalMaxSubcycles,const 
    for (size_t c=0; c<propagatedCells.size(); ++c) {
       const CellID cellID = propagatedCells[c];
       const Real maxVdt = mpiGrid[cellID]->get_max_v_dt(popID);//*mpiGrid[cellID]->parameters[CellParams::TIMECLASSDT];
+      Real celldt = dt*mpiGrid[cellID]->parameters[CellParams::TIMECLASSDT];
+
       
       //compute subcycle dt. The length is maxVdt on all steps
       //except the last one. This is to keep the neighboring
@@ -421,8 +423,8 @@ void calculateAcceleration(const uint popID,const uint globalMaxSubcycles,const 
       //spatial block neighbors as much in sync as possible for
       //adjust blocks.
       Real subcycleDt;
-      if( (step + 1) * maxVdt > fabs(dt)*mpiGrid[cellID]->parameters[CellParams::TIMECLASSDT]) {
-	      subcycleDt = max(fabs(dt)*mpiGrid[cellID]->parameters[CellParams::TIMECLASSDT] - step * maxVdt, 0.0);
+      if( (step + 1) * maxVdt > fabs(celldt)) {
+	      subcycleDt = max(fabs(celldt) - step * maxVdt, 0.0);
       } else{
          subcycleDt = maxVdt;
       }
@@ -448,9 +450,13 @@ void calculateAcceleration(const uint popID,const uint globalMaxSubcycles,const 
       uint map_order=rndInt%3;
       phiprof::Timer semilagAccTimer {"cell-semilag-acc"};
       cpu_accelerate_cell(mpiGrid[cellID],popID,map_order,subcycleDt);
+      if (cellID == 16)
+         #pragma omp critical(output)
+         {
+            std::cout<< "Cellid " << cellID << " at t=" << mpiGrid[cellID]->parameters[CellParams::TIME_V] <<": subcycledt " << subcycleDt << " maxvdt "<< maxVdt << " step " << step << " globalmax " <<  globalMaxSubcycles << " step: " << step << "\n";
+         }
+
       mpiGrid[cellID]->parameters[CellParams::TIME_V] += subcycleDt;
-      if (subcycleDt < 4)
-         std::cout<< "Cellid " << cellID << ": subcycledt " << subcycleDt << " maxvdt "<< maxVdt << " step " << step << " globalmax " <<  globalMaxSubcycles << " step: " << step << "\n";
 
       semilagAccTimer.stop();
    }

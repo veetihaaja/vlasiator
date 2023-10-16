@@ -90,8 +90,8 @@ void cpu_accelerate_cell(SpatialCell* spatial_cell,
    //double t1 = MPI_Wtime();
    vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& vmesh = spatial_cell->get_velocity_mesh(popID);
 
-    if(!doGhost){
-       cpu_accelerate_cell(spatial_cell, popID, map_order, dt/2, true);
+    if(doGhost == false){
+       cpu_accelerate_cell(spatial_cell, popID, map_order, dt, true);
     }
     else {
        spatial_cell->set_velocity_mesh_ghost(popID);
@@ -108,6 +108,20 @@ void cpu_accelerate_cell(SpatialCell* spatial_cell,
    Transform<Real,3,Affine> fwd_transform= compute_acceleration_transformation(spatial_cell,popID,dt);
    Transform<Real,3,Affine> bwd_transform= fwd_transform.inverse();
    transformTimer.stop();
+
+   if (spatial_cell->parameters[CellParams::CELLID] == 16)
+   #pragma omp critical(output)
+   {
+      std::cout<< "Cellid " << spatial_cell->parameters[CellParams::CELLID] << 
+      " at t=" << spatial_cell->parameters[CellParams::TIME_V] <<": dt " << 
+      dt <<  "\n";
+      std::stringstream ss;
+      ss << fwd_transform(0,0) << " " << fwd_transform(0,1) << " " << fwd_transform(0,2) << "\n" <<
+            fwd_transform(1,0) << " " << fwd_transform(1,1) << " " << fwd_transform(1,2) << "\n" <<
+            fwd_transform(2,0) << " " << fwd_transform(2,1) << " " << fwd_transform(2,2) << "\n";
+      std::cout << ss.str() << "\n";
+   }
+
 
    const uint8_t refLevel = 0;
    Real intersection_z,intersection_z_di,intersection_z_dj,intersection_z_dk;
