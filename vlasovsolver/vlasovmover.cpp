@@ -276,7 +276,7 @@ void calculateSpatialTranslation(
    // TC propagation lists, TODO move out of here somewhere sensible and less often called
    for (int tc = 0; tc <= P::maxTimeclass; tc++)
    {
-      std::cout << "initing up tc " << tc << " vectors \n";
+      // std::cout << "initing up tc " << tc << " vectors \n";
       tc_propagated_cells.push_back(vector<CellID>());
       tc_target_cells.push_back(vector<CellID>());
    }
@@ -286,7 +286,7 @@ void calculateSpatialTranslation(
    remoteTargetCellsy = mpiGrid.get_remote_cells_on_process_boundary(VLASOV_SOLVER_TARGET_Y_NEIGHBORHOOD_ID);
    remoteTargetCellsz = mpiGrid.get_remote_cells_on_process_boundary(VLASOV_SOLVER_TARGET_Z_NEIGHBORHOOD_ID);
 
-   std::cout << "setting up tc cell vectors \n";
+   // std::cout << "setting up tc cell vectors \n";
    for (size_t c=0; c<localCells.size(); ++c) {
       int cellTC = (int)mpiGrid[localCells[c]]->parameters[CellParams::TIMECLASS];
       
@@ -298,20 +298,18 @@ void calculateSpatialTranslation(
             tc_target_cells[cellTC].push_back(localCells[c]);
       }
    }
-   for (int tc = 0; tc <= P::maxTimeclass; tc++)
-   {
-      std::cout << "" << tc << " cellvector size "<< tc_propagated_cells[tc].size()<<" \n";
+   // for (int tc = 0; tc <= P::maxTimeclass; tc++)
+   // {
+   //    std::cout << "" << tc << " cellvector size "<< tc_propagated_cells[tc].size()<<" \n";
       
-   }
+   // }
    // Figure out which spatial cells are translated,
    // result independent of particle species.
-   std::cout << __FILE__<<":"<<__LINE__ <<"\n";
    for (size_t c=0; c<localCells.size(); ++c) {
       if (do_translate_cell(mpiGrid[localCells[c]],true)) {
          local_propagated_cells.push_back(localCells[c]);
       }
    }
-   std::cout << __FILE__<<":"<<__LINE__ <<"\n";
    // Figure out target spatial cells, result
    // independent of particle species.
    for (size_t c=0; c<localCells.size(); ++c) {
@@ -320,7 +318,6 @@ void calculateSpatialTranslation(
          local_target_cells.push_back(localCells[c]);
       }
    }
-   std::cout << __FILE__<<":"<<__LINE__ <<"\n";
    if (P::prepareForRebalance == true && P::amrMaxSpatialRefLevel != 0) {
       // One more element to count the sums
       for (size_t c=0; c<local_propagated_cells.size()+1; c++) {
@@ -334,11 +331,11 @@ void calculateSpatialTranslation(
       string profName = "translate "+getObjectWrapper().particleSpecies[popID].name;
       phiprof::Timer timer {profName};
       SpatialCell::setCommunicatedSpecies(popID);
-      //      std::cout << "I am at line " << __LINE__ << " of " << __FILE__ << std::endl;
       for(int tc = 0; tc <= P::currentMaxTimeclass; tc++){
-         std::cout << "calculateSpatialTranslation tc " << tc << " by dt " << P::timeclassDt[tc] <<"\n";
          int mod = 1 << (P::currentMaxTimeclass - tc);
          if((P::fractionalTimestep % mod) == 0){
+            
+            std::cout << tc_propagated_cells[tc].size() << " cells: calculateSpatialTranslation tc " << tc << " by dt " << P::timeclassDt[tc] <<"\n";
             calculateSpatialTranslation(
                mpiGrid,
                localCells,
@@ -412,7 +409,7 @@ void calculateAcceleration(const uint popID,const uint globalMaxSubcycles,const 
    for (size_t c=0; c<propagatedCells.size(); ++c) {
       const CellID cellID = propagatedCells[c];
       const Real maxVdt = mpiGrid[cellID]->get_max_v_dt(popID);//*mpiGrid[cellID]->parameters[CellParams::TIMECLASSDT];
-      Real celldt = dt*mpiGrid[cellID]->parameters[CellParams::TIMECLASSDT];
+      Real celldt = dt*mpiGrid[cellID]->get_tc_dt();
 
       
       //compute subcycle dt. The length is maxVdt on all steps
@@ -500,32 +497,38 @@ void calculateAcceleration(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& 
          int maxSubcycles=0;
          int globalMaxSubcycles;
 
-         // Set active population
-         SpatialCell::setCommunicatedSpecies(popID);
-         
-         // Iterate through all local cells and collect cells to propagate.
-         // Ghost cells (spatial cells at the boundary of the simulation 
-         // volume) do not need to be propagated:
-         vector<CellID> propagatedCells;
-         for (size_t c=0; c<cells.size(); ++c) {
-            SpatialCell* SC = mpiGrid[cells[c]];
-            Real dt_cell;
-            if(dt < 0.0) { // Revert to previous real time, stored in cell
-                  dt_cell = SC->parameters[CellParams::TIME_R] - P::t;
-               }
-               else { // dt is a factor of 0.5 or 1.0; so dt_cell is local timestep * dt factor
-                  dt_cell = dt*SC->parameters[CellParams::TIMESTEP_R];
-               }
-            const vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& vmesh = SC->get_velocity_mesh(popID);
-            // disregard boundary cells, in preparation for acceleration
-            if (  (SC->sysBoundaryFlag == sysboundarytype::NOT_SYSBOUNDARY) ||
-                  // Include inflow-Maxwellian
-                  (P::vlasovAccelerateMaxwellianBoundaries && (SC->sysBoundaryFlag == sysboundarytype::SET_MAXWELLIAN)) ) {
-                     if (vmesh.size() != 0 && 
-                        SC->get_timeclass_turn() == true
-                        ) {
-                           //do not propagate spatial cells with no blocks
-                           //propagate only those cells that have 
+       // Set active population
+       SpatialCell::setCommunicatedSpecies(popID);
+       
+       // Iterate through all local cells and collect cells to propagate.
+       // Ghost cells (spatial cells at the boundary of the simulation 
+       // volume) do not need to be propagated:
+       vector<CellID> propagatedCells;
+       for (size_t c=0; c<cells.size(); ++c) {
+          SpatialCell* SC = mpiGrid[cells[c]];
+          Real dt_cell;
+          if(dt < 0.0) { // Revert to previous real time, stored in cell
+               dt_cell = SC->parameters[CellParams::TIME_R] - P::t;
+            }
+            else { // dt is a factor of 0.5 or 1.0; so dt_cell is local timestep * dt factor
+               dt_cell = dt*SC->get_tc_dt();
+            }
+         // if ( (SC->parameters[CellParams::CELLID] == 9 || SC->parameters[CellParams::CELLID] == 11 || SC->parameters[CellParams::CELLID] == 12))
+            // std::cout << "vdt on tc  " << SC->parameters[CellParams::TIMECLASS] << " on ftstep " << P::fractionalTimestep << ", dt " << dt_cell <<"\n";
+
+          const vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& vmesh = SC->get_velocity_mesh(popID);
+          // disregard boundary cells, in preparation for acceleration
+          if (  (SC->sysBoundaryFlag == sysboundarytype::NOT_SYSBOUNDARY) ||
+                // Include inflow-Maxwellian
+                (P::vlasovAccelerateMaxwellianBoundaries && (SC->sysBoundaryFlag == sysboundarytype::SET_MAXWELLIAN)) ) {
+                  if (vmesh.size() != 0){   //do not propagate spatial cells with no blocks
+                        if(P::tc_leapfrog_init == false){
+                           propagatedCells.push_back(cells[c]);
+                        }
+                        else if (SC->parameters[CellParams::TIMECLASS] == P::currentMaxTimeclass){
+                           propagatedCells.push_back(cells[c]);
+                        }
+                        else if ( SC->get_timeclass_turn_v() == true){ // propagate only if it is the cell's turn)
                            propagatedCells.push_back(cells[c]);
                         }
                   //prepare for acceleration, updates max dt for each cell, it
@@ -533,36 +536,36 @@ void calculateAcceleration(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& 
                   //they are not propagated
                   prepareAccelerateCell(SC, popID);
 
-                  //update max subcycles for all cells in this process
-                  maxSubcycles = max((int)getAccelerationSubcycles(SC, dt_cell, popID), maxSubcycles);
-                  spatial_cell::Population& pop = SC->get_population(popID);
-                  pop.ACCSUBCYCLES = getAccelerationSubcycles(SC, dt_cell, popID);
-               }
-         }
-         // Compute global maximum for number of subcycles
-         MPI_Allreduce(&maxSubcycles, &globalMaxSubcycles, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-         
-         // substep global max times
-         for(uint step=0; step<(uint)globalMaxSubcycles; ++step) {
-            if(step > 0) {
-               // prune list of cells to propagate to only contained those which are now subcycled
-               vector<CellID> temp;
-               for (const auto& cell: propagatedCells) {
-                  if (step < getAccelerationSubcycles(mpiGrid[cell], dt*mpiGrid[cell]->parameters[CellParams::TIMECLASSDT], popID) ) {
-                     temp.push_back(cell);
-                  }
-               }
-               
-               propagatedCells.swap(temp);
-            }
-            // Accelerate population over one subcycle step
-            calculateAcceleration(popID,(uint)globalMaxSubcycles,step,mpiGrid,propagatedCells,dt*mpiGrid[cell]->parameters[CellParams::TIMECLASSDT]);
-         } // for-loop over acceleration substeps
-         
-         // final adjust for all cells, also fixing remote cells.
-         adjustVelocityBlocks(mpiGrid, cells, true, popID);
-      } // for-loop over particle species
-   }
+             //update max subcycles for all cells in this process
+             maxSubcycles = max((int)getAccelerationSubcycles(SC, dt_cell, popID), maxSubcycles);
+             spatial_cell::Population& pop = SC->get_population(popID);
+             pop.ACCSUBCYCLES = getAccelerationSubcycles(SC, dt_cell, popID);
+          
+       }
+       // Compute global maximum for number of subcycles
+       MPI_Allreduce(&maxSubcycles, &globalMaxSubcycles, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+       
+       // substep global max times
+       for(uint step=0; step<(uint)globalMaxSubcycles; ++step) {
+          if(step > 0) {
+             // prune list of cells to propagate to only contained those which are now subcycled
+             vector<CellID> temp;
+             for (const auto& cell: propagatedCells) {
+                if (step < getAccelerationSubcycles(mpiGrid[cell], dt*mpiGrid[cell]->get_tc_dt(), popID) ) {
+                   temp.push_back(cell);
+                }
+             }
+             
+             propagatedCells.swap(temp);
+          }
+          // Accelerate population over one subcycle step
+          calculateAcceleration(popID,(uint)globalMaxSubcycles,step,mpiGrid,propagatedCells,dt*mpiGrid[cell]->get_tc_dt());
+       } // for-loop over acceleration substeps
+       
+       // final adjust for all cells, also fixing remote cells.
+       adjustVelocityBlocks(mpiGrid, cells, true, popID);
+    } // for-loop over particle species
+    phiprof::stop("semilag-acc");
 
    // Recalculate "_V" velocity moments
    calculateMoments_V(mpiGrid,cells,true);

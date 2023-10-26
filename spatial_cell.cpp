@@ -565,24 +565,19 @@ namespace spatial_cell {
     * @return local dt
    */
    const Real& SpatialCell::get_tc_dt() const {
-      return this->parameters[CellParams::TIMECLASSDT];
+      return P::timeclassDt[this->parameters[CellParams::TIMECLASS]];
    }
 
-//// hmmmm
    const bool SpatialCell::get_timeclass_turn_v() const {
       // If on max timeclass, we propagate on each loop.
       int mod = 1 << (P::currentMaxTimeclass - (int)this->parameters[CellParams::TIMECLASS]);
       bool ret = ((P::fractionalTimestep % mod) == 0);
-
-
-      // if (this->parameters[CellParams::CELLID] == 9 || this->parameters[CellParams::CELLID] == 11 || this->parameters[CellParams::CELLID] == 12)
-      //    std::cout << ret << " on V on tc  " << this->parameters[CellParams::TIMECLASS] << " on ftstep " << P::fractionalTimestep << ", t " << P::tstep << " modulo " << mod <<"\n";
       return ret;
-      
    }
 
    const bool SpatialCell::get_timeclass_turn_r() const {
       return this->get_timeclass_turn_v();
+      /* // Obsolete tries for fancy and incorrect stepping
       if (this->parameters[CellParams::TIMECLASS] == P::currentMaxTimeclass) {
          return true;
       }
@@ -595,7 +590,7 @@ namespace spatial_cell {
             // std::cout << "R on tc  " << this->parameters[CellParams::TIMECLASS] << " ftstep " << P::fractionalTimestep <<", t " << P::tstep <<"\n";
          return ret;
       }
-      //return (P::fractionalTimestep+int(pow(2,P::currentMaxTimeclass)/2)) % pow(2,P::currentMaxTimeclass - this->CellParams[CellParams::TIMECLASS]) == 0;
+      */
    }
 
    /** Get MPI datatype for sending the cell data.

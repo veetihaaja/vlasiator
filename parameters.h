@@ -66,6 +66,18 @@ struct Parameters {
    static int maxTimeclass;
    static int timeclassLBmantissa;
    static bool tc_leapfrog_init;
+
+   static bool tcDebugBox;          // Force timeclass 1 with the box
+   static int tcOverrideTimeclass;  // Set fixed timeclass everywhere [debugging, default -1 i.e. off]
+   static bool tcRankwise;          // are cell timeclasses chosen by MPI rank? 
+
+   static Realf tcBoxHalfWidthX;
+   static Realf tcBoxHalfWidthY;
+   static Realf tcBoxHalfWidthZ;
+   static Realf tcBoxCenterX;
+   static Realf tcBoxCenterY;
+   static Realf tcBoxCenterZ;
+
    static Real vlasovSolverMaxCFL;   /*!< The maximum CFL limit for propagation of distribution function. Used to set
                                         timestep if useCFLlimit is true. */
    static Real vlasovSolverMinCFL;   /*!< The minimum CFL limit for propagation of distribution function. Used to set

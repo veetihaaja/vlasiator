@@ -248,11 +248,18 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
    }else{
       fsdt = P::dt;
    }
-   // This is the full range of timeclasses
+   // This is the full range of timeclasses that could be used based on the physical environment
    int timeclassRange = int(log2(baseDt/fsdt));
    
    // ... and we need to clamp that with the parameter for number of MaxTimeclasses
    P::currentMaxTimeclass = min(P::maxTimeclass, timeclassRange);
+   if(P::tcOverrideTimeclass > -1){
+      std::cerr << "Setting all tc to " << P::tcOverrideTimeclass << "\n";
+      P::currentMaxTimeclass = min(P::maxTimeclass,P::tcOverrideTimeclass);
+   }
+   if(P::tcDebugBox){
+      P::currentMaxTimeclass = 1;
+   }
    for(int i = 0; i <= P::maxTimeclass; ++i){
       newTimeclassDts[i] = fsdt*pow(2,P::currentMaxTimeclass - min(i,P::currentMaxTimeclass));
    }
@@ -262,60 +269,68 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
    baseDt = fsdt*pow(2, P::currentMaxTimeclass);
    if (myRank == MASTER_RANK) cout << "for new baseDt = " << baseDt << std::endl;
    
+   // TODO handle changing P::currentMaxTimeclass!
 
    // We need dts and timeclasses relative to the shortest viable maxDt:
    int dtdiff = int(log2(localDt/fsdt));
    int localTimeClass = max(0,P::currentMaxTimeclass - max(0, dtdiff)); // this shouldn't actually matter anymore?
    
-   for (vector<CellID>::const_iterator cell_id=cells.begin(); cell_id!=cells.end(); ++cell_id) {
-      SpatialCell* cell = mpiGrid[*cell_id];
-      cell->parameters[CellParams::TIMECLASS_RANK] = localTimeClass;
-      cell->parameters[CellParams::TIMECLASSDT_RANK] = fsdt*pow(2,P::currentMaxTimeclass - localTimeClass);
-
-      Real cellDt;
-      if( cell->parameters[CellParams::MAXVDT] > 0) {
-         cellDt = min(cell->parameters[CellParams::MAXVDT]* P::maxSlAccelerationSubcycles,cell->parameters[CellParams::MAXRDT]);
+   if(P::tcDebugBox){
+      localTimeClass = 0;
+      for (vector<CellID>::const_iterator cell_id=cells.begin(); cell_id!=cells.end(); ++cell_id) {
+         SpatialCell* cell = mpiGrid[*cell_id];
+         const Real x = cell->parameters[CellParams::XCRD];
+         const Real y = cell->parameters[CellParams::YCRD];
+         const Real z = cell->parameters[CellParams::ZCRD];
+         if (abs(x-P::tcBoxCenterX) < P::tcBoxHalfWidthX &&
+             abs(y-P::tcBoxCenterY) < P::tcBoxHalfWidthY &&
+             abs(z-P::tcBoxCenterZ) < P::tcBoxHalfWidthZ ){
+            cell->parameters[CellParams::TIMECLASS] = 1;
+            localTimeClass = 1;
+         }
+         else{
+            cell->parameters[CellParams::TIMECLASS] = 0;
+            localTimeClass = max(0, localTimeClass);
+         }
       }
-      else{
-         cellDt = cell->parameters[CellParams::MAXRDT];
+      
+      for (vector<CellID>::const_iterator cell_id=cells.begin(); cell_id!=cells.end(); ++cell_id) {
+         SpatialCell* cell = mpiGrid[*cell_id];
+         if(P::tcRankwise){
+            cell->parameters[CellParams::TIMECLASS] = localTimeClass;
+         }
+         cell->parameters[CellParams::TIMECLASSDT] = cell->get_tc_dt();
       }
-      //localDt = min(localDt,cell->parameters[CellParams::MAXFDT]* P::maxFieldSolverSubcycles);
-      dtdiff = int(log2(cellDt/newDt));
-      int cellTimeClass = max(0,P::currentMaxTimeclass - max(0, dtdiff));
-      cell->parameters[CellParams::TIMECLASS] = cellTimeClass;
-      cell->parameters[CellParams::TIMECLASS] = cell->parameters[CellParams::TIMECLASS_RANK]; // = cellTimeClass;
-      cell->parameters[CellParams::TIMECLASSDT] =cell->parameters[CellParams::TIMECLASSDT_RANK]; //= newDt*pow(2,P::currentMaxTimeclass - cellTimeClass);
-      cell->parameters[CellParams::TIMECLASSDT] = newDt*pow(2,P::currentMaxTimeclass - cellTimeClass);
-   }
-
-
-   Real localDt;
-   localDt = meanVlasovCFL * dtMaxLocal[0];
-   localDt = min(localDt,meanVlasovCFL * dtMaxLocal[1] * P::maxSlAccelerationSubcycles);
-   localDt = min(localDt,meanFieldsCFL * dtMaxLocal[2] * P::maxFieldSolverSubcycles);
-   newDt = meanVlasovCFL * dtMaxGlobal[0];
-   newDt = min(newDt,meanVlasovCFL * dtMaxGlobal[1] * P::maxSlAccelerationSubcycles);
-   newDt = min(newDt,meanFieldsCFL * dtMaxGlobal[2] * P::maxFieldSolverSubcycles);
-
-   //newDt is now the dt at max timeclass
-
-   int dtdiff = int(log2(localDt/newDt));
-   int localTimeClass = max(0,P::MaxTimeClass - dtdiff);
-   int myRank;MPI_Comm_rank(MPI_COMM_WORLD,&myRank);
-   cout << myRank<<": localTimeClass = " << localTimeClass << " for localdt " << localDt << "; globalDt " << newDt << std::endl;
    
+   }
+   else {
+      for (vector<CellID>::const_iterator cell_id=cells.begin(); cell_id!=cells.end(); ++cell_id) {
+         SpatialCell* cell = mpiGrid[*cell_id];
+         cell->parameters[CellParams::TIMECLASS_RANK] = localTimeClass;
+         cell->parameters[CellParams::TIMECLASSDT_RANK] = fsdt*pow(2,P::currentMaxTimeclass - localTimeClass);
 
-   for (vector<CellID>::const_iterator cell_id=cells.begin(); cell_id!=cells.end(); ++cell_id) {
-      SpatialCell* cell = mpiGrid[*cell_id];
-      cell->parameters[CellParams::TIMECLASS_RANK] = localTimeClass;
-      cell->parameters[CellParams::TIMECLASSDT_RANK] = newDt*pow(2,P::MaxTimeClass-localTimeClass);
-
-      Real cellDt = min(cell->parameters[CellParams::MAXVDT]* P::maxSlAccelerationSubcycles,cell->parameters[CellParams::MAXRDT]);
-      //localDt = min(localDt,cell->parameters[CellParams::MAXFDT]* P::maxFieldSolverSubcycles);
-      dtdiff = int(log2(cellDt/newDt));
-      int cellTimeClass = max(0,P::MaxTimeClass - dtdiff);
-      cell->parameters[CellParams::TIMECLASS] = cellTimeClass;
-      cell->parameters[CellParams::TIMECLASSDT] = fsdt*pow(2,P::currentMaxTimeclass - cellTimeClass);
+         Real cellDt;
+         if( cell->parameters[CellParams::MAXVDT] > 0) {
+            cellDt = min(cell->parameters[CellParams::MAXVDT]* P::maxSlAccelerationSubcycles,cell->parameters[CellParams::MAXRDT]);
+         }
+         else{
+            cellDt = cell->parameters[CellParams::MAXRDT];
+         }
+         
+         dtdiff = int(log2(cellDt/newDt));
+         int cellTimeClass = max(0,P::currentMaxTimeclass - max(0, dtdiff));
+         if(P::tcOverrideTimeclass > -1){
+            cell->parameters[CellParams::TIMECLASS] = P::tcOverrideTimeclass;
+         } else{
+            if(P::tcRankwise){
+               cell->parameters[CellParams::TIMECLASS] = localTimeClass;   
+            } else{
+               cell->parameters[CellParams::TIMECLASS] = cellTimeClass;
+            }
+         }
+         cell->parameters[CellParams::TIMECLASSDT] = cell->get_tc_dt(); //This is only for debugging
+      }
+      
    }
    //this yoinked from within the below loop to set the timeclassDts anyway
    newTimeclassDts = std::vector<Real>(P::maxTimeclass+1);
@@ -826,7 +841,7 @@ int main(int argn,char* args[]) {
    // For the MPI-rank based timeclasses. Implement to CellParams if cell-based.
    // Move to params.
 
-   P::tc_leapfrog_init = false;
+   P::tc_leapfrog_init = false; // not used
    if (P::isRestart == false) {
       //compute new dt
       phiprof::Timer computeDtimer {"compute-dt"};
@@ -849,7 +864,7 @@ int main(int argn,char* args[]) {
       phiprof::Timer propagateHalfTimer {"propagate-velocity-space-dt/2"};
       if (P::propagateVlasovAcceleration) {
          calculateAcceleration(mpiGrid, 0.5);
-         P::tc_leapfrog_init = false;
+         P::tc_leapfrog_init = false; // not used
       } else {
          //zero step to set up moments _v
          calculateAcceleration(mpiGrid, 0.0);
@@ -1183,6 +1198,7 @@ int main(int argn,char* args[]) {
       //   -> do the acc shuffle for all cells to begin with
       std::vector<Real> newTimeclassDts = std::vector<Real>(P::maxTimeclass+1);
       if(P::dynamicTimestep  && P::tstep > P::tstep_min) {
+         std::cout << "Computing new dts\n";
          computeNewTimeStep(mpiGrid, technicalGrid, newDt, dtIsChanged, newTimeclassDts);
          if(myRank == MASTER_RANK){
             std::cout << "timeclass dts = ";
@@ -1367,6 +1383,7 @@ int main(int argn,char* args[]) {
       momentsTimer.start();
       // *here we compute rho and rho_v for timestep t + dt, so next
       // timestep * //
+      // Does extra work by computing these for all cells at all timeclasses.
       std::cout << "for timestep t+dt\n";
       calculateInterpolatedVelocityMoments(
          mpiGrid,

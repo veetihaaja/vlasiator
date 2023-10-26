@@ -67,6 +67,8 @@ Real P::t_max = LARGE_REAL;
 Real P::dt = NAN;
 int P::maxTimeclass = 0;
 int P::currentMaxTimeclass = 0;
+bool P::tcRankwise = false;
+
 vector<Real> P::timeclassDt;
 vector<Real> P::timeclassTime;
 int P::fractionalTimestep = 0;
@@ -87,6 +89,15 @@ uint P::diagnosticInterval = numeric_limits<uint>::max();
 bool P::writeInitialState = true;
 bool P::writeFullBGB = false;
 bool P::tc_leapfrog_init = false;
+
+bool P::tcDebugBox = false;
+int P::tcOverrideTimeclass = -1;
+Realf P::tcBoxHalfWidthX = 2e7;
+Realf P::tcBoxHalfWidthY = 2e7;
+Realf P::tcBoxHalfWidthZ = 2e7;
+Realf P::tcBoxCenterX = 0.0;
+Realf P::tcBoxCenterY = 0.0;
+Realf P::tcBoxCenterZ = 0.0;
 
 bool P::meshRepartitioned = true;
 bool P::prepareForRebalance = false;
@@ -293,6 +304,16 @@ bool P::addParameters() {
 
    RP::add("gridbuilder.dt", "Initial timestep in seconds.", 0.0);
    RP::add("gridbuilder.timeclass_max", "Maximum number of timeclasses.", 0);
+   RP::add("gridbuilder.tcRankwise", "Use timeclasses at MPI rank level insted of cell-wise timeclasses.", false);
+
+   RP::add("gridbuilder.tcDebugBox", "Use a forced timeclass box.", false);
+   RP::add("gridbuilder.tcOverrideTimeclass", "Use a forced timeclass everywhere.", -1);
+   RP::add("gridbuilder.tcBoxHalfWidthX", "Forced timeclass box half-width, X, meters", 2e7);
+   RP::add("gridbuilder.tcBoxHalfWidthY", "Forced timeclass box half-width, Y, meters", 2e7);
+   RP::add("gridbuilder.tcBoxHalfWidthZ", "Forced timeclass box half-width, Z, meters", 2e7);
+   RP::add("gridbuilder.tcBoxCenterX", "Forced timeclass box center, X, meters", 0.0);
+   RP::add("gridbuilder.tcBoxCenterY", "Forced timeclass box center, Y, meters", 0.0);
+   RP::add("gridbuilder.tcBoxCenterZ", "Forced timeclass box center, Z, meters", 0.0);
 
    RP::add("gridbuilder.t_max",
            "Maximum simulation time, in seconds. If timestep_max limit is hit first this time will never be reached",
@@ -777,8 +798,18 @@ void Parameters::getParameters() {
 
    RP::get("gridbuilder.dt", P::dt);
    RP::get("gridbuilder.timeclass_max", P::maxTimeclass);
+   RP::get("gridbuilder.tcRankwise", P::tcRankwise);
 
-   
+   RP::get("gridbuilder.tcDebugBox", P::tcDebugBox);
+   RP::get("gridbuilder.tcOverrideTimeclass", P::tcOverrideTimeclass);
+   RP::get("gridbuilder.tcBoxHalfWidthX", P::tcBoxHalfWidthX);
+   RP::get("gridbuilder.tcBoxHalfWidthY", P::tcBoxHalfWidthY);
+   RP::get("gridbuilder.tcBoxHalfWidthZ", P::tcBoxHalfWidthZ);
+   RP::get("gridbuilder.tcBoxCenterX", P::tcBoxCenterX);
+   RP::get("gridbuilder.tcBoxCenterY", P::tcBoxCenterY);
+   RP::get("gridbuilder.tcBoxCenterZ", P::tcBoxCenterZ);
+
+
    P::timeclassDt = std::vector<Real>(P::maxTimeclass+1);
    P::timeclassTime = std::vector<Real>(P::maxTimeclass+1);
 
