@@ -81,13 +81,7 @@ void calculateSpatialTranslation(
     if (P::amrMaxSpatialRefLevel > 0) AMRtranslationActive = true;
 
     double t1;
-//std::cout << "foo " << dt << " " << local_propagated_cells.size()  << " \n";
-    for(CellID c : local_propagated_cells)
-   {
-      //std::cout << c << " at TIME_R " << mpiGrid[c]->parameters[CellParams::TIME_R] << " + " << dt <<"\n";
-      mpiGrid[c]->parameters[CellParams::TIME_R] += dt;
-   }
-    
+   
     int myRank;
     MPI_Comm_rank(MPI_COMM_WORLD,&myRank);
    
@@ -226,7 +220,8 @@ void calculateSpatialTranslation(
 
    for(CellID c : local_propagated_cells)
    {
-      mpiGrid[c]->parameters[CellParams::TIME_R] += dt*mpiGrid[c]->parameters[CellParams::TIMECLASSDT];
+      if (c == 16) std::cout << c << " at TIME_R " << mpiGrid[c]->parameters[CellParams::TIME_R] << " + " << dt <<"\n";
+      mpiGrid[c]->parameters[CellParams::TIME_R] += dt;
    }
    phiprof::Timer btpostimer {"barrier-trans-post-trans",{"Barriers","MPI"}};
    MPI_Barrier(MPI_COMM_WORLD);
@@ -497,75 +492,78 @@ void calculateAcceleration(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& 
          int maxSubcycles=0;
          int globalMaxSubcycles;
 
-       // Set active population
-       SpatialCell::setCommunicatedSpecies(popID);
-       
-       // Iterate through all local cells and collect cells to propagate.
-       // Ghost cells (spatial cells at the boundary of the simulation 
-       // volume) do not need to be propagated:
-       vector<CellID> propagatedCells;
-       for (size_t c=0; c<cells.size(); ++c) {
-          SpatialCell* SC = mpiGrid[cells[c]];
-          Real dt_cell;
-          if(dt < 0.0) { // Revert to previous real time, stored in cell
-               dt_cell = SC->parameters[CellParams::TIME_R] - P::t;
-            }
-            else { // dt is a factor of 0.5 or 1.0; so dt_cell is local timestep * dt factor
-               dt_cell = dt*SC->get_tc_dt();
-            }
-         // if ( (SC->parameters[CellParams::CELLID] == 9 || SC->parameters[CellParams::CELLID] == 11 || SC->parameters[CellParams::CELLID] == 12))
-            // std::cout << "vdt on tc  " << SC->parameters[CellParams::TIMECLASS] << " on ftstep " << P::fractionalTimestep << ", dt " << dt_cell <<"\n";
+         // Set active population
+         SpatialCell::setCommunicatedSpecies(popID);
+         
+         // Iterate through all local cells and collect cells to propagate.
+         // Ghost cells (spatial cells at the boundary of the simulation 
+         // volume) do not need to be propagated:
+         vector<CellID> propagatedCells;
+         for (size_t c=0; c<cells.size(); ++c) {
+            SpatialCell* SC = mpiGrid[cells[c]];
+            Real dt_cell;
+            if(dt < 0.0) { // Revert to previous real time, stored in cell
+                  dt_cell = SC->parameters[CellParams::TIME_R] - P::t;
+               }
+               else { // dt is a factor of 0.5 or 1.0; so dt_cell is local timestep * dt factor
+                  dt_cell = dt*SC->get_tc_dt();
+               }
+            // if ( (SC->parameters[CellParams::CELLID] == 9 || SC->parameters[CellParams::CELLID] == 11 || SC->parameters[CellParams::CELLID] == 12))
+               // std::cout << "vdt on tc  " << SC->parameters[CellParams::TIMECLASS] << " on ftstep " << P::fractionalTimestep << ", dt " << dt_cell <<"\n";
 
-          const vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& vmesh = SC->get_velocity_mesh(popID);
-          // disregard boundary cells, in preparation for acceleration
-          if (  (SC->sysBoundaryFlag == sysboundarytype::NOT_SYSBOUNDARY) ||
-                // Include inflow-Maxwellian
-                (P::vlasovAccelerateMaxwellianBoundaries && (SC->sysBoundaryFlag == sysboundarytype::SET_MAXWELLIAN)) ) {
-                  if (vmesh.size() != 0){   //do not propagate spatial cells with no blocks
-                        if(P::tc_leapfrog_init == false){
-                           propagatedCells.push_back(cells[c]);
-                        }
-                        else if (SC->parameters[CellParams::TIMECLASS] == P::currentMaxTimeclass){
-                           propagatedCells.push_back(cells[c]);
-                        }
-                        else if ( SC->get_timeclass_turn_v() == true){ // propagate only if it is the cell's turn)
-                           propagatedCells.push_back(cells[c]);
-                        }
-                  //prepare for acceleration, updates max dt for each cell, it
-                  //needs to be set to something sensible for _all_ cells, even if
-                  //they are not propagated
-                  prepareAccelerateCell(SC, popID);
+            const vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& vmesh = SC->get_velocity_mesh(popID);
+            // disregard boundary cells, in preparation for acceleration
+            if (  (SC->sysBoundaryFlag == sysboundarytype::NOT_SYSBOUNDARY) ||
+                  // Include inflow-Maxwellian
+                  (P::vlasovAccelerateMaxwellianBoundaries && (SC->sysBoundaryFlag == sysboundarytype::SET_MAXWELLIAN)) ) {
+                     if (vmesh.size() != 0){   //do not propagate spatial cells with no blocks
+                           if(P::tc_leapfrog_init == false){
+                              propagatedCells.push_back(cells[c]);
+                           }
+                           else if (SC->parameters[CellParams::TIMECLASS] == P::currentMaxTimeclass){
+                              propagatedCells.push_back(cells[c]);
+                           }
+                           else if ( SC->get_timeclass_turn_v() == true){ // propagate only if it is the cell's turn)
+                              propagatedCells.push_back(cells[c]);
+                           }
+                     }
+                     //prepare for acceleration, updates max dt for each cell, it
+                     //needs to be set to something sensible for _all_ cells, even if
+                     //they are not propagated
+                     prepareAccelerateCell(SC, popID);
 
-             //update max subcycles for all cells in this process
-             maxSubcycles = max((int)getAccelerationSubcycles(SC, dt_cell, popID), maxSubcycles);
-             spatial_cell::Population& pop = SC->get_population(popID);
-             pop.ACCSUBCYCLES = getAccelerationSubcycles(SC, dt_cell, popID);
-          
-       }
-       // Compute global maximum for number of subcycles
-       MPI_Allreduce(&maxSubcycles, &globalMaxSubcycles, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-       
-       // substep global max times
-       for(uint step=0; step<(uint)globalMaxSubcycles; ++step) {
-          if(step > 0) {
-             // prune list of cells to propagate to only contained those which are now subcycled
-             vector<CellID> temp;
-             for (const auto& cell: propagatedCells) {
-                if (step < getAccelerationSubcycles(mpiGrid[cell], dt*mpiGrid[cell]->get_tc_dt(), popID) ) {
-                   temp.push_back(cell);
-                }
-             }
-             
-             propagatedCells.swap(temp);
-          }
-          // Accelerate population over one subcycle step
-          calculateAcceleration(popID,(uint)globalMaxSubcycles,step,mpiGrid,propagatedCells,dt*mpiGrid[cell]->get_tc_dt());
-       } // for-loop over acceleration substeps
-       
-       // final adjust for all cells, also fixing remote cells.
-       adjustVelocityBlocks(mpiGrid, cells, true, popID);
-    } // for-loop over particle species
-    phiprof::stop("semilag-acc");
+               //update max subcycles for all cells in this process
+               maxSubcycles = max((int)getAccelerationSubcycles(SC, dt_cell, popID), maxSubcycles);
+               spatial_cell::Population& pop = SC->get_population(popID);
+               pop.ACCSUBCYCLES = getAccelerationSubcycles(SC, dt_cell, popID);
+            }
+            
+         } // for loop over cells
+         // Compute global maximum for number of subcycles
+         MPI_Allreduce(&maxSubcycles, &globalMaxSubcycles, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
+         
+         // substep global max times
+         for(uint step=0; step<(uint)globalMaxSubcycles; ++step) {
+            if(step > 0) {
+               // prune list of cells to propagate to only contained those which are now subcycled
+               vector<CellID> temp;
+               for (const auto& cell: propagatedCells) {
+                  if (step < getAccelerationSubcycles(mpiGrid[cell], dt*mpiGrid[cell]->get_tc_dt(), popID) ) {
+                     temp.push_back(cell);
+                  }
+               }
+               
+               propagatedCells.swap(temp);
+            }
+            // Accelerate population over one subcycle step
+            calculateAcceleration(popID,(uint)globalMaxSubcycles,step,mpiGrid,propagatedCells,dt);
+         } // for-loop over acceleration substeps
+         
+         // final adjust for all cells, also fixing remote cells.
+         adjustVelocityBlocks(mpiGrid, cells, true, popID);
+      } // for-loop over particle species
+      timer.stop();
+   } //else
 
    // Recalculate "_V" velocity moments
    calculateMoments_V(mpiGrid,cells,true);
@@ -579,18 +577,17 @@ void calculateAcceleration(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& 
          cell->parameters[CellParams::MAXVDT]
            = min(cell->get_max_v_dt(popID), cell->parameters[CellParams::MAXVDT]);
       }
-      if(abs(cell->parameters[CellParams::XCRD]+cell->parameters[CellParams::DX]/2) < 6*P::dx_ini)
-         {
+      if(abs(cell->parameters[CellParams::XCRD]+cell->parameters[CellParams::DX]/2) < 6*P::dx_ini) {
             //cell->parameters[CellParams::MAXVDT] /= 2;
             // cout << "maxvdt \n";
          }
-      if(abs(cell->parameters[CellParams::XCRD]+cell->parameters[CellParams::DX]/2) < 2*P::dx_ini)
-         {
+      if(abs(cell->parameters[CellParams::XCRD]+cell->parameters[CellParams::DX]/2) < 2*P::dx_ini) {
             //cell->parameters[CellParams::MAXVDT] /= 2;
             // cout << "maxvdt \n";
          }
    }
 }
+
 
 /*--------------------------------------------------
   Functions for computing moments
