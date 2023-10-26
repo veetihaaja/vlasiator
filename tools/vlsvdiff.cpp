@@ -53,7 +53,6 @@
 #include <typeinfo>
 #include <algorithm>
 #include <cstring>
-#include <fsgrid.hpp> // computeDomainDecomposition
 
 #include "definitions.h"
 #include <vlsv_reader.h>
@@ -541,17 +540,8 @@ bool convertMesh(vlsvinterface::Reader& vlsvReader,
             std::array<int,3> GlobalBox={xcells,ycells,zcells};
             std::array<int,3> thisDomainDecomp;
 
-            std::array<int,3> GlobalBox2={xcells,ycells,zcells};
-            std::array<int,3> thisDomainDecomp2;
-
             //Compute Domain Decomposition Scheme for this vlsv file
             computeDomainDecomposition(GlobalBox,numtasks,thisDomainDecomp);
-            FsGridTools::computeDomainDecomposition(GlobalBox2, numtasks, thisDomainDecomp2);
-            std::cerr << "native decomposition gb " << GlobalBox[0] << " " << GlobalBox[1] << " " << GlobalBox[2] << ", tDD" 
-                                                    << thisDomainDecomp[0] << " " << thisDomainDecomp[1] << " " << thisDomainDecomp[2] << "\n";
-            std::cerr << "fsgrid decomposition gb " << GlobalBox2[0] << " " << GlobalBox2[1] << " " << GlobalBox2[2] << ", tDD" 
-                                                    << thisDomainDecomp2[0] << " " << thisDomainDecomp2[1] << " " << thisDomainDecomp2[2] << "\n"; 
-            
 
             std::array<int32_t,3> taskSize,taskStart;
             std::array<int32_t,3> taskEnd;
