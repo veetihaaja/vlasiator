@@ -65,6 +65,7 @@ Real P::t = 0;
 Real P::t_min = 0;
 Real P::t_max = LARGE_REAL;
 Real P::dt = NAN;
+Real P::dt0 = NAN;
 int P::maxTimeclass = 0;
 int P::currentMaxTimeclass = 0;
 bool P::tcRankwise = false;
@@ -797,6 +798,8 @@ void Parameters::getParameters() {
    P::dz_ini = (P::zmax - P::zmin) / P::zcells_ini;
 
    RP::get("gridbuilder.dt", P::dt);
+   RP::get("gridbuilder.dt", P::dt0);
+
    RP::get("gridbuilder.timeclass_max", P::maxTimeclass);
    RP::get("gridbuilder.tcRankwise", P::tcRankwise);
 

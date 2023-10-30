@@ -517,13 +517,7 @@ void calculateAcceleration(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& 
                   // Include inflow-Maxwellian
                   (P::vlasovAccelerateMaxwellianBoundaries && (SC->sysBoundaryFlag == sysboundarytype::SET_MAXWELLIAN)) ) {
                      if (vmesh.size() != 0){   //do not propagate spatial cells with no blocks
-                           if(P::tc_leapfrog_init == false){
-                              propagatedCells.push_back(cells[c]);
-                           }
-                           else if (SC->parameters[CellParams::TIMECLASS] == P::currentMaxTimeclass){
-                              propagatedCells.push_back(cells[c]);
-                           }
-                           else if ( SC->get_timeclass_turn_v() == true){ // propagate only if it is the cell's turn)
+                           if ( SC->get_timeclass_turn_v() == true){ // propagate only if it is the cell's turn)
                               propagatedCells.push_back(cells[c]);
                            }
                      }

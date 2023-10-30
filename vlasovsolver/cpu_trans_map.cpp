@@ -62,6 +62,7 @@ bool do_translate_cell(SpatialCell* SC, bool tc){
       return false;
    }
    else if(tc) {// Check if it is our timeclasses turn to translate
+                // TODO This is also handled when constructing cells to translate per timeclass. Superfluous?
       if(SC->get_timeclass_turn_r() == true){
          return true;
       }

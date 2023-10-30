@@ -57,6 +57,7 @@ struct Parameters {
                          updated during simulation
                          Choosing this now to be the shortest TC timestep
                          */
+   static Real dt0;   /*! Initial input of dt, for debugging */
                          
    static std::vector<Real> timeclassDt;
    static std::vector<Real> timeclassTime;

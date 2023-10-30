@@ -365,6 +365,7 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
    } else {
       subcycleDt = P::dt;
    }
+   if (myRank == MASTER_RANK) std::cerr << "Difference between new fs_dt/maxTC dt and initial given dt = " << std::scientific << P::dt - P::dt0 << "\n";
 
    // Subcycle if field solver dt < global dt (including CFL) (new or old dt hence the hassle with subcycleDt
    if (meanFieldsCFL * dtMaxGlobal[2] < subcycleDt && P::propagateField) {
