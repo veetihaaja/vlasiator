@@ -328,10 +328,13 @@ bool map_1d(SpatialCell* spatial_cell,
          firstBlockIndexK = (firstBlockIndexK < max_v_length ) ? firstBlockIndexK : max_v_length - 1;
          lastBlockIndexK  = (lastBlockIndexK  >= 0)            ? lastBlockIndexK  : 0;
          lastBlockIndexK  = (lastBlockIndexK  < max_v_length ) ? lastBlockIndexK  : max_v_length - 1;
-         if(firstBlockIndexK < wallmargin
+         if(P::propagateVlasovAcceleration &&
+            (
+            firstBlockIndexK < wallmargin
             || firstBlockIndexK >= max_v_length - wallmargin
             || lastBlockIndexK < wallmargin
             || lastBlockIndexK >= max_v_length - wallmargin
+            )
          ) {
             string message = "Some target blocks in acceleration are going to be less than ";
             message += std::to_string(wallmargin);
