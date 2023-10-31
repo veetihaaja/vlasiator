@@ -514,19 +514,37 @@ namespace spatial_cell {
       }
       #endif
                                               
-      if (blockGID == invalid_global_id()) return false;
+      if (blockGID == invalid_global_id())
+      { 
+         std::cerr << "invalid gid\n";
+         return false;
+      }
+
       const vmesh::LocalID blockLID = get_velocity_block_local_id(blockGID,popID);
-      if (blockLID == invalid_local_id()) return false;
+      if (blockLID == invalid_local_id())
+      {
+         std::cerr << "invalid lid\n";
+          return false;
+      }
+
             
       bool has_content = false;
       const Real velocity_block_min_value = getVelocityBlockMinValue(popID);
+      Realf bad_block_datum = 1.0f;
       const Realf* block_data = populations[popID].blockContainer.getData(blockLID);
       for (unsigned int i=0; i<VELOCITY_BLOCK_LENGTH; ++i) {
          if (block_data[i] >= velocity_block_min_value) {
             has_content = true;
-            break;
          }
+         else{
+            bad_block_datum = block_data[i];
+         }
+         if (has_content) break;
+
       }
+      if(has_content == false){
+            std::cerr << "blockGID/-LID " << blockGID << "/"<<blockLID <<" claims only bad block_data, here's one = " << bad_block_datum << "\n";
+      } 
       
       return has_content;
    }
@@ -1431,17 +1449,35 @@ namespace spatial_cell {
          exit(1);
       }
       #endif
-      
+      if(parameters[CellParams::CELLID] == 16)
+      {
+         std::cerr << __FILE__<<":"<<__LINE__<<" velocity_block_with_content_list.size() = " << velocity_block_with_content_list.size() << ", velocity_block_with_no_content_list.size() = " << velocity_block_with_no_content_list.size() << "\n";
+      }
       velocity_block_with_content_list.clear();
       velocity_block_with_no_content_list.clear();
       
       for (vmesh::LocalID block_index=0; block_index<populations[popID].vmesh.size(); ++block_index) {
          const vmesh::GlobalID globalID = populations[popID].vmesh.getGlobalID(block_index);
+         // if(parameters[CellParams::CELLID] == 16)
+         // {
+         //    const Realf* data = populations[0].blockContainer.getData();
+
+         //    std::cerr << "blockdata dump for cell 16\n\t";
+         //       for (uint k=0; k<WID; ++k) for (uint j=0; j<WID; ++j) for (uint i=0; i<WID; ++i) {
+         //          std::cerr << (data+block_index*WID3)[cellIndex(i,j,k)] << ", ";
+         //       }
+         //   std::cerr << "\n\n";
+         // }
+
          if (compute_block_has_content(globalID,popID)){
             velocity_block_with_content_list.push_back(globalID);
          } else {
             velocity_block_with_no_content_list.push_back(globalID);
          }
+      }
+      if(parameters[CellParams::CELLID] == 16)
+      {
+         std::cerr << __FILE__<<":"<<__LINE__<<" velocity_block_with_content_list.size() = " << velocity_block_with_content_list.size() << ", velocity_block_with_no_content_list.size() = " << velocity_block_with_no_content_list.size() << "\n";
       }
    }
    

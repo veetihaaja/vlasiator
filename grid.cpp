@@ -313,6 +313,9 @@ void initializeGrids(
       }
 
       for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
+         std::cerr << __FILE__<<":"<<__LINE__<< " calling adjustVelocityBlocks at t = " 
+         << P::t << ", preparing to receive; len cells = " << cells.size() <<
+         "\n";
          adjustVelocityBlocks(mpiGrid,cells,true,popID);
          #ifdef DEBUG_VAMR_VALIDATE
             writeVelMesh(mpiGrid);
@@ -410,7 +413,8 @@ void initializeGrids(
    if(P::refineOnRestart) {
       // Half-step acceleration
       if( P::propagateVlasovAcceleration ) {
-         calculateAcceleration(mpiGrid, -0.5*P::dt + 0.5*P::bailout_min_dt);
+         calculateAcceleration(mpiGrid, -0.5);
+         calculateAcceleration(mpiGrid, 0.5*P::bailout_min_dt); //WARNING TODO
       } else {
          calculateAcceleration(mpiGrid, 0.0);
       }
@@ -706,6 +710,10 @@ bool adjustVelocityBlocks(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& m
       Real density_post_adjust=0.0;
       CellID cell_id=cellsToAdjust[i];
       SpatialCell* cell = mpiGrid[cell_id];
+
+      if(cell_id == 16){
+         std::cerr << __FILE__<<":"<<__LINE__<<" number of blocks =" <<cell->get_number_of_velocity_blocks(popID) << "\n";
+      }
       
       // gather spatial neighbor list and create vector with pointers to neighbor spatial cells
       const auto* neighbors = mpiGrid.get_neighbors_of(cell_id, NEAREST_NEIGHBORHOOD_ID);
@@ -736,6 +744,10 @@ bool adjustVelocityBlocks(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& m
                cell->get_data(popID)[i] *= density_pre_adjust/density_post_adjust;
             }
          }
+      }
+
+      if(cell_id == 16){
+         std::cerr << __FILE__<<":"<<__LINE__<<" number of blocks =" <<cell->get_number_of_velocity_blocks(popID) << "\n";
       }
    }
    adjustimer.stop();

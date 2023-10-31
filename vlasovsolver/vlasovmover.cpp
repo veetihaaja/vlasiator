@@ -460,11 +460,15 @@ void calculateAcceleration(const uint popID,const uint globalMaxSubcycles,const 
    //- All cells update and communicate their lists of content blocks
    //- Only cells which were accerelated on this step need to be adjusted (blocks removed or added).
    //- Not done here on last step (done after loop)
-   if(step < (globalMaxSubcycles - 1)) adjustVelocityBlocks(mpiGrid, propagatedCells, false, popID);
+   if(step < (globalMaxSubcycles - 1))
+   {
+      std::cerr << __FILE__<<":"<<__LINE__<< " calling adjustVelocityBlocks at t = " << P::t << ", acc step " << step<< ", propagatedCell.size()" << propagatedCells.size() <<"\n";
+      adjustVelocityBlocks(mpiGrid, propagatedCells, false, popID);
+   }
 }
 
 /** Accelerate all particle populations to new time t+dt. 
- * This function is AMR safe.
+ * This function is AMR safe. NB: acceleration by dt = 0 is not an idempotent operation.
  * @param mpiGrid Parallel grid library.
  * @param dt Time step factor: cells will propagated by dt*CellParams[CellParams::CELLDT] if needed.*/
 void calculateAcceleration(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
@@ -481,7 +485,9 @@ void calculateAcceleration(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& 
       // because the boundary conditions may have altered the velocity space, 
       // and to update changes in no-content blocks during translation.
       for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
-         adjustVelocityBlocks(mpiGrid, cells, true, popID);
+std::cerr << __FILE__<<":"<<__LINE__<< " calling adjustVelocityBlocks at t = " 
+         << P::t << ", preparing to receive; len cells = " << cells.size() <<
+         "\n";         adjustVelocityBlocks(mpiGrid, cells, true, popID);
       }
    } else {
       // Fairly ugly but no goto
@@ -554,7 +560,9 @@ void calculateAcceleration(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& 
          } // for-loop over acceleration substeps
          
          // final adjust for all cells, also fixing remote cells.
-         adjustVelocityBlocks(mpiGrid, cells, true, popID);
+std::cerr << __FILE__<<":"<<__LINE__<< " calling adjustVelocityBlocks at t = " 
+         << P::t << ", preparing to receive; len cells = " << cells.size() <<
+         "\n";         adjustVelocityBlocks(mpiGrid, cells, true, popID);
       } // for-loop over particle species
       timer.stop();
    } //else
