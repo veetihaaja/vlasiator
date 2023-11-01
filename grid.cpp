@@ -711,9 +711,9 @@ bool adjustVelocityBlocks(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& m
       CellID cell_id=cellsToAdjust[i];
       SpatialCell* cell = mpiGrid[cell_id];
 
-      if(cell_id == 16){
-         std::cerr << __FILE__<<":"<<__LINE__<<" number of blocks =" <<cell->get_number_of_velocity_blocks(popID) << "\n";
-      }
+      // if(cell_id == 16){
+      //    std::cerr << __FILE__<<":"<<__LINE__<<" number of blocks =" <<cell->get_number_of_velocity_blocks(popID) << "\n";
+      // }
       
       // gather spatial neighbor list and create vector with pointers to neighbor spatial cells
       const auto* neighbors = mpiGrid.get_neighbors_of(cell_id, NEAREST_NEIGHBORHOOD_ID);
@@ -746,9 +746,9 @@ bool adjustVelocityBlocks(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& m
          }
       }
 
-      if(cell_id == 16){
-         std::cerr << __FILE__<<":"<<__LINE__<<" number of blocks =" <<cell->get_number_of_velocity_blocks(popID) << "\n";
-      }
+      // if(cell_id == 16){
+      //    std::cerr << __FILE__<<":"<<__LINE__<<" number of blocks =" <<cell->get_number_of_velocity_blocks(popID) << "\n";
+      // }
    }
    adjustimer.stop();
 

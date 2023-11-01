@@ -109,20 +109,20 @@ void cpu_accelerate_cell(SpatialCell* spatial_cell,
    Transform<Real,3,Affine> bwd_transform= fwd_transform.inverse();
    transformTimer.stop();
 
-   if (spatial_cell->parameters[CellParams::CELLID] == 16)
-   #pragma omp critical(output)
-   {
-      std::cout<< "Cellid " << spatial_cell->parameters[CellParams::CELLID] << 
-      " at t=" << spatial_cell->parameters[CellParams::TIME_V] <<": dt " << 
-      dt <<  "\n";
-      std::stringstream ss;
-      ss.precision(64);
-      ss << std::scientific;
-      ss << fwd_transform(0,0) << " " << fwd_transform(0,1) << " " << fwd_transform(0,2) << "\n" <<
-            fwd_transform(1,0) << " " << fwd_transform(1,1) << " " << fwd_transform(1,2) << "\n" <<
-            fwd_transform(2,0) << " " << fwd_transform(2,1) << " " << fwd_transform(2,2) << "\n";
-      std::cout << ss.str() << "\n";
-   }
+   // if (spatial_cell->parameters[CellParams::CELLID] == 16)
+   // #pragma omp critical(output)
+   // {
+   //    std::cout<< "Cellid " << spatial_cell->parameters[CellParams::CELLID] << 
+   //    " at t=" << spatial_cell->parameters[CellParams::TIME_V] <<": dt " << 
+   //    dt <<  "\n";
+   //    std::stringstream ss;
+   //    ss.precision(64);
+   //    ss << std::scientific;
+   //    ss << fwd_transform(0,0) << " " << fwd_transform(0,1) << " " << fwd_transform(0,2) << "\n" <<
+   //          fwd_transform(1,0) << " " << fwd_transform(1,1) << " " << fwd_transform(1,2) << "\n" <<
+   //          fwd_transform(2,0) << " " << fwd_transform(2,1) << " " << fwd_transform(2,2) << "\n";
+   //    std::cout << ss.str() << "\n";
+   // }
 
 
    const uint8_t refLevel = 0;

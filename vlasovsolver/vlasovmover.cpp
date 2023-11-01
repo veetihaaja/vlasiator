@@ -220,7 +220,7 @@ void calculateSpatialTranslation(
 
    for(CellID c : local_propagated_cells)
    {
-      if (c == 16) std::cout << c << " at TIME_R " << mpiGrid[c]->parameters[CellParams::TIME_R] << " + " << dt <<"\n";
+      // if (c == 16) std::cout << c << " at TIME_R " << mpiGrid[c]->parameters[CellParams::TIME_R] << " + " << dt <<"\n";
       mpiGrid[c]->parameters[CellParams::TIME_R] += dt;
    }
    phiprof::Timer btpostimer {"barrier-trans-post-trans",{"Barriers","MPI"}};
@@ -430,16 +430,20 @@ void calculateAcceleration(const uint popID,const uint globalMaxSubcycles,const 
       // for all cells, but varies with timestep.
       memset(&(rngDataBuffer), 0, sizeof(rngDataBuffer));
       #ifdef _AIX
-         initstate_r(P::tstep, &(rngStateBuffer[0]), 256, NULL, &(rngDataBuffer));
+         initstate_r(P::tstep+P::fractionalTimestep, &(rngStateBuffer[0]), 256, NULL, &(rngDataBuffer));
          int64_t rndInt;
          random_r(&rndInt, &rngDataBuffer);
       #else
-         initstate_r(P::tstep, &(rngStateBuffer[0]), 256, &(rngDataBuffer));
+         initstate_r(P::tstep+P::fractionalTimestep, &(rngStateBuffer[0]), 256, &(rngDataBuffer));
          int32_t rndInt;
          random_r(&rngDataBuffer, &rndInt);
       #endif
-            
-      uint map_order=rndInt%3;
+      
+      #ifndef DEBUG_TIMECLASSES
+         uint map_order=rndInt%3;
+      #else
+         uint map_order=1;
+      #endif
       phiprof::Timer semilagAccTimer {"cell-semilag-acc"};
       cpu_accelerate_cell(mpiGrid[cellID],popID,map_order,subcycleDt);
       if (cellID == 16)
@@ -462,7 +466,6 @@ void calculateAcceleration(const uint popID,const uint globalMaxSubcycles,const 
    //- Not done here on last step (done after loop)
    if(step < (globalMaxSubcycles - 1))
    {
-      std::cerr << __FILE__<<":"<<__LINE__<< " calling adjustVelocityBlocks at t = " << P::t << ", acc step " << step<< ", propagatedCell.size()" << propagatedCells.size() <<"\n";
       adjustVelocityBlocks(mpiGrid, propagatedCells, false, popID);
    }
 }
@@ -485,9 +488,10 @@ void calculateAcceleration(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& 
       // because the boundary conditions may have altered the velocity space, 
       // and to update changes in no-content blocks during translation.
       for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
-std::cerr << __FILE__<<":"<<__LINE__<< " calling adjustVelocityBlocks at t = " 
-         << P::t << ", preparing to receive; len cells = " << cells.size() <<
-         "\n";         adjustVelocityBlocks(mpiGrid, cells, true, popID);
+// std::cerr << __FILE__<<":"<<__LINE__<< " calling adjustVelocityBlocks at t = " 
+//          << P::t << ", preparing to receive; len cells = " << cells.size() <<
+//          "\n";
+         adjustVelocityBlocks(mpiGrid, cells, true, popID);
       }
    } else {
       // Fairly ugly but no goto
@@ -560,9 +564,10 @@ std::cerr << __FILE__<<":"<<__LINE__<< " calling adjustVelocityBlocks at t = "
          } // for-loop over acceleration substeps
          
          // final adjust for all cells, also fixing remote cells.
-std::cerr << __FILE__<<":"<<__LINE__<< " calling adjustVelocityBlocks at t = " 
-         << P::t << ", preparing to receive; len cells = " << cells.size() <<
-         "\n";         adjustVelocityBlocks(mpiGrid, cells, true, popID);
+// std::cerr << __FILE__<<":"<<__LINE__<< " calling adjustVelocityBlocks at t = " 
+//          << P::t << ", preparing to receive; len cells = " << cells.size() <<
+//          "\n";        
+         adjustVelocityBlocks(mpiGrid, cells, true, popID);
       } // for-loop over particle species
       timer.stop();
    } //else

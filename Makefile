@@ -14,6 +14,8 @@ ifneq (,$(findstring testpackage,$(MAKECMDGOALS)))
 endif
 
 
+COMPFLAGS += -DDEBUG_TIMECLASSES
+
 include MAKE/Makefile.${ARCH}
 
 

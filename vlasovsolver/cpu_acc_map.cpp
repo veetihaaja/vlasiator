@@ -128,14 +128,14 @@ bool map_1d(SpatialCell* spatial_cell,
    uint cell_indices_to_id[3] = {0, 0, 0}; /*< used when computing id of target cell in block, 0 for compiler */
    vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& vmesh = spatial_cell->get_velocity_mesh(popID);;
    vmesh::VelocityBlockContainer<vmesh::LocalID>& blockContainer = spatial_cell->get_velocity_blocks(popID);;
-   if(!doGhost){
-      // vmesh    = spatial_cell->get_velocity_mesh(popID);
-      // blockContainer = spatial_cell->get_velocity_blocks(popID);
-   }
-   else{
-      vmesh    = spatial_cell->get_velocity_mesh_ghost(popID);
-      blockContainer = spatial_cell->get_velocity_blocks_ghost(popID);
-   }
+   // if(!doGhost){
+   //    // vmesh    = spatial_cell->get_velocity_mesh(popID);
+   //    // blockContainer = spatial_cell->get_velocity_blocks(popID);
+   // }
+   // else{
+   //    vmesh    = spatial_cell->get_velocity_mesh_ghost(popID);
+   //    blockContainer = spatial_cell->get_velocity_blocks_ghost(popID);
+   // }
 
    //nothing to do if no blocks
    if(vmesh.size() == 0)

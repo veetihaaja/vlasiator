@@ -999,8 +999,8 @@ int main(int argn,char* args[]) {
       logFile << writeVerbose;
       loggingTimer.stop();
 
-// Check whether diagnostic output has to be produced
-      if (P::diagnosticInterval != 0 && P::tstep % P::diagnosticInterval == 0) {
+      // Check whether diagnostic output has to be produced
+      if (P::diagnosticInterval != 0 && (P::tstep % P::diagnosticInterval == 0) && P::fractionalTimestep == 0) {
          
          phiprof::Timer diagnosticTimer {"diagnostic-io"};
          if (writeDiagnostic(mpiGrid, diagnosticReducer) == false) {
@@ -1070,8 +1070,8 @@ int main(int argn,char* args[]) {
       if (myRank == MASTER_RANK) {
          if (  (P::saveRestartWalltimeInterval >= 0.0
             && (P::saveRestartWalltimeInterval*wallTimeRestartCounter <=  MPI_Wtime()-initialWtime
-               || P::tstep == P::tstep_max
-               || P::t >= P::t_max))
+               || (P::tstep == P::tstep_max && P::fractionalTimestep == 0)
+               || (P::t >= P::t_max && P::fractionalTimestep == 0)))
             || (doBailout > 0 && P::bailout_write_restart)
             || globalflags::writeRestart
          ) {
@@ -1143,7 +1143,7 @@ int main(int argn,char* args[]) {
       
       //Re-loadbalance if needed
       //TODO - add LB measure and do LB if it exceeds threshold
-      if(((P::tstep % P::rebalanceInterval == 0 && P::tstep > P::tstep_min) || overrideRebalanceNow)) {
+      if(((P::tstep % P::rebalanceInterval == 0 && P::tstep > P::tstep_min && P::fractionalTimestep == 0) || overrideRebalanceNow)) {
          logFile << "(LB): Start load balance, tstep = " << P::tstep << " t = " << P::t << endl << writeVerbose;
          // Refinement includes LB
          if (!dtIsChanged && P::adaptRefinement && P::tstep % (P::rebalanceInterval * P::refineMultiplier) == 0 && P::t > P::refineAfter) { 
@@ -1232,7 +1232,7 @@ int main(int argn,char* args[]) {
          }
       }
       
-      if (P::tstep % P::rebalanceInterval == P::rebalanceInterval-1 || P::prepareForRebalance == true) {
+      if (((P::tstep % P::rebalanceInterval == P::rebalanceInterval-1) && (P::fractionalTimestep == 0)) || P::prepareForRebalance == true) {
          if(P::prepareForRebalance == true) {
             overrideRebalanceNow = true;
          } else {
@@ -1336,7 +1336,7 @@ int main(int argn,char* args[]) {
          int nIterations, nRestarts;
          Real residual, minPotentialN, maxPotentialN, minPotentialS, maxPotentialS;
          SBC::ionosphereGrid.solve(nIterations, nRestarts, residual, minPotentialN, maxPotentialN, minPotentialS, maxPotentialS);
-         logFile << "tstep = " << P::tstep
+         logFile << "tstep = " << P::tstep << "("<<P::fractionalTimestep<<"/"<< (1u << (P::currentMaxTimeclass)) << ")"
          << " t = " << P::t
          << " ionosphere iterations = " << nIterations
          << " restarts = " << nRestarts
@@ -1414,7 +1414,7 @@ int main(int argn,char* args[]) {
       P::meshRepartitioned = false;
       globalflags::ionosphereJustSolved = false;
       ++P::fractionalTimestep;
-      if(P::fractionalTimestep % (1 << (P::currentMaxTimeclass)) == 0){
+      if(P::fractionalTimestep % (1u << (P::currentMaxTimeclass)) == 0){
          ++P::tstep;
          P::fractionalTimestep = 0;
       }
