@@ -304,7 +304,7 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
    
    }
    else if(true){ // Rank-based tc, only +1
-      if(P::maxTimeClass != 1){
+      if(P::maxTimeclass != 1){
          std::cerr << "This test requires P::maxTimeclass=1\n";
          abort();
       }
