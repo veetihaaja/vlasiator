@@ -1212,7 +1212,7 @@ int main(int argn,char* args[]) {
          if(dtIsChanged) {
             phiprof::Timer updateDtimer {"update-dt"};
             //propagate velocity space back to real-time
-            if( P::propagateVlasovAcceleration && false) {
+            if( P::propagateVlasovAcceleration) {
                // Back half dt to real time, forward by new half dt
                calculateAcceleration(mpiGrid,-0.5); //This sets cells back to previous TIME_R
                calculateAcceleration(mpiGrid, 0.5); //This propagates by 0.5 

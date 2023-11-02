@@ -245,7 +245,7 @@ void calculateSpatialTranslation(
         dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
         creal dt) {
    typedef Parameters P;
-   
+   std::cerr << std::scientific << "calculateSpatialTranslation at t="<<P::t << ", for dt="<<dt<<"\n";
    phiprof::Timer semilagTimer {"semilag-trans"};
    
    //double t1 = MPI_Wtime();
@@ -446,11 +446,11 @@ void calculateAcceleration(const uint popID,const uint globalMaxSubcycles,const 
       #endif
       phiprof::Timer semilagAccTimer {"cell-semilag-acc"};
       cpu_accelerate_cell(mpiGrid[cellID],popID,map_order,subcycleDt);
-      if (cellID == 16)
-         #pragma omp critical(output)
-         {
-            std::cout<< "Cellid " << cellID << " at t=" << mpiGrid[cellID]->parameters[CellParams::TIME_V] <<": subcycledt " << subcycleDt << " maxvdt "<< maxVdt << " step " << step << " globalmax " <<  globalMaxSubcycles << " step: " << step << "\n";
-         }
+      // if (cellID == 16)
+      //    #pragma omp critical(output)
+      //    {
+      //       std::cout<< "Cellid " << cellID << " at t=" << mpiGrid[cellID]->parameters[CellParams::TIME_V] <<": subcycledt " << subcycleDt << " maxvdt "<< maxVdt << " step " << step << " globalmax " <<  globalMaxSubcycles << " step: " << step << "\n";
+      //    }
 
       mpiGrid[cellID]->parameters[CellParams::TIME_V] += subcycleDt;
 
@@ -481,7 +481,7 @@ void calculateAcceleration(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& 
    const vector<CellID>& cells = getLocalCells();
       int myRank;
    MPI_Comm_rank(MPI_COMM_WORLD,&myRank);
-   
+   std::cerr <<std::scientific << "calculateAcceleration at t="<<P::t << ", for dtfactor="<<dt<<"\n";
    if (dt == 0.0 && (P::tstep > 0 || P::fractionalTimestep > 0)) {
       
       // Even if acceleration is turned off we need to adjust velocity blocks 
