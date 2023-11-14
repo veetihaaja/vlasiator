@@ -89,54 +89,47 @@ CellID get_spatial_neighbor(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geom
                             const int spatial_di,
                             const int spatial_dj,
                             const int spatial_dk ) {
-   dccrg::Types<3>::indices_t indices_unsigned = mpiGrid.mapping.get_indices(cellID);
-   int64_t indices[3];
-   dccrg::Grid_Length::type length = mpiGrid.mapping.length.get();
+   dccrg::Types<3>::indices_t indices = mpiGrid.mapping.get_indices(cellID);
 
-   //compute raw new indices
-   indices[0] = spatial_di + indices_unsigned[0];
-   indices[1] = spatial_dj + indices_unsigned[1];
-   indices[2] = spatial_dk + indices_unsigned[2];
+   std::set<uint64_t> nbrIDs = mpiGrid.find_cells_at_offset(indices, cellID, 0, {spatial_di, spatial_dj, spatial_dk});
 
-   //take periodicity into account
-   for(uint i = 0; i<3; i++) {
-      if(mpiGrid.topology.is_periodic(i)) {
-         while(indices[i] < 0 )
-            indices[i] += length[i];
-         while(indices[i] >= static_cast<int64_t>(length[i]) )
-            indices[i] -= length[i];
+   if(nbrIDs.size() != 1) {
+      std::cerr << "Error: Cell " << cellID << " has more than one neighbour (namely " << nbrIDs.size() << ":" << std::endl;
+      std::cerr << "[";
+      for(auto n : nbrIDs) {
+         std::cerr << n << ", ";
       }
-   }
-   //return INVALID_CELLID for cells outside system (non-periodic)
-   for(uint i = 0; i<3; i++) {
-      if(indices[i]< 0)
-         return INVALID_CELLID;
-      if(indices[i]>=static_cast<int64_t>(length[i]))
-         return INVALID_CELLID;
-   }
-   //store nbr indices into the correct datatype
-   for(uint i = 0; i<3; i++) {
-      indices_unsigned[i] = indices[i];
-   }
-   //get nbrID
-   CellID nbrID = mpiGrid.mapping.get_cell_from_indices(indices_unsigned,0);
-   if (nbrID == dccrg::error_cell ) {
-      std::cerr << __FILE__ << ":" << __LINE__
-                << " No neighbor for cell?" << cellID
-                << " at offsets " << spatial_di << ", " << spatial_dj << ", " << spatial_dk
-                << std::endl;
+      std::cerr << "]" << std::endl;
+
       abort();
+   }
+
+   //get nbrID
+   CellID nbrID = *nbrIDs.begin();
+   if (nbrID == dccrg::error_cell ) {
+      //std::cerr << __FILE__ << ":" << __LINE__
+      //          << " No neighbor for cell " << cellID << " (indices [" << indices[0] << ", " << indices[1] << ", " << indices[2] << "]"
+      //          << " at offsets [" << spatial_di << ", " << spatial_dj << ", " << spatial_dk
+      //          << "]"
+      //          << std::endl;
+      //abort();
+      return INVALID_CELLID;
    }
    
    // not existing cell or do not compute
-   if( mpiGrid[nbrID]->sysBoundaryFlag == sysboundarytype::DO_NOT_COMPUTE)
+   if( mpiGrid[nbrID]->sysBoundaryFlag == sysboundarytype::DO_NOT_COMPUTE) {
+      //std::cerr << "Cell " << cellID << " has no neighbour in offset [" << spatial_di << ", " << spatial_dj << ", " << spatial_dk << "] "
+      //   "because the cell would be DO_NOT_COMPUTE" << std::endl;
       return INVALID_CELLID;
+   }
 
    //cell on boundary, but not first layer and we want to include
    //first layer (e.g. when we compute source cells)
    if( include_first_boundary_layer &&
        mpiGrid[nbrID]->sysBoundaryFlag != sysboundarytype::NOT_SYSBOUNDARY &&
        mpiGrid[nbrID]->sysBoundaryLayer != 1 ) {
+      //std::cerr << "Cell " << cellID << " has no neighbour in offset [" << spatial_di << ", " << spatial_dj << ", " << spatial_dk << "] "
+      //   "because the cell would be boundary layer 1." << std::endl;
       return INVALID_CELLID;
    }
 
@@ -144,9 +137,12 @@ CellID get_spatial_neighbor(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geom
    //invalid.(e.g. when we compute targets)
    if( !include_first_boundary_layer &&
        mpiGrid[nbrID]->sysBoundaryFlag != sysboundarytype::NOT_SYSBOUNDARY){
+      //std::cerr << "Cell " << cellID << " has no neighbour in offset [" << spatial_di << ", " << spatial_dj << ", " << spatial_dk << "] "
+      //   "because the cell would be on the boundary." << std::endl;
       return INVALID_CELLID;
    }
 
+   //std::cerr << "Cell " << cellID << " has neighbour " << nbrID << "in offset [" << spatial_di << ", " << spatial_dj << ", " << spatial_dk << "] " << std::endl;
    return nbrID; //no AMR
 }
                                       
@@ -699,23 +695,44 @@ void update_remote_mapping_contribution(
       CellID p_ngbr = INVALID_CELLID;
       CellID m_ngbr = INVALID_CELLID;
 
+      //if(local_cells[c] == 4 || local_cells[c] == 5) {
+      //   fprintf(stderr, "Cell %li has neighbours in SHIFT_P_X_NEIGHBORHOOD_ID: [\n", local_cells[c]);
+      //   
+      //   for(auto& nbr : *mpiGrid.get_neighbors_of(local_cells[c], SHIFT_P_X_NEIGHBORHOOD_ID)) {
+      //         fprintf(stderr, "\t%li (%i %i %i %i)\n", nbr.first, nbr.second[0], nbr.second[1], nbr.second[2], nbr.second[3]);
+      //   }
+      //   fprintf(stderr, "]\n");
+      //   fprintf(stderr, "Cell %li has neighbours in SHIFT_M_X_NEIGHBORHOOD_ID: [\n", local_cells[c]);
+      //   for(auto& nbr : *mpiGrid.get_neighbors_of(local_cells[c], SHIFT_M_X_NEIGHBORHOOD_ID)) {
+      //         fprintf(stderr, "\t%li (%i %i %i %i)\n", nbr.first, nbr.second[0], nbr.second[1], nbr.second[2], nbr.second[3]);
+      //   }
+      //   fprintf(stderr, "]\n");
+
+      //}
+
       for (const auto& [neighbor, dir] : mpiGrid.get_face_neighbors_of(local_cells[c])) {
          if(dir == ((int)dimension + 1) * direction) {
             p_ngbr = neighbor;
          }
-
          if(dir == -1 * ((int)dimension + 1) * direction) {
             m_ngbr = neighbor;
          }
+
       }
-      
+
+      //MPI_Barrier(MPI_COMM_WORLD);
+
       //internal cell, not much to do
       if (mpiGrid.is_local(p_ngbr) && mpiGrid.is_local(m_ngbr)) continue;
 
       SpatialCell *pcell = NULL;
-      if (p_ngbr != INVALID_CELLID) pcell = mpiGrid[p_ngbr];
+      if (p_ngbr != INVALID_CELLID) {
+         pcell = mpiGrid[p_ngbr];
+      }
       SpatialCell *mcell = NULL;
-      if (m_ngbr != INVALID_CELLID) mcell = mpiGrid[m_ngbr];
+      if (m_ngbr != INVALID_CELLID) {
+         mcell = mpiGrid[m_ngbr];
+      }
       if (p_ngbr != INVALID_CELLID && pcell->sysBoundaryFlag == sysboundarytype::NOT_SYSBOUNDARY) 
          if (!mpiGrid.is_local(p_ngbr) && do_translate_cell(ccell)) {
             //if (p_ngbr != INVALID_CELLID && !mpiGrid.is_local(p_ngbr) && do_translate_cell(ccell)) {
@@ -724,12 +741,22 @@ void update_remote_mapping_contribution(
             //2) is remote cell, 3) if the source cell in center was
             //translated
             ccell->neighbor_block_data[0] = pcell->get_data(popID);
+
+            for(unsigned int cell = 0; cell<VELOCITY_BLOCK_LENGTH * pcell->get_number_of_velocity_blocks(popID); ++cell) {
+               if(isnan( pcell->get_data(popID)[cell] ) || isinf(  pcell->get_data(popID)[cell])) {
+                  fprintf(stderr,"NaN sent at cell %li, vel cell %i",receive_cells[c], cell);
+                  abort();
+               }
+            }
+
+
             ccell->neighbor_number_of_blocks[0] = pcell->get_number_of_velocity_blocks(popID);
             send_cells.push_back(p_ngbr);
          }
       if (m_ngbr != INVALID_CELLID &&
           !mpiGrid.is_local(m_ngbr) &&
           ccell->sysBoundaryFlag == sysboundarytype::NOT_SYSBOUNDARY) {
+        
          //Receive data that mcell mapped to ccell to this local cell
          //data array, if 1) m is a valid source cell, 2) center cell is to be updated (normal cell) 3) m is remote
          //we will here allocate a receive buffer, since we need to aggregate values
@@ -738,8 +765,10 @@ void update_remote_mapping_contribution(
          
          receive_cells.push_back(local_cells[c]);
          receiveBuffers.push_back(mcell->neighbor_block_data[0]);
-      }
+      }    
    }
+
+   //std::cerr << "send_cells.size = " << send_cells.size() << ", recieve_cells.size = " << receive_cells.size() << std::endl;
 
    // Do communication
    SpatialCell::setCommunicatedSpecies(popID);
@@ -759,16 +788,30 @@ void update_remote_mapping_contribution(
       break;
    }
    
-#pragma omp parallel
    {
       //reduce data: sum received data in the data array to 
       // the target grid in the temporary block container
+      //std::cerr << "Recieve_cells are [ ";
+      //for (size_t c=0; c < receive_cells.size(); ++c) {
+      //   std::cerr << receive_cells[c] << " ";
+      //}
+      //std::cerr << "\n";
       for (size_t c=0; c < receive_cells.size(); ++c) {
          SpatialCell* spatial_cell = mpiGrid[receive_cells[c]];
          Realf *blockData = spatial_cell->get_data(popID);
           
+         //fprintf(stderr, "Cell %i's recieveBuffer is at 0x%08lx, recieveBuffers[c][cell] is at 0x%08lx\n",
+         //     receive_cells[c],
+         //     mpiGrid[(( receive_cells[c]+((direction>0)?-1:1) - 1 ) % 8 ) + 1  ]->neighbor_block_data[0],
+         //     receiveBuffers[c]);
+
 #pragma omp for 
          for(unsigned int cell = 0; cell<VELOCITY_BLOCK_LENGTH * spatial_cell->get_number_of_velocity_blocks(popID); ++cell) {
+            if(isnan(receiveBuffers[c][cell]) || isinf(receiveBuffers[c][cell])) {
+               fprintf(stderr, "NaN received at cell %li, vel_cell %i (%i blocks)\n", receive_cells[c], cell, spatial_cell->get_number_of_velocity_blocks(popID));
+               //abort();
+               //break;
+            }
             blockData[cell] += receiveBuffers[c][cell];
          }
       }

@@ -643,7 +643,7 @@ int main(int argn,char* args[]) {
       sysBoundaryContainer,
       *project
    );
-   
+  
    const std::vector<CellID>& cells = getLocalCells();
    
    initGridsTimer.stop();

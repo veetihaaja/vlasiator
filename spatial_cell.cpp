@@ -651,8 +651,13 @@ namespace spatial_cell {
             }
 
             // send velocity block list
-            displacements.push_back((uint8_t*) &(populations[activePopID].vmesh.getGrid()[0]) - (uint8_t*) this);
-            block_lengths.push_back(sizeof(vmesh::GlobalID) * populations[activePopID].vmesh.size());
+            if(populations[activePopID].vmesh.size() > 0) {
+               displacements.push_back((uint8_t*) &(populations[activePopID].vmesh.getGrid()[0]) - (uint8_t*) this);
+               block_lengths.push_back(sizeof(vmesh::GlobalID) * populations[activePopID].vmesh.size());
+            } else {
+               displacements.push_back(0);
+               block_lengths.push_back(0);
+            }
          }
 
          if ((SpatialCell::mpi_transfer_type & Transfer::VEL_BLOCK_WITH_CONTENT_STAGE1) !=0) {
@@ -667,8 +672,13 @@ namespace spatial_cell {
             }
 
             //velocity_block_with_content_list_size should first be updated, before this can be done (STAGE1)
-            displacements.push_back((uint8_t*) &(this->velocity_block_with_content_list[0]) - (uint8_t*) this);
-            block_lengths.push_back(sizeof(vmesh::GlobalID)*this->velocity_block_with_content_list_size);
+            if(velocity_block_with_content_list_size > 0) {
+               displacements.push_back((uint8_t*) &(this->velocity_block_with_content_list[0]) - (uint8_t*) this);
+               block_lengths.push_back(sizeof(vmesh::GlobalID)*this->velocity_block_with_content_list_size);
+            } else {
+               displacements.push_back(0);
+               block_lengths.push_back(0);
+            }
          }
 
          if ((SpatialCell::mpi_transfer_type & Transfer::VEL_BLOCK_DATA) !=0) {
@@ -688,6 +698,13 @@ namespace spatial_cell {
             if ( P::amrMaxSpatialRefLevel == 0 || receiving || ranks.find(receiver_rank) != ranks.end()) {
                
                for ( int i = 0; i < MAX_NEIGHBORS_PER_DIM; ++i) {
+                  if(!receiving) {
+                     for(unsigned int j=0; j < this->neighbor_number_of_blocks[i]*VELOCITY_BLOCK_LENGTH; j++) {
+                        if(isnan(this->neighbor_block_data[i][j])) {
+                           std::cerr << "WARNING: Sending NaN data to neighbour (cellID " << cellID << ", neighbourID " << i << ", neigbour block data " << j << std::endl;
+                        }
+                     }
+                  }
                   displacements.push_back((uint8_t*) this->neighbor_block_data[i] - (uint8_t*) this);
                   block_lengths.push_back(sizeof(Realf) * VELOCITY_BLOCK_LENGTH * this->neighbor_number_of_blocks[i]);
                }
