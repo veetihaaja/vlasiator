@@ -83,13 +83,6 @@ namespace SBC {
             creal& dt,
             cuint& component
          )=0;
-         virtual void fieldSolverBoundaryCondMagneticFieldProjection(
-            FsGrid< std::array<Real, fsgrids::bfield::N_BFIELD>, FS_STENCIL_WIDTH> & bGrid,
-            FsGrid< fsgrids::technical, FS_STENCIL_WIDTH> & technicalGrid,
-            cint i,
-            cint j,
-            cint k
-         )=0;
          virtual void fieldSolverBoundaryCondElectricField(
             FsGrid< std::array<Real, fsgrids::efield::N_EFIELD>, FS_STENCIL_WIDTH> & EGrid,
             cint i,
@@ -143,6 +136,10 @@ namespace SBC {
             cuint& component
          );
         
+         virtual void mapCellPotentialAndGetEXBDrift(
+            std::array<Real, CellParams::N_SPATIAL_CELL_PARAMS>& cellParams
+         );
+
          /** This function computes the Vlasov (distribution function) 
           * boundary condition for the given particle species only. 
           * It is not! allowed to change block structure in cell.

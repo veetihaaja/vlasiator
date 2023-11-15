@@ -268,16 +268,19 @@ namespace SBC {
       array<Real, fsgrids::volfields::N_VOL> * volGrid0 = volGrid.get(i,j,k);
       switch(component) {
          case 0:
+            volGrid0->at(fsgrids::volfields::dPERBXVOLdx) = 0.0;
             volGrid0->at(fsgrids::volfields::dPERBYVOLdx) = 0.0;
             volGrid0->at(fsgrids::volfields::dPERBZVOLdx) = 0.0;
             break;
          case 1:
             volGrid0->at(fsgrids::volfields::dPERBXVOLdy) = 0.0;
+            volGrid0->at(fsgrids::volfields::dPERBYVOLdy) = 0.0;
             volGrid0->at(fsgrids::volfields::dPERBZVOLdy) = 0.0;
             break;
          case 2:
             volGrid0->at(fsgrids::volfields::dPERBXVOLdz) = 0.0;
             volGrid0->at(fsgrids::volfields::dPERBYVOLdz) = 0.0;
+            volGrid0->at(fsgrids::volfields::dPERBZVOLdz) = 0.0;
             break;
          default:
             cerr << __FILE__ << ":" << __LINE__ << ":" << " Invalid component" << endl;
@@ -484,7 +487,6 @@ namespace SBC {
       
 
       // Rescale own vspace
-      const Realf* toData = to->get_data(popID);
       for (vmesh::LocalID toBlockLID=0; toBlockLID<to->get_number_of_velocity_blocks(popID); ++toBlockLID) {
          // Pointer to target block data
          Realf* toData = to->get_data(toBlockLID,popID);
@@ -858,9 +860,8 @@ namespace SBC {
    array<SpatialCell*,27> & SysBoundaryCondition::getFlowtoCells(
       const CellID& cellID
    ) {
-      phiprof::start("getFlowtoCells");
+      phiprof::Timer timer {"getFlowtoCells"};
       array<SpatialCell*,27> & flowtoCells = allFlowtoCells.at(cellID);
-      phiprof::stop("getFlowtoCells");
       return flowtoCells;
    }
    
@@ -869,7 +870,7 @@ namespace SBC {
       const vmesh::GlobalID blockGID,
       const uint popID
    ) {
-      phiprof::start("getFlowtoCellsBlock");
+      phiprof::Timer timer {"getFlowtoCellsBlock"};
       array<Realf*,27> flowtoCellsBlock;
       flowtoCellsBlock.fill(NULL);
       for (uint i=0; i<27; i++) {
@@ -877,7 +878,6 @@ namespace SBC {
             flowtoCellsBlock.at(i) = flowtoCells.at(i)->get_data(flowtoCells.at(i)->get_velocity_block_local_id(blockGID,popID), popID);
          }
       }
-      phiprof::stop("getFlowtoCellsBlock");
       return flowtoCellsBlock;
    }
    
@@ -982,4 +982,9 @@ namespace SBC {
       return true;
    }
 
+   void SysBoundaryCondition::mapCellPotentialAndGetEXBDrift(
+      std::array<Real, CellParams::N_SPATIAL_CELL_PARAMS>& cellParams
+   ) {
+      std::cerr << "Error: SysBoundaryCondition::mapCellPotentialAndGetEXBDrift called!\n";
+   }
 } // namespace SBC
