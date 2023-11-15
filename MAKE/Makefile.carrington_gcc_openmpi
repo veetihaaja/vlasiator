@@ -57,7 +57,7 @@ FLAGS =
 
 #GNU flags:
 CC_BRAND = gcc
-CC_BRAND_VERSION = 11.2.0
+CC_BRAND_VERSION = 11.3.0
 CXXFLAGS += -O3 -fopenmp -funroll-loops -std=c++17 -mavx -march=znver2 #-flto
 testpackage: CXXFLAGS = -O2 -fopenmp -funroll-loops -std=c++17 -mavx -march=znver2 -DIONOSPHERE_SORTED_SUMS
 CXXFLAGS += -Wall -Wextra -Wno-unused
@@ -84,7 +84,7 @@ testpackage: CXXFLAGS += -DUSE_JEMALLOC -DJEMALLOC_NO_DEMANGLE
 #======== Libraries ===========
 
 MPT_BRAND = OpenMPI
-MPT_VERSION = 4.1.1
+MPT_VERSION = 4.1.4
 
 JEMALLOC_VERSION = 5.2.1
 LIBRARY_PREFIX = /proj/group/spacephysics/libraries
@@ -112,6 +112,7 @@ LIB_PAPI = -lpapi
 #header libraries
 INC_EIGEN = -isystem $(LIBRARY_PREFIX)/ -isystem $(LIBRARY_PREFIX)/Eigen/
 INC_FSGRID = -I$(LIBRARY_PREFIX)/fsgrid/
-INC_DCCRG = -I$(LIBRARY_PREFIX)/dccrg_dAMR/
+#INC_DCCRG = -I$(LIBRARY_PREFIX)/dccrg/
+INC_DCCRG = -I/proj/markusb/libraries/dccrg/
 INC_VECTORCLASS = -isystem $(LIBRARY_PREFIX)/vectorclass/
 

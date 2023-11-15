@@ -208,7 +208,12 @@ void prepareSeedIdsAndPencils(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Ge
 // pencils used for AMR translation
 static std::array<setOfPencils,3> DimensionPencils;
 
+// Only communicate required cells
 void flagSpatialCellsForAmrCommunication(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
                                          const std::vector<CellID>& localPropagatedCells);
+
+// Local translation cell lists (no interim comms)
+void prepareLocalTranslationCellLists(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
+                                      const std::vector<CellID>& localCells);
 
 #endif
