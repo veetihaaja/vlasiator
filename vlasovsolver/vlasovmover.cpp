@@ -414,7 +414,7 @@ void calculateSpatialTranslation(
                // Not yet implemented for non-AMR solver
                calculateSpatialLocalTranslation(
                   mpiGrid,
-                  local_propagated_cells[tc], // Used for LB
+                  tc_propagated_cells[tc], // Used for LB
                   nPencils,
                   P::timeclassDt[tc],
                   popID,
@@ -423,9 +423,7 @@ void calculateSpatialTranslation(
             } else {
                calculateSpatialTranslation(
                   mpiGrid,
-                  localCells,
                   tc_propagated_cells[tc], //local_propagated_cells,
-                  tc_target_cells[tc], //local_target_cells,
                   remoteTargetCellsx,
                   remoteTargetCellsy,
                   remoteTargetCellsz,

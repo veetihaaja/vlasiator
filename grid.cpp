@@ -128,7 +128,7 @@ void initializeGrids(
    
    mpiGrid.set_initial_length(grid_length)
       .set_load_balancing_method(&P::loadBalanceAlgorithm[0])
-      .set_neighborhood_length(neighborhood_size)
+      .set_neighborhood_length(neighborhood_size+4)
       .set_maximum_refinement_level(P::amrMaxSpatialRefLevel)
       .set_periodic(sysBoundaries.isBoundaryPeriodic(0),
                     sysBoundaries.isBoundaryPeriodic(1),
@@ -1137,7 +1137,10 @@ void initializeStencils(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
          neighborhood.push_back({{0, d, 0}});
       }
    }
-   mpiGrid.add_neighborhood(VLASOV_SOLVER_Y_NEIGHBORHOOD_ID, neighborhood);
+   if (!mpiGrid.add_neighborhood(VLASOV_SOLVER_Y_NEIGHBORHOOD_ID, neighborhood)){
+      std::cerr << "Failed to add neighborhood VLASOV_SOLVER_Y_NEIGHBORHOOD_ID \n";
+      abort();
+   }
 
    
    neighborhood.clear();
@@ -1150,6 +1153,39 @@ void initializeStencils(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
       std::cerr << "Failed to add neighborhood VLASOV_SOLVER_Z_NEIGHBORHOOD_ID \n";
       abort();
    }
+   neighborhood.clear();
+
+   for (int d = -VLASOV_STENCIL_WIDTH-3; d <= VLASOV_STENCIL_WIDTH+3; d++) {
+      if (d != 0) {
+         neighborhood.push_back({{d, 0, 0}});
+      }
+   }
+   if (!mpiGrid.add_neighborhood(VLASOV_SOLVER_EXTENDED_X_NEIGHBORHOOD_ID, neighborhood)) {
+      std::cerr << "Failed to add neighborhood VLASOV_SOLVER_EXTENDED_X_NEIGHBORHOOD_ID \n";
+      abort();
+   }
+
+   neighborhood.clear();
+   for (int d = -VLASOV_STENCIL_WIDTH-3; d <= VLASOV_STENCIL_WIDTH+3; d++) {
+      if (d != 0) {
+         neighborhood.push_back({{0, d, 0}});
+      }
+   }
+   if (!mpiGrid.add_neighborhood(VLASOV_SOLVER_EXTENDED_Y_NEIGHBORHOOD_ID, neighborhood)) { 
+      std::cerr << "Failed to add neighborhood VLASOV_SOLVER_EXTENDED_Y_NEIGHBORHOOD_ID \n";
+      abort();
+   }
+
+   neighborhood.clear();
+   for (int d = -VLASOV_STENCIL_WIDTH-3; d <= VLASOV_STENCIL_WIDTH+3; d++) {
+      if (d != 0) {
+         neighborhood.push_back({{0, 0, d}});
+      }
+   }
+   if (!mpiGrid.add_neighborhood(VLASOV_SOLVER_EXTENDED_Z_NEIGHBORHOOD_ID, neighborhood)) {
+      std::cerr << "Failed to add neighborhood VLASOV_SOLVER_EXTENDED_Z_NEIGHBORHOOD_ID \n";
+      abort();
+   }
 
    neighborhood.clear();
    for (int d = -1; d <= 1; d++) {
@@ -1157,7 +1193,7 @@ void initializeStencils(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
          neighborhood.push_back({{d, 0, 0}});
       }
    }
-   if (!mpiGrid.add_neighborhood(VLASOV_SOLVER_TARGET_X_NEIGHBORHOOD_ID, neighborhood)){
+   if (!mpiGrid.add_neighborhood(VLASOV_SOLVER_TARGET_X_NEIGHBORHOOD_ID, neighborhood)) {
       std::cerr << "Failed to add neighborhood VLASOV_SOLVER_TARGET_X_NEIGHBORHOOD_ID \n";
       abort();
    }
@@ -1221,6 +1257,35 @@ void initializeStencils(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
       std::cerr << "Failed to add neighborhood SHIFT_P_Z_NEIGHBORHOOD_ID \n";
       abort();
    }
+
+   // Extra-large neighbourhood for use in local translation. Note: if the AMR translation flag is not used, memory
+   // usage can grow in an uncontrolled fashion due to extra-large ghost regions.
+   // This is also asymmetric due to translation direction order. For now assumes VLASOV_STENCIL_WIDTH=2.
+   neighborhood.clear();
+   //if (P::vlasovSolverLocalTranslate) {
+   for (int y = 1; y <= VLASOV_STENCIL_WIDTH+3; y++) {
+      neighborhood.push_back({{ 0, y, 0}});
+      neighborhood.push_back({{ 0,-y, 0}});
+   }
+   for (int y = -1; y <= 1; y++) {
+      for (int x = 1; x <= VLASOV_STENCIL_WIDTH+4; x++) {
+         neighborhood.push_back({{ x, y, 0}});
+         neighborhood.push_back({{-x, y, 0}});
+      }
+   }
+   for (int y = -1; y <= 1; y++) {
+      for (int x = -2; x <= 2; x++) {
+         for (int z = 1; z <= VLASOV_STENCIL_WIDTH+4; z++) {
+            neighborhood.push_back({{ x, y, z}});
+            neighborhood.push_back({{ x, y,-z}});
+         }
+      }
+   }
+   if(!mpiGrid.add_neighborhood(VLASOV_SOLVER_GHOST_NEIGHBORHOOD_ID, neighborhood)){
+      std::cerr << "Failed to add neighborhood VLASOV_SOLVER_GHOST_NEIGHBORHOOD_ID \n";
+      abort();
+   }
+   return;
 }
 
 bool validateMesh(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,const uint popID) {
