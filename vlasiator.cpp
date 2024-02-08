@@ -531,7 +531,6 @@ int main(int argn,char* args[]) {
    // of looping and detecting boundary types here.
    perBDt2Grid.copyData(perBGrid);
 
->>>>>>> origin/master
    const std::vector<CellID>& cells = getLocalCells();
    
    initGridsTimer.stop();
