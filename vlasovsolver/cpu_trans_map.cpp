@@ -116,8 +116,6 @@ CellID get_spatial_neighbor(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geom
    if( include_first_boundary_layer &&
        mpiGrid[nbrID]->sysBoundaryFlag != sysboundarytype::NOT_SYSBOUNDARY &&
        mpiGrid[nbrID]->sysBoundaryLayer != 1 ) {
-      //std::cerr << "Cell " << cellID << " has no neighbour in offset [" << spatial_di << ", " << spatial_dj << ", " << spatial_dk << "] "
-      //   "because the cell would be boundary layer 1." << std::endl;
       return INVALID_CELLID;
    }
 
@@ -125,12 +123,9 @@ CellID get_spatial_neighbor(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geom
    //invalid.(e.g. when we compute targets)
    if( !include_first_boundary_layer &&
        mpiGrid[nbrID]->sysBoundaryFlag != sysboundarytype::NOT_SYSBOUNDARY){
-      //std::cerr << "Cell " << cellID << " has no neighbour in offset [" << spatial_di << ", " << spatial_dj << ", " << spatial_dk << "] "
-      //   "because the cell would be on the boundary." << std::endl;
       return INVALID_CELLID;
    }
 
-   //std::cerr << "Cell " << cellID << " has neighbour " << nbrID << "in offset [" << spatial_di << ", " << spatial_dj << ", " << spatial_dk << "] " << std::endl;
    return nbrID; //no AMR
 }
                                       
@@ -724,15 +719,6 @@ void update_remote_mapping_contribution(
             //2) is remote cell, 3) if the source cell in center was
             //translated
             ccell->neighbor_block_data[0] = pcell->get_data(popID);
-
-            for(unsigned int cell = 0; cell<VELOCITY_BLOCK_LENGTH * pcell->get_number_of_velocity_blocks(popID); ++cell) {
-               if(isnan( pcell->get_data(popID)[cell] ) || isinf(  pcell->get_data(popID)[cell])) {
-                  fprintf(stderr,"NaN sent at cell %li, vel cell %i",receive_cells[c], cell);
-                  abort();
-               }
-            }
-
-
             ccell->neighbor_number_of_blocks[0] = pcell->get_number_of_velocity_blocks(popID);
             send_cells.push_back(p_ngbr);
          }
@@ -771,6 +757,7 @@ void update_remote_mapping_contribution(
       break;
    }
    
+#pragma omp parallel
    {
       //reduce data: sum received data in the data array to 
       // the target grid in the temporary block container
