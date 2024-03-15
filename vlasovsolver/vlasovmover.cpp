@@ -320,7 +320,7 @@ void calculateSpatialTranslation(
       }
    }
    computeTimer.stop();
-   
+
    // Translate all particle species
    for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
       string profName = "translate "+getObjectWrapper().particleSpecies[popID].name;
@@ -423,24 +423,13 @@ void calculateAcceleration(const uint popID,const uint globalMaxSubcycles,const 
       if (dt<0) subcycleDt = -subcycleDt;
       
       //generate pseudo-random order which is always the same irrespective of parallelization, restarts, etc.
-      char rngStateBuffer[256];
-      random_data rngDataBuffer;
-   
+      std::default_random_engine rndState;
       // set seed, initialise generator and get value. The order is the same
       // for all cells, but varies with timestep.
-      memset(&(rngDataBuffer), 0, sizeof(rngDataBuffer));
-      #ifdef _AIX
-         initstate_r(P::tstep+P::fractionalTimestep, &(rngStateBuffer[0]), 256, NULL, &(rngDataBuffer));
-         int64_t rndInt;
-         random_r(&rndInt, &rngDataBuffer);
-      #else
-         initstate_r(P::tstep+P::fractionalTimestep, &(rngStateBuffer[0]), 256, &(rngDataBuffer));
-         int32_t rndInt;
-         random_r(&rngDataBuffer, &rndInt);
-      #endif
-      
+      rndState.seed(P::tstep + P::fractionalTimestep); // WARNING this formulation actually has some correlations (P::tstep + P::fractionalTimestep can do aliasing...)
+
       #ifndef DEBUG_TIMECLASSES
-         uint map_order=rndInt%3;
+         uint map_order=std::uniform_int_distribution<>(0,2)(rndState);
       #else
          uint map_order=1;
       #endif
@@ -525,7 +514,7 @@ void calculateAcceleration(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& 
             // disregard boundary cells, in preparation for acceleration
             if (  (SC->sysBoundaryFlag == sysboundarytype::NOT_SYSBOUNDARY) ||
                   // Include inflow-Maxwellian
-                  (P::vlasovAccelerateMaxwellianBoundaries && (SC->sysBoundaryFlag == sysboundarytype::SET_MAXWELLIAN)) ) {
+                  (P::vlasovAccelerateMaxwellianBoundaries && (SC->sysBoundaryFlag == sysboundarytype::MAXWELLIAN)) ) {
                      if (vmesh.size() != 0){   //do not propagate spatial cells with no blocks
                            if ( SC->get_timeclass_turn_v() == true){ // propagate only if it is the cell's turn)
                               propagatedCells.push_back(cells[c]);
