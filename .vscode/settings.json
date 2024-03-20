@@ -9,6 +9,8 @@
       "semaphore": "cpp",
       "valarray": "cpp",
       "algorithm": "cpp",
-      "vector": "cpp"
+      "vector": "cpp",
+      "cmath": "cpp",
+      "complex": "cpp"
    },
 }
