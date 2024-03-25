@@ -320,7 +320,7 @@ void calculateSpatialTranslation(
         dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
         creal dt) {
    typedef Parameters P;
-   std::cerr << std::scientific << "calculateSpatialTranslation at t="<<P::t << ", for dt="<<dt<<"\n";
+   std::cerr << std::scientific << "calculateSpatialTranslation at t="<<P::t << "\n";//", for dtfactor="<<dt<<"\n";
    phiprof::Timer semilagTimer {"semilag-trans"};
    
    //double t1 = MPI_Wtime();

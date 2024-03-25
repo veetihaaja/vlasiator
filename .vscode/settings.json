@@ -11,6 +11,8 @@
       "algorithm": "cpp",
       "vector": "cpp",
       "cmath": "cpp",
-      "complex": "cpp"
+      "complex": "cpp",
+      "array": "cpp",
+      "string_view": "cpp"
    },
 }

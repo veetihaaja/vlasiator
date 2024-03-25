@@ -6,6 +6,7 @@
 #include "../memoryallocation.h"
 #include "cpu_trans_map_amr.hpp"
 #include "cpu_trans_map.hpp"
+#include <sstream>
 
 // use DCCRG version 970ae46 on 12 May 2021
 // https://github.com/markusbattarbee/dccrg/tree/vlasiator_neighbor_face_testing
@@ -299,6 +300,23 @@ void findNeighborhoodCells(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geome
    // Create list of unique distances
    // Check for already found cells is required as one cell can be listed at several different distances
    for (const auto& nbrPair : *NbrPairs) {
+      if (nbrPair.first == NULL)
+      {
+         std::cerr << __FILE__ << ":" << __LINE__ << "Null nbrPair.first\n";
+      }
+      bool null_seconds = false;
+      std::cerr  << "nbrpair.second" << nbrPair.second[0] << "\n";
+      if(&nbrPair.second == NULL)
+      {
+         // if (asecond == NULL){
+            null_seconds = true;
+            std::stringstream ss; ss << __FILE__ << ":" << __LINE__ << " Null ptr in nbrPair.second for StartingCellID " << startingCellID << " \n";
+            std::cerr << ss.str();
+            // break;
+         // }
+      }
+      // if(null_seconds) continue;
+
       if(nbrPair.second[dimension] > 0) {
          if (foundNeighbors.find(nbrPair.first) == foundNeighbors.end()) {
             distancesplus.insert(nbrPair.second[dimension]);
