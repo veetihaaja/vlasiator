@@ -305,7 +305,7 @@ void findNeighborhoodCells(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geome
          std::cerr << __FILE__ << ":" << __LINE__ << "Null nbrPair.first\n";
       }
       bool null_seconds = false;
-      std::cerr  << "nbrpair.second" << nbrPair.second[0] << "\n";
+      std::cerr  << "nbrpair.second " << nbrPair.second[0] << "\n";
       if(&nbrPair.second == NULL)
       {
          // if (asecond == NULL){

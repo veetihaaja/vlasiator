@@ -358,16 +358,16 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
       for (vector<CellID>::const_iterator cell_id=cells.begin(); cell_id!=cells.end(); ++cell_id) {
          SpatialCell* cell = mpiGrid[*cell_id];
 
-         // cell->parameters[CellParams::TIMECLASS] = min(localTimeClass, P::maxTimeclass);
-         cell->parameters[CellParams::TIMECLASS] = min(int(cell->parameters[CellParams::XCRD] > -100/*epsilon*/), P::maxTimeclass);
+         cell->parameters[CellParams::TIMECLASS] = min(localTimeClass, P::maxTimeclass);
+         // cell->parameters[CellParams::TIMECLASS] = min(int(cell->parameters[CellParams::XCRD] > -100/*epsilon*/), P::maxTimeclass);
          cell->parameters[CellParams::TIMECLASSDT] = cell->get_tc_dt();
       }
-      if(P::maxTimeclass > 0) {
-         P::currentMaxTimeclass = 1;
-      }
-      else{
-         P::currentMaxTimeclass = 0;
-      }
+      // if(P::maxTimeclass > 0) {
+      //    P::currentMaxTimeclass = 1;
+      // }
+      // else{
+      //    P::currentMaxTimeclass = 0;
+      // }
    }
    else {
       for (vector<CellID>::const_iterator cell_id=cells.begin(); cell_id!=cells.end(); ++cell_id) {
