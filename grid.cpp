@@ -655,7 +655,7 @@ void balanceLoad(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid, S
    if(P::amrMaxSpatialRefLevel > 0) {
       phiprof::Timer timer {"GetSeedIdsAndBuildPencils"};
       for (int dimension=0; dimension<3; dimension++) {
-         prepareSeedIdsAndPencils(mpiGrid,dimension);
+         prepareSeedIdsAndPencils(mpiGrid, dimension);
       }
    }
 }
@@ -829,8 +829,8 @@ void report_grid_memory_consumption(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Ge
       mem[4] += mpiGrid[remote_cells[i]]->get_cell_memory_capacity();
    }
    
-   mem[2] = mem[0] + mem[1];//total meory according to size()
-   mem[5] = mem[3] + mem[4];//total memory according to capacity()
+   mem[2] = mem[0] + mem[1]; //total memory according to size()
+   mem[5] = mem[3] + mem[4]; //total memory according to capacity()
 
 
    MPI_Reduce(mem, sum_mem, 6, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);

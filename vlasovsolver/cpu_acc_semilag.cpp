@@ -94,12 +94,12 @@ void cpu_accelerate_cell(SpatialCell* spatial_cell,
    //     cpu_accelerate_cell(spatial_cell, popID, map_order, dt, true);
    //  }
    //  else {
-   //     spatial_cell->set_velocity_mesh_ghost(popID);
-   //     spatial_cell->set_velocity_blocks_ghost(popID);
-   //     vmesh = vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>(spatial_cell->get_velocity_mesh_ghost(popID));
+   //     spatial_cell->set_velocity_mesh_ghost(popID, -1);
+   //     spatial_cell->set_velocity_blocks_ghost(popID, -1);
+   //     vmesh = vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>(spatial_cell->get_velocity_mesh_ghost(popID,-1));
    //  }
    
-   //vmesh::VelocityBlockContainer<vmesh::LocalID>& blockContainer = spatial_cell->get_velocity_blocks(popID);
+   vmesh::VelocityBlockContainer<vmesh::LocalID>& blockContainer = spatial_cell->get_velocity_blocks(popID);
 
    // compute transform, forward in time and backward in time
    phiprof::Timer transformTimer {"compute-transform"};

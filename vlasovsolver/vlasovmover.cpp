@@ -106,7 +106,7 @@ void calculateSpatialTranslation(
       if(P::amrMaxSpatialRefLevel == 0) {
          trans_map_1d(mpiGrid,local_propagated_cells, remoteTargetCellsz, 2, dt,popID); // map along z//
       } else {
-         trans_map_1d_amr(mpiGrid,local_propagated_cells, remoteTargetCellsz, nPencils, 2, dt,popID); // map along z//
+         trans_map_1d_amr(mpiGrid,local_propagated_cells, remoteTargetCellsz, nPencils, 2, dt, 0, popID); // map along z//
       }
       computeTimer.stop();
       time += MPI_Wtime() - t1;
@@ -151,7 +151,7 @@ void calculateSpatialTranslation(
       if(P::amrMaxSpatialRefLevel == 0) {
          trans_map_1d(mpiGrid,local_propagated_cells, remoteTargetCellsx, 0,dt,popID); // map along x//
       } else {
-         trans_map_1d_amr(mpiGrid,local_propagated_cells, remoteTargetCellsx, nPencils, 0,dt,popID); // map along x//
+         trans_map_1d_amr(mpiGrid,local_propagated_cells, remoteTargetCellsx, nPencils, 0, dt, 0, popID); // map along x//
       }
       computeTimer.stop();
       time += MPI_Wtime() - t1;
@@ -195,7 +195,7 @@ void calculateSpatialTranslation(
       if(P::amrMaxSpatialRefLevel == 0) {
          trans_map_1d(mpiGrid,local_propagated_cells, remoteTargetCellsy, 1,dt,popID); // map along y//
       } else {
-         trans_map_1d_amr(mpiGrid,local_propagated_cells, remoteTargetCellsy, nPencils, 1,dt,popID); // map along y//      
+         trans_map_1d_amr(mpiGrid,local_propagated_cells, remoteTargetCellsy, nPencils, 1, dt, 0, popID); // map along y//      
       }
       computeTimer.stop();
       time += MPI_Wtime() - t1;
@@ -268,7 +268,7 @@ void calculateSpatialLocalTranslation(
       if(P::amrMaxSpatialRefLevel == 0) {
          //trans_map_1d(mpiGrid,local_propagated_cells, remoteTargetCellsz, 2, dt,popID); // map along z//
       } else {
-         trans_map_1d_amr(mpiGrid,local_propagated_cells, nullTargetCells, nPencils, 2, dt,popID); // map along z//
+         trans_map_1d_amr(mpiGrid,local_propagated_cells, nullTargetCells, nPencils, 2, dt, 0, popID); // map along z//
       }
       phiprof::stop("compute-mapping-z");
    }
@@ -279,7 +279,7 @@ void calculateSpatialLocalTranslation(
       if(P::amrMaxSpatialRefLevel == 0) {
          //trans_map_1d(mpiGrid,local_propagated_cells, remoteTargetCellsx, 0,dt,popID); // map along x//
       } else {
-         trans_map_1d_amr(mpiGrid,local_propagated_cells, nullTargetCells, nPencils, 0,dt,popID); // map along x//
+         trans_map_1d_amr(mpiGrid,local_propagated_cells, nullTargetCells, nPencils, 0, dt, 0, popID); // map along x//
       }
       phiprof::stop("compute-mapping-x");
    }
@@ -290,7 +290,7 @@ void calculateSpatialLocalTranslation(
       if(P::amrMaxSpatialRefLevel == 0) {
          //trans_map_1d(mpiGrid,local_propagated_cells, remoteTargetCellsy, 1,dt,popID); // map along y//
       } else {
-         trans_map_1d_amr(mpiGrid,local_propagated_cells, nullTargetCells, nPencils, 1,dt,popID); // map along y//
+         trans_map_1d_amr(mpiGrid,local_propagated_cells, nullTargetCells, nPencils, 1, dt, 0, popID); // map along y//
       }
       phiprof::stop("compute-mapping-y");
    }
@@ -527,6 +527,7 @@ void calculateAcceleration(const uint popID,const uint globalMaxSubcycles,const 
       #else
          uint map_order=1;
       #endif
+      map_order=1;
       phiprof::Timer semilagAccTimer {"cell-semilag-acc"};
       cpu_accelerate_cell(mpiGrid[cellID],popID,map_order,subcycleDt);
       // if (cellID == 16)

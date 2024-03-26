@@ -68,6 +68,7 @@ struct Parameters {
    static int maxTimeclass;
    static int timeclassLBmantissa;
    static bool tc_leapfrog_init;
+   static int tc_test_type;
 
    static bool tcDebugBox;          // Force timeclass 1 with the box
    static int tcOverrideTimeclass;  // Set fixed timeclass everywhere [debugging, default -1 i.e. off]

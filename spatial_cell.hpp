@@ -171,11 +171,6 @@ namespace spatial_cell {
                                                                       * global IDs.*/
       vmesh::VelocityBlockContainer<vmesh::LocalID> blockContainer;  /**< Velocity block data.*/
 
-      vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID> vmesh_ghost;     /**< Velocity mesh timeghost. Contains all velocity blocks that exist 
-                                                                            * in this spatial cell. Cells are identified by their unique 
-                                                                            * global IDs.*/
-      vmesh::VelocityBlockContainer<vmesh::LocalID> blockContainer_ghost;  /**< Velocity block data for the timeghost.*/
-
    };
 
    class SpatialCell {
@@ -299,10 +294,10 @@ namespace spatial_cell {
       vmesh::VelocityBlockContainer<vmesh::LocalID>& get_velocity_blocks(const size_t& popID);
 
 
-      void set_velocity_mesh_ghost(const size_t& popID);
-      void set_velocity_blocks_ghost(const size_t& popID);
-      vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& get_velocity_mesh_ghost(const size_t& popID);
-      vmesh::VelocityBlockContainer<vmesh::LocalID>& get_velocity_blocks_ghost(const size_t& popID);
+      void set_velocity_mesh_ghost(const size_t& popID, const int timeclass);
+      void set_velocity_blocks_ghost(const size_t& popID, const int timeclass);
+      vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& get_velocity_mesh_ghost(const size_t& popID, const int timeclass);
+      vmesh::VelocityBlockContainer<vmesh::LocalID>& get_velocity_blocks_ghost(const size_t& popID, const int timeclass);
 
       vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& get_velocity_mesh_temporary();
       vmesh::VelocityBlockContainer<vmesh::LocalID>& get_velocity_blocks_temporary();
@@ -368,6 +363,10 @@ namespace spatial_cell {
       static bool mpiTransferInAMRTranslation;                                /**< Do we only transfer cells which are required by AMR translation. */
       static int mpiTransferXYZTranslation;                                   /**< Dimension in which AMR translation is happening */
 
+      std::vector<int> requested_timeclass_ghosts = {};                       /**< See Pencil construction. Translation stencil neighbours may want v-space values at
+                                                                               *   varying timeclass synchronizations. This keeps track which levels are requested of this
+                                                                               *   cell. Populations struct contains mappings of these timeclasses to ghost vmeshes. */
+
       //SpatialCell& operator=(const SpatialCell& other);
     private:
       //SpatialCell& operator=(const SpatialCell&);
@@ -391,6 +390,7 @@ namespace spatial_cell {
                                                                                  * before you have set the correct meshID using setMesh function.*/
       vmesh::VelocityBlockContainer<vmesh::LocalID> blockContainerTemp;
       std::vector<spatial_cell::Population> populations;                        /**< Particle population variables.*/
+      std::map<std::pair<const uint, const int>, spatial_cell::Population> ghostPopulations;
    };
 
    /****************************
@@ -1537,52 +1537,52 @@ namespace spatial_cell {
    }
 
 
-   inline void SpatialCell::set_velocity_mesh_ghost(const size_t& popID) {
+   inline void SpatialCell::set_velocity_mesh_ghost(const size_t& popID, const int timeclass) {
       #ifdef DEBUG_SPATIAL_CELL
       if (popID >= populations.size()) {
          std::cerr << "ERROR, popID " << popID << " exceeds populations.size() " << populations.size() << " in ";
-         std::cerr << __FILE__ << ":" << __LINE__ << std::endl;             
+         std::cerr << __FILE__ << ":" << __LINE__ << std::endl;
          exit(1);
       }
       #endif
 
-      populations[popID].vmesh = vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>(populations[popID].vmesh);
+      ghostPopulations[{popID,timeclass}].vmesh = vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>(populations[popID].vmesh);
    }
 
-   inline void SpatialCell::set_velocity_blocks_ghost(const size_t& popID) {
+   inline void SpatialCell::set_velocity_blocks_ghost(const size_t& popID, const int timeclass) {
       #ifdef DEBUG_SPATIAL_CELL
       if (popID >= populations.size()) {
          std::cerr << "ERROR, popID " << popID << " exceeds populations.size() " << populations.size() << " in ";
-         std::cerr << __FILE__ << ":" << __LINE__ << std::endl;             
+         std::cerr << __FILE__ << ":" << __LINE__ << std::endl;
          exit(1);
       }
       #endif
       
-      populations[popID].blockContainer_ghost = vmesh::VelocityBlockContainer<vmesh::LocalID>(populations[popID].blockContainer_ghost);
+      ghostPopulations[{popID,timeclass}].blockContainer = vmesh::VelocityBlockContainer<vmesh::LocalID>(populations[popID].blockContainer);
    }
 
-   inline vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& SpatialCell::get_velocity_mesh_ghost(const size_t& popID) {
+   inline vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& SpatialCell::get_velocity_mesh_ghost(const size_t& popID, const int timeclass) {
       #ifdef DEBUG_SPATIAL_CELL
       if (popID >= populations.size()) {
          std::cerr << "ERROR, popID " << popID << " exceeds populations.size() " << populations.size() << " in ";
-         std::cerr << __FILE__ << ":" << __LINE__ << std::endl;             
+         std::cerr << __FILE__ << ":" << __LINE__ << std::endl;
          exit(1);
       }
       #endif
 
-      return populations[popID].vmesh;
+      return ghostPopulations[{popID,timeclass}].vmesh;
    }
 
-   inline vmesh::VelocityBlockContainer<vmesh::LocalID>& SpatialCell::get_velocity_blocks_ghost(const size_t& popID) {
+   inline vmesh::VelocityBlockContainer<vmesh::LocalID>& SpatialCell::get_velocity_blocks_ghost(const size_t& popID, const int timeclass) {
       #ifdef DEBUG_SPATIAL_CELL
       if (popID >= populations.size()) {
          std::cerr << "ERROR, popID " << popID << " exceeds populations.size() " << populations.size() << " in ";
-         std::cerr << __FILE__ << ":" << __LINE__ << std::endl;             
+         std::cerr << __FILE__ << ":" << __LINE__ << std::endl;
          exit(1);
       }
       #endif
       
-      return populations[popID].blockContainer;
+      return ghostPopulations[{popID,timeclass}].blockContainer;
    }
 
 

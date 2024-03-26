@@ -305,7 +305,7 @@ void findNeighborhoodCells(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geome
          std::cerr << __FILE__ << ":" << __LINE__ << "Null nbrPair.first\n";
       }
       bool null_seconds = false;
-      std::cerr  << "nbrpair.second " << nbrPair.second[0] << "\n";
+      // std::cerr  << "nbrpair.second " << nbrPair.second[0] << "\n";
       if(&nbrPair.second == NULL)
       {
          // if (asecond == NULL){
@@ -851,7 +851,7 @@ void computeSpatialTargetCellsForPencilsWithFaces(const dccrg::Dccrg<SpatialCell
       }
       backNeighborIds.clear();
 
-      // Incerment global id by L + 2 ghost cells.
+      // Increment global id by L + 2 ghost cells.
       GID += (L + 2);
    }
 
@@ -950,6 +950,7 @@ setOfPencils buildPencilsWithNeighbors( const dccrg::Dccrg<SpatialCell,dccrg::Ca
    if( startingRefLvl > startingPathSize ) {
 
       CellID myId = seedId;
+
       
       for ( int i = path.size(); i < startingRefLvl; ++i) {
 
@@ -1005,12 +1006,19 @@ setOfPencils buildPencilsWithNeighbors( const dccrg::Dccrg<SpatialCell,dccrg::Ca
       periodic = false;
       bool neighborExists = false;
       int refLvl = 0;
-      
+      int myTimeclass = grid[id]->parameters[CellParams::TIMECLASS];
+
       // Find the refinement level in the neighboring cell. Check all possible neighbors
       // in case some of them are remote.
       for (int tmpPath = 0; tmpPath < 4; ++tmpPath) {
          nextNeighbor = selectNeighbor(grid,id,dimension,tmpPath);
-         if(nextNeighbor != INVALID_CELLID) {
+         if(P::tc_test_type == 3){
+            if(grid[nextNeighbor]->parameters[CellParams::TIMECLASS] != myTimeclass){
+               neighborExists = false;
+               break;
+            }
+         }
+         if( nextNeighbor != INVALID_CELLID) {
             refLvl = max(refLvl,grid.get_refinement_level(nextNeighbor));
             neighborExists = true;
          }
@@ -1035,8 +1043,8 @@ setOfPencils buildPencilsWithNeighbors( const dccrg::Dccrg<SpatialCell,dccrg::Ca
                std::cout << std::endl;
             }
 	
-            nextNeighbor = selectNeighbor(grid,id,dimension,path[refLvl - 1]);      
-	    coordinates = grid.get_center(nextNeighbor);
+            nextNeighbor = selectNeighbor(grid,id,dimension,path[refLvl - 1]);
+	         coordinates = grid.get_center(nextNeighbor);
 
          } else {
 	
@@ -1060,7 +1068,7 @@ setOfPencils buildPencilsWithNeighbors( const dccrg::Dccrg<SpatialCell,dccrg::Ca
 	    
                   // This builder continues with neighbor 3
                   path = myPath;
-		  coordinates = grid.get_center(nextNeighbor);
+		            coordinates = grid.get_center(nextNeighbor);
 
                } else {
 	    
@@ -1142,7 +1150,7 @@ bool check_skip_remapping(Vec* values) {
  *
  * @param dz Width of spatial cells in the direction of the pencil, vector datatype
  * @param values Density values of the block, vector datatype
- * @param dimension Satial dimension
+ * @param dimension Spatial dimension
  * @param blockGID Global ID of the velocity block.
  * @param dt Time step
  * @param vmesh Velocity mesh object
@@ -1170,13 +1178,10 @@ void propagatePencil(
    // In fact propagating to > 1 neighbor will give an error
    // Also defined in the calling function for the allocation of targetValues
    const uint nTargetNeighborsPerPencil = 1;
-
    
    for (uint i = 0; i < (lengthOfPencil + 2 * nTargetNeighborsPerPencil) * WID3 / VECL; i++) {
-      
       // init target_values
       targetValues[i] = Vec(0.0);
-      
    }
    
    // Go from 0 to length here to propagate all the cells in the pencil
@@ -1844,7 +1849,7 @@ void prepareSeedIdsAndPencils(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Ge
       }
    } else {
       for (size_t c=0; c<localCells.size(); ++c) {
-         if (do_translate_cell(mpiGrid[localCells[c]])) {
+         if (do_translate_cell(mpiGrid[localCells[c]]) && mpiGrid[localCells[c]]) {
             PropagatedCells.push_back(localCells[c]);
          }
       }
@@ -1924,7 +1929,7 @@ bool trans_map_1d_amr(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>&
                       const vector<CellID>& remoteTargetCells,
                       std::vector<uint>& nPencils,
                       const uint dimension,
-                      const Realv dt,
+                      const Realv dt, const int timeclass,
                       const uint popID) {
    phiprof::Timer setupTimer {"setup"};
    uint cell_indices_to_id[3]; /*< used when computing id of target cell in block*/

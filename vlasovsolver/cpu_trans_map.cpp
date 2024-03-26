@@ -56,12 +56,12 @@ using namespace spatial_cell;
 #define i_trans_pt_blockv(planeVectorIndex, planeIndex, blockIndex)  ( planeVectorIndex + planeIndex * VEC_PER_PLANE + (blockIndex + 1) * VEC_PER_BLOCK)
 
 //Is cell translated? It is not translated if DO_NO_COMPUTE or if it is sysboundary cell and not in first sysboundarylayer
-bool do_translate_cell(SpatialCell* SC, bool tc){
+bool do_translate_cell(SpatialCell* SC, int tc){
    if(SC->sysBoundaryFlag == sysboundarytype::DO_NOT_COMPUTE ||
       (SC->sysBoundaryLayer != 1 && SC->sysBoundaryFlag != sysboundarytype::NOT_SYSBOUNDARY)){
       return false;
    }
-   else if(tc) {// Check if it is our timeclasses turn to translate
+   else if(tc > -1) {// Check if it is our timeclasses turn to translate
                 // TODO This is also handled when constructing cells to translate per timeclass. Superfluous?
       if(SC->get_timeclass_turn_r() == true){
          return true;
@@ -599,7 +599,7 @@ bool trans_map_1d(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
             if(targetsValid[celli]) {
                for(uint ti = 0; ti < 3; ti++) {
                   SpatialCell* spatial_cell = targetNeighbors[celli * 3 + ti];
-                  if(spatial_cell ==NULL) {
+                  if(spatial_cell == NULL) {
                      //invalid target spatial cell
                      continue;
                   }

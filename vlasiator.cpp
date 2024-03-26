@@ -152,6 +152,8 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
    isChanged = false;
 
    const vector<CellID>& cells = getLocalCells();
+   newTimeclassDts = std::vector<Real>(P::maxTimeclass+1);
+
    /* Arrays for storing local (per process) and global max dt
       0th position stores ordinary space propagation dt
       1st position stores velocity space propagation dt
@@ -315,59 +317,86 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
    int dtdiff = int(log2(localDt/fsdt));
    int localTimeClass = max(0,P::currentMaxTimeclass - max(0, dtdiff)); // this shouldn't actually matter anymore?
    
-   if(P::tcDebugBox){
-      localTimeClass = 0;
-      for (vector<CellID>::const_iterator cell_id=cells.begin(); cell_id!=cells.end(); ++cell_id) {
-         SpatialCell* cell = mpiGrid[*cell_id];
-         const Real x = cell->parameters[CellParams::XCRD];
-         const Real y = cell->parameters[CellParams::YCRD];
-         const Real z = cell->parameters[CellParams::ZCRD];
-         if (abs(x-P::tcBoxCenterX) < P::tcBoxHalfWidthX &&
-             abs(y-P::tcBoxCenterY) < P::tcBoxHalfWidthY &&
-             abs(z-P::tcBoxCenterZ) < P::tcBoxHalfWidthZ ){
-            cell->parameters[CellParams::TIMECLASS] = 1;
-            localTimeClass = 1;
-         }
-         else{
-            cell->parameters[CellParams::TIMECLASS] = 0;
-            localTimeClass = max(0, localTimeClass);
-         }
-      }
+   // if(P::tcDebugBox){
+   //    localTimeClass = 0;
+   //    for (vector<CellID>::const_iterator cell_id=cells.begin(); cell_id!=cells.end(); ++cell_id) {
+   //       SpatialCell* cell = mpiGrid[*cell_id];
+   //       const Real x = cell->parameters[CellParams::XCRD];
+   //       const Real y = cell->parameters[CellParams::YCRD];
+   //       const Real z = cell->parameters[CellParams::ZCRD];
+   //       if (abs(x-P::tcBoxCenterX) < P::tcBoxHalfWidthX &&
+   //           abs(y-P::tcBoxCenterY) < P::tcBoxHalfWidthY &&
+   //           abs(z-P::tcBoxCenterZ) < P::tcBoxHalfWidthZ ){
+   //          cell->parameters[CellParams::TIMECLASS] = 1;
+   //          localTimeClass = 1;
+   //       }
+   //       else{
+   //          cell->parameters[CellParams::TIMECLASS] = 0;
+   //          localTimeClass = max(0, localTimeClass);
+   //       }
+   //    }
       
-      for (vector<CellID>::const_iterator cell_id=cells.begin(); cell_id!=cells.end(); ++cell_id) {
-         SpatialCell* cell = mpiGrid[*cell_id];
-         if(P::tcRankwise){
-            cell->parameters[CellParams::TIMECLASS] = localTimeClass;
-         }
-         cell->parameters[CellParams::TIMECLASSDT] = cell->get_tc_dt();
-      }
+   //    for (vector<CellID>::const_iterator cell_id=cells.begin(); cell_id!=cells.end(); ++cell_id) {
+   //       SpatialCell* cell = mpiGrid[*cell_id];
+   //       if(P::tcRankwise){
+   //          cell->parameters[CellParams::TIMECLASS] = localTimeClass;
+   //       }
+   //       cell->parameters[CellParams::TIMECLASSDT] = cell->get_tc_dt();
+   //    }
    
-   }
-   else if(true){ // Rank-based tc, only +1 or overrides
-      // if(P::maxTimeclass != 1){
-      //    std::cerr << "This test requires P::maxTimeclass=1\n";
-      //    abort();
-      // }
+   // }
+   if(P::tc_test_type == 1){
       if(P::tcOverrideTimeclass > -1){
          localTimeClass = P::tcOverrideTimeclass;
       }
       else {
-         localTimeClass = myRank % 2;
+         localTimeClass = 0;
       }
+      P::currentMaxTimeclass = P::maxTimeclass;
+
+      for(int i = 0; i <= P::maxTimeclass; ++i){
+         newTimeclassDts[i] = fsdt*pow(2,P::currentMaxTimeclass - min(i,P::currentMaxTimeclass));
+      }
+      P::timeclassDt = newTimeclassDts;
       
       for (vector<CellID>::const_iterator cell_id=cells.begin(); cell_id!=cells.end(); ++cell_id) {
          SpatialCell* cell = mpiGrid[*cell_id];
 
          cell->parameters[CellParams::TIMECLASS] = min(localTimeClass, P::maxTimeclass);
-         // cell->parameters[CellParams::TIMECLASS] = min(int(cell->parameters[CellParams::XCRD] > -100/*epsilon*/), P::maxTimeclass);
          cell->parameters[CellParams::TIMECLASSDT] = cell->get_tc_dt();
       }
-      // if(P::maxTimeclass > 0) {
-      //    P::currentMaxTimeclass = 1;
+   }
+   else if(P::tc_test_type == 2 || P::tc_test_type == 3){ 
+      std::cerr << "TC test 2\n";
+      if(P::maxTimeclass > 1){
+         std::cerr << "This test requires P::maxTimeclass=0 or 1\n";
+         abort();
+      }
+      if(P::maxTimeclass > 0) {
+         P::currentMaxTimeclass = 1;
+      }
+      else{
+         P::currentMaxTimeclass = 0;
+      }
+      for(int i = 0; i <= P::maxTimeclass; ++i){
+         newTimeclassDts[i] = fsdt*pow(2,P::currentMaxTimeclass - min(i,P::currentMaxTimeclass));
+      }
+      P::timeclassDt = newTimeclassDts;
+      // if(P::tcOverrideTimeclass > -1){
+      //    localTimeClass = P::tcOverrideTimeclass;
       // }
-      // else{
-      //    P::currentMaxTimeclass = 0;
+      // else {
+      //    localTimeClass = myRank % 2;
       // }
+      
+      for (vector<CellID>::const_iterator cell_id=cells.begin(); cell_id!=cells.end(); ++cell_id) {
+         SpatialCell* cell = mpiGrid[*cell_id];
+
+         // cell->parameters[CellParams::TIMECLASS] = min(localTimeClass, P::maxTimeclass);
+         cell->parameters[CellParams::TIMECLASS] = min(int(cell->parameters[CellParams::XCRD] > -100/*epsilon*/), P::maxTimeclass);
+         cell->parameters[CellParams::TIMECLASSDT] = cell->get_tc_dt();
+      }
+      
    }
    else {
       for (vector<CellID>::const_iterator cell_id=cells.begin(); cell_id!=cells.end(); ++cell_id) {
@@ -399,7 +428,6 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
       
    }
    //this yoinked from within the below loop to set the timeclassDts anyway
-   newTimeclassDts = std::vector<Real>(P::maxTimeclass+1);
    for(int i = 0; i <= P::maxTimeclass; ++i){
       newTimeclassDts[i] = fsdt*pow(2,P::currentMaxTimeclass - min(i,P::currentMaxTimeclass));
    }
