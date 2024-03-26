@@ -44,7 +44,6 @@ void store_trans_block_data(SpatialCell** target_neighbors,const vmesh::GlobalID
                             Vec* __restrict__ target_values,
                             const unsigned char* const cellid_transpose,const uint popID);
 
-bool do_translate_cell(spatial_cell::SpatialCell* SC, int tc = -1);
 bool trans_map_1d(const dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
                   const std::vector<CellID>& localPropagatedCells,
                   const std::vector<CellID>& remoteTargetCells,

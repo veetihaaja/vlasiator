@@ -54,14 +54,7 @@ using namespace spatial_cell;
 const int PAD=1;
 static Realf tempSource[(WID+2*PAD)*(WID+2*PAD)*(WID+2*PAD)];
 
-//Is cell translated? It is not translated if DO_NO_COMPUTE or if it is sysboundary cell and not in first sysboundarylayer
-bool do_translate_cell(SpatialCell* SC) {
-   if (SC->sysBoundaryFlag == sysboundarytype::DO_NOT_COMPUTE ||
-      (SC->sysBoundaryLayer != 1 && SC->sysBoundaryFlag != sysboundarytype::NOT_SYSBOUNDARY))
-     return false;
-   else
-     return true;
-}
+
 
 /*
  * return INVALID_CELLID if the spatial neighbor does not exist, or if

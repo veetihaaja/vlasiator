@@ -42,6 +42,7 @@
 #include "cpu_moments.h"
 #include "cpu_acc_semilag.hpp"
 #include "cpu_trans_map.hpp"
+#include "cpu_trans_pencils.hpp"
 #include "cpu_trans_map_amr.hpp"
 
 using namespace std;
@@ -79,6 +80,7 @@ void calculateSpatialTranslation(
     if (P::amrMaxSpatialRefLevel > 0) AMRtranslationActive = true;
 
     double t1;
+
     int myRank;
     MPI_Comm_rank(MPI_COMM_WORLD,&myRank);
    
@@ -195,7 +197,7 @@ void calculateSpatialTranslation(
       if(P::amrMaxSpatialRefLevel == 0) {
          trans_map_1d(mpiGrid,local_propagated_cells, remoteTargetCellsy, 1,dt,popID); // map along y//
       } else {
-         trans_map_1d_amr(mpiGrid,local_propagated_cells, remoteTargetCellsy, nPencils, 1, dt, 0, popID); // map along y//      
+         trans_map_1d_amr(mpiGrid,local_propagated_cells, remoteTargetCellsy, nPencils, 1, dt, 0, popID); // map along y//
       }
       computeTimer.stop();
       time += MPI_Wtime() - t1;
@@ -307,9 +309,9 @@ void calculateSpatialLocalTranslation(
 }
 
 /*!
-  
-  Propagates the distribution function in spatial space. 
-  
+
+  Propagates the distribution function in spatial space.
+
   Based on SLICE-3D algorithm: Zerroukat, M., and T. Allen. "A
   three‐dimensional monotone and conservative semi‐Lagrangian scheme
   (SLICE‐3D) for transport problems." Quarterly Journal of the Royal
@@ -337,7 +339,7 @@ void calculateSpatialTranslation(
    vector<uint> nPencils;
    Real time=0.0;
 
-   // If dt=0 we are either initializing or distribution functions are not translated. 
+   // If dt=0 we are either initializing or distribution functions are not translated.
    // In both cases go to the end of this function and calculate the moments.
    if (dt == 0.0) {
       calculateMoments_R(mpiGrid,localCells,true);
@@ -362,10 +364,10 @@ void calculateSpatialTranslation(
    for (size_t c=0; c<localCells.size(); ++c) {
       int cellTC = (int)mpiGrid[localCells[c]]->parameters[CellParams::TIMECLASS];
       
-      if (do_translate_cell(mpiGrid[localCells[c]],false)) {
+      if (do_translate_cell(mpiGrid[localCells[c]],-1)) {
          tc_propagated_cells[cellTC].push_back(localCells[c]);
       }
-      if (do_translate_cell(mpiGrid[localCells[c]],false) &&
+      if (do_translate_cell(mpiGrid[localCells[c]],-1) &&
           mpiGrid[localCells[c]]->sysBoundaryFlag == sysboundarytype::NOT_SYSBOUNDARY) {
             tc_target_cells[cellTC].push_back(localCells[c]);
       }
@@ -379,10 +381,11 @@ void calculateSpatialTranslation(
    // result independent of particle species.
    // If performing all-local translation, this is used for LB.
    for (size_t c=0; c<localCells.size(); ++c) {
-      if (do_translate_cell(mpiGrid[localCells[c]],true)) {
+      if (do_translate_cell(mpiGrid[localCells[c]],1)) {
          local_propagated_cells.push_back(localCells[c]);
       }
    }
+
    // Figure out target spatial cells, result
    // independent of particle species.
    for (size_t c=0; c<localCells.size(); ++c) {
@@ -463,7 +466,7 @@ void calculateSpatialTranslation(
          }
       }
    }
-   
+
    // Mapping complete, update moments and maximum dt limits //
    calculateMoments_R(mpiGrid,localCells,true);
 }
@@ -488,7 +491,8 @@ void calculateAcceleration(const uint popID,const uint globalMaxSubcycles,const 
                            const Real& dt) {
    // Set active population
    SpatialCell::setCommunicatedSpecies(popID);
-      // Calculate velocity moments, these are needed to 
+
+   // Calculate velocity moments, these are needed to
    // calculate the transforms used in the accelerations.
    // Calculated moments are stored in the "_V" variables.
    calculateMoments_V(mpiGrid, propagatedCells, false);
@@ -515,7 +519,7 @@ void calculateAcceleration(const uint popID,const uint globalMaxSubcycles,const 
          subcycleDt = maxVdt;
       }
       if (dt<0) subcycleDt = -subcycleDt;
-      
+
       //generate pseudo-random order which is always the same irrespective of parallelization, restarts, etc.
       std::default_random_engine rndState;
       // set seed, initialise generator and get value. The order is the same
@@ -554,22 +558,22 @@ void calculateAcceleration(const uint popID,const uint globalMaxSubcycles,const 
    }
 }
 
-/** Accelerate all particle populations to new time t+dt. 
+/** Accelerate all particle populations to new time t+dt.
  * This function is AMR safe. NB: acceleration by dt = 0 is not an idempotent operation.
  * @param mpiGrid Parallel grid library.
  * @param dt Time step factor: cells will propagated by dt*CellParams[CellParams::CELLDT] if needed.*/
 void calculateAcceleration(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
                            Real dt
-                          ) {    
+                          ) {
    typedef Parameters P;
    const vector<CellID>& cells = getLocalCells();
    int myRank;
    MPI_Comm_rank(MPI_COMM_WORLD,&myRank);
-   std::cerr <<std::scientific << "calculateAcceleration at t="<<P::t << ", for dtfactor="<<dt<<"\n";
+std::cerr <<std::scientific << "calculateAcceleration at t="<<P::t << ", for dtfactor="<<dt<<"\n";
    if (dt == 0.0 && (P::tstep > 0 || P::fractionalTimestep > 0)) {
-      
-      // Even if acceleration is turned off we need to adjust velocity blocks 
-      // because the boundary conditions may have altered the velocity space, 
+
+      // Even if acceleration is turned off we need to adjust velocity blocks
+      // because the boundary conditions may have altered the velocity space,
       // and to update changes in no-content blocks during translation.
       for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
 // std::cerr << __FILE__<<":"<<__LINE__<< " calling adjustVelocityBlocks at t = " 
@@ -696,7 +700,7 @@ void calculateInterpolatedVelocityMoments(
    const int cp_p33
 ) {
    const vector<CellID>& cells = getLocalCells();
-   
+
    //Iterate through all local cells
     #pragma omp parallel for
    for (size_t c=0; c<cells.size(); ++c) {
