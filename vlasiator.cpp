@@ -961,6 +961,8 @@ int main(int argn,char* args[]) {
          }
          std::cout << endl;
       }
+      balanceLoad(mpiGrid, sysBoundaryContainer);
+
       computeDtimer.stop();
       
       //go forward by dt/2 in V, initializes leapfrog split. In restarts the
@@ -1376,6 +1378,8 @@ int main(int argn,char* args[]) {
             continue; //
             addTimedBarrier("barrier-new-dt-set");
          }
+         balanceLoad(mpiGrid, sysBoundaryContainer);
+
       }
       
       if (((P::tstep % P::rebalanceInterval == P::rebalanceInterval-1) && (P::fractionalTimestep == 0)) || P::prepareForRebalance == true) {

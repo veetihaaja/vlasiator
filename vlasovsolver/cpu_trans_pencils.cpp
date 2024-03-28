@@ -966,6 +966,7 @@ void buildPencilsWithNeighbors( const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_
 
    std::array<double, 3> coordinates = grid.get_center(seedId);
    int startingPathSize = path.size();
+   int timeclass = grid[id]->parameters[CellParams::TIMECLASS];
 
    // Find the "pre-existing" path for new pencils starting at higher reflevels
    if( startingRefLvl > startingPathSize ) {
@@ -1021,7 +1022,6 @@ void buildPencilsWithNeighbors( const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_
       periodic = false;
       bool neighborExists = false;
       int refLvl = 0;
-      int timeclass = grid[id]->parameters[CellParams::TIMECLASS];
 
       // Find the refinement level in the neighboring (local) cell. Check all possible neighbors
       // in case some of them are remote.
@@ -1136,13 +1136,17 @@ void buildPencilsWithNeighbors( const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_
    x = coordinates[ix];
    y = coordinates[iy];
 
-   pencils.addPencil(ids,x,y,periodic,path);
+   pencils.addPencil(ids, x, y, periodic, path, timeclass);
    return;
 }
 
 /* Determine which cells in the local DCCRG mesh should be starting points for pencils.
- * If a neighbor cell is non-local, across a periodic boundary, or in non-periodic boundary layer 1
- * then we use this cell as a seed for pencils
+ * If a neighbor cell is 
+ *  - non-local,
+ *  - across a periodic boundary,
+ *  - in non-periodic boundary layer 1, or
+ *  - on a different timeclass, TBD
+ * then we use this cell as a seed for pencils.
  *
  * @param [in] mpiGrid DCCRG grid object
  * @param [in] localPropagatedCells List of local cells that get propagated
@@ -1199,7 +1203,8 @@ void getSeedIds(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGr
             // then we use the current cell as a seed for pencils
             if ( (myIndices[dimension] < nbrIndices[dimension]) ||
                !mpiGrid.is_local(neighbor) ||
-               !do_translate_cell(mpiGrid[neighbor]) )
+               !do_translate_cell(mpiGrid[neighbor]) ||
+               mpiGrid[celli]->parameters[CellParams::TIMECLASS] != mpiGrid[neighbor]->parameters[CellParams::TIMECLASS])
             {
                addToSeedIds = true;
                break;
@@ -1490,7 +1495,7 @@ void printPencilsFunc(const setOfPencils& pencils, const uint dimension, const i
    MPI_Barrier(MPI_COMM_WORLD);
    if(myRank == MASTER_RANK) {
       ss << "(D=DO_NOT_COMPUTE, S=Sysboundary L2, L=Sysboundary L1, N=Non-sysboundary L2, G=Ghost cell)" << std::endl;
-      ss << "t, N, mpirank, dimension, length (x, y): indices {path} DZs AreaRatios" << std::endl;
+      ss << "t, N, mpirank, dimension, timeclass, length (x, y): indices {path} DZs AreaRatios" << std::endl;
       ss << "----------------------------------------------------------------------" << std::endl;
    }
    MPI_Barrier(MPI_COMM_WORLD);
@@ -1501,6 +1506,7 @@ void printPencilsFunc(const setOfPencils& pencils, const uint dimension, const i
       ss << i << ", ";
       ss << myRank << ", ";
       ss << dimension << ", ";
+      ss << pencils.timeclasses[i] << ", ";
       ss << L << ", ";
       ss << "(" << pencils.x[i] << ", " << pencils.y[i] << "): ";
       for (auto j = pencils.ids.begin() + ibeg; j != pencils.ids.begin() + iend; ++j) {
@@ -1552,8 +1558,8 @@ void prepareSeedIdsAndPencils(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Ge
                               const uint dimension) {
 
    // Optional heavy printouts for debugging
-   const bool printPencils = false;
-   const bool printSeeds = false;
+   const bool printPencils = true;
+   const bool printSeeds = true;
    int myRank, mpi_size;
    if(printPencils || printSeeds) {
       MPI_Comm_rank(MPI_COMM_WORLD,&myRank);
@@ -1642,7 +1648,7 @@ void prepareSeedIdsAndPencils(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Ge
             ibeg = thread_pencils.ids.begin() + thread_pencils.idsStart[i];
             iend = ibeg + thread_pencils.lengthOfPencils[i];
             std::vector<CellID> pencilIds(ibeg, iend);
-            DimensionPencils[dimension].addPencil(pencilIds,thread_pencils.x[i],thread_pencils.y[i],thread_pencils.periodic[i],thread_pencils.path[i]);
+            DimensionPencils[dimension].addPencil(pencilIds,thread_pencils.x[i],thread_pencils.y[i],thread_pencils.periodic[i],thread_pencils.path[i], thread_pencils.timeclasses[i]);
          }
       }
    }

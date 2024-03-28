@@ -39,6 +39,7 @@ struct setOfPencils {
    std::vector< Real > x,y; // x,y - position
    std::vector< bool > periodic;
    std::vector< std::vector<uint> > path; // Path taken through refinement levels
+   std::vector< int > timeclasses; // Timeclass of each pencil 
 
    setOfPencils() {
       N = 0;
@@ -60,7 +61,7 @@ struct setOfPencils {
       path.clear();
    }
 
-   void addPencil(std::vector<CellID> idsIn, Real xIn, Real yIn, bool periodicIn, std::vector<uint> pathIn) {
+   void addPencil(std::vector<CellID> idsIn, Real xIn, Real yIn, bool periodicIn, std::vector<uint> pathIn, int timeclass) {
       N++;
       // If necessary, add the zero cells to the beginning and end
       if (idsIn.front() != 0) {
@@ -81,6 +82,7 @@ struct setOfPencils {
       y.push_back(yIn);
       periodic.push_back(periodicIn);
       path.push_back(pathIn);
+      timeclasses.push_back(timeclass);
    }
 
    void removePencil(const uint pencilId) {
@@ -185,7 +187,7 @@ struct setOfPencils {
          } else {
             auto myPath = copy_of_path;
             myPath.push_back(step);
-            addPencil(myIds, myX, myY, periodic.at(myPencilId), myPath);
+            addPencil(myIds, myX, myY, periodic.at(myPencilId), myPath, this->timeclasses[myPencilId]);
          }
       }
    }

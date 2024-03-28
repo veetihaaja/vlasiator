@@ -478,6 +478,7 @@ void setFaceNeighborRanks( dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& 
 void balanceLoad(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid, SysBoundary& sysBoundaries){
    // Invalidate cached cell lists
    Parameters::meshRepartitioned = true;
+   std::cerr << "balanceLoad called \n";
 
    // tell other processes which velocity blocks exist in remote spatial cells
    phiprof::Timer balanceLoadTimer {"Balancing load", {"Load balance"}};
