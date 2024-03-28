@@ -123,17 +123,15 @@ typedef Realf (*VAmrVelRefinement)(const Realf* velBlock);
 
 //Vlasov propagator stencils in ordinary space, velocity space may be
 //higher. Assume H4 (or H5) for PPM, H6 for PQM
-// #ifdef TRANS_SEMILAG_PLM
-//    #define  VLASOV_STENCIL_WIDTH 1
-// #endif
-// #ifdef TRANS_SEMILAG_PPM
-//    #define  VLASOV_STENCIL_WIDTH 2
-// #endif
-// #ifdef TRANS_SEMILAG_PQM
-//    #define  VLASOV_STENCIL_WIDTH 3
-// #endif
-
-#define  VLASOV_STENCIL_WIDTH 6
+#ifdef TRANS_SEMILAG_PLM
+   #define  VLASOV_STENCIL_WIDTH 1
+#endif
+#ifdef TRANS_SEMILAG_PPM
+   #define  VLASOV_STENCIL_WIDTH 2
+#endif
+#ifdef TRANS_SEMILAG_PQM
+   #define  VLASOV_STENCIL_WIDTH 3
+#endif
 
 // Max number of face neighbors per dimension with AMR
 #define MAX_NEIGHBORS_PER_DIM 8

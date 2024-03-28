@@ -32,7 +32,7 @@ struct setOfPencils {
    uint N; // Number of pencils in the set
    uint sumOfLengths;
    std::vector< uint > lengthOfPencils; // Lengths of pencils (including stencil cells)
-   std::vector< CellID > ids; // List of pencil cells (incudingstencil cells)
+   std::vector< CellID > ids; // List of pencil cells (including stencil cells)
    std::vector< uint > idsStart; // List of where a pencil's CellIDs start in the ids array
    std::vector< Realf > sourceDZ; // Widths of source cells
    std::vector< Realf > targetRatios; // Pencil to target cell area ratios of target cells
@@ -59,18 +59,23 @@ struct setOfPencils {
       y.clear();
       periodic.clear();
       path.clear();
+      timeclasses.clear();
    }
 
    void addPencil(std::vector<CellID> idsIn, Real xIn, Real yIn, bool periodicIn, std::vector<uint> pathIn, int timeclass) {
       N++;
       // If necessary, add the zero cells to the beginning and end
       if (idsIn.front() != 0) {
-         idsIn.insert(idsIn.begin(),0);
-         idsIn.insert(idsIn.begin(),0);
+         for (int i = 0; i < VLASOV_STENCIL_WIDTH; i++)
+         {
+            idsIn.insert(idsIn.begin(),0); // ugly
+         }
       }
       if (idsIn.back() != 0) {
-         idsIn.push_back(0);
-         idsIn.push_back(0);
+         for (int i = 0; i < VLASOV_STENCIL_WIDTH; i++)
+         {
+            idsIn.push_back(0);
+         }
       }
       sumOfLengths += idsIn.size();
       lengthOfPencils.push_back(idsIn.size());
@@ -96,6 +101,7 @@ struct setOfPencils {
       targetRatios.erase(targetRatios.begin() + ibeg, targetRatios.begin() + ibeg + lengthOfPencils[pencilId] + 2*VLASOV_STENCIL_WIDTH);
       sourceDZ.erase(sourceDZ.begin() + ibeg, sourceDZ.begin() + ibeg + lengthOfPencils[pencilId] + 2*VLASOV_STENCIL_WIDTH);
       idsStart.erase(idsStart.begin() + pencilId);
+      timeclasses.erase(timeclasses.begin() + pencilId);
 
       N--;
       sumOfLengths -= lengthOfPencils[pencilId];

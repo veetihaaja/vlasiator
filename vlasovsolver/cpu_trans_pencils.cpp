@@ -1109,6 +1109,8 @@ void buildPencilsWithNeighbors( const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_
          }
       }
 
+      timeclass = grid[id]->parameters[CellParams::TIMECLASS];
+
       id = nextNeighbor;
    } // Closes while loop - end of pencil reached.
 
@@ -1136,6 +1138,7 @@ void buildPencilsWithNeighbors( const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_
    x = coordinates[ix];
    y = coordinates[iy];
 
+   std::cerr << __FILE__ <<":"<<__LINE__<<" calling addPencil\n";
    pencils.addPencil(ids, x, y, periodic, path, timeclass);
    return;
 }
@@ -1212,7 +1215,7 @@ void getSeedIds(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGr
          }
       } // finish check A
       if ( addToSeedIds ) {
-#pragma omp critical
+#pragma omp critical (pencil_seedIds_push_back)
          seedIds.push_back(celli);
          continue;
       }
@@ -1259,7 +1262,7 @@ void getSeedIds(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGr
       } // Finish B check
 
       if ( addToSeedIds ) {
-         #pragma omp critical
+#pragma omp critical (pencil_seedIds_push_back)
          seedIds.push_back(celli);
          continue;
       }
@@ -1288,7 +1291,7 @@ void getSeedIds(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGr
       } // Finish C check
 
       if ( addToSeedIds ) {
-#pragma omp critical
+#pragma omp critical (pencil_seedIds_push_back)
          seedIds.push_back(celli);
       }
    }
@@ -1648,10 +1651,13 @@ void prepareSeedIdsAndPencils(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Ge
             ibeg = thread_pencils.ids.begin() + thread_pencils.idsStart[i];
             iend = ibeg + thread_pencils.lengthOfPencils[i];
             std::vector<CellID> pencilIds(ibeg, iend);
+            std::cerr << __FILE__ <<":"<<__LINE__<<" calling addPencil\n";
             DimensionPencils[dimension].addPencil(pencilIds,thread_pencils.x[i],thread_pencils.y[i],thread_pencils.periodic[i],thread_pencils.path[i], thread_pencils.timeclasses[i]);
          }
       }
    }
+   std::cerr << __FILE__ <<":"<<__LINE__<<" calling printPencilsFunc\n";
+   printPencilsFunc(DimensionPencils[dimension],dimension,myRank,mpiGrid);
 
    phiprof::Timer checkGhostCellsTimer {"check_ghost_cells"};
    // Check refinement of two ghost cells on each end of each pencil
