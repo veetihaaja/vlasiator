@@ -618,11 +618,13 @@ void computeSpatialSourceCellsForPencil(const dccrg::Dccrg<SpatialCell,dccrg::Ca
                                         const uint dimension,
                                         std::vector<uint> path,
                                         Realf* sourceDZ,
-                                        Realf* targetRatios
+                                        Realf* targetRatios,
+                                        int timeclass
                                         ){
 
    // These neighborhoods now include the AMR addition beyond the regular vlasov stencil
    int neighborhood = getNeighborhood(dimension,VLASOV_STENCIL_WIDTH);
+   
    stringstream ss;
    for (uint j = 0; j < L; ++j) {
       ss<< ids[j] << " ";
@@ -710,7 +712,9 @@ void computeSpatialSourceCellsForPencil(const dccrg::Dccrg<SpatialCell,dccrg::Ca
       }
    }
 
-   /*loop to negative side and replace all invalid cells with the closest good cell*/
+   /*loop to negative side and replace all invalid cells with the closest good cell
+   * Also tag requested timeclass ghosts on the same go if needed.
+   */
    CellID lastGoodCell = ids[VLASOV_STENCIL_WIDTH];
    for(int i = VLASOV_STENCIL_WIDTH - 1; i >= 0 ;--i){
       bool isGood = false;
@@ -718,6 +722,9 @@ void computeSpatialSourceCellsForPencil(const dccrg::Dccrg<SpatialCell,dccrg::Ca
          if (mpiGrid[ids[i]] != NULL) {
             if (mpiGrid[ids[i]]->sysBoundaryFlag != sysboundarytype::DO_NOT_COMPUTE) {
                isGood = true;
+            }
+            if (mpiGrid[ids[i]]->parameters[CellParams::TIMECLASS] != timeclass){ 
+               mpiGrid[ids[i]]->requested_timeclass_ghosts.insert(timeclass);
             }
          }
       }
@@ -728,7 +735,9 @@ void computeSpatialSourceCellsForPencil(const dccrg::Dccrg<SpatialCell,dccrg::Ca
       }
    }
 
-   /*loop to positive side and replace all invalid cells with the closest good cell*/
+   /*loop to positive side and replace all invalid cells with the closest good cell
+   * Also tag requested timeclass ghosts on the same go if needed.
+   */
    lastGoodCell = ids[L - VLASOV_STENCIL_WIDTH - 1];
    for(int i = (int)L - VLASOV_STENCIL_WIDTH; i < (int)L; ++i){
       bool isGood = false;
@@ -736,6 +745,9 @@ void computeSpatialSourceCellsForPencil(const dccrg::Dccrg<SpatialCell,dccrg::Ca
          if (mpiGrid[ids[i]] != NULL) {
             if (mpiGrid[ids[i]]->sysBoundaryFlag != sysboundarytype::DO_NOT_COMPUTE) {
                isGood = true;
+            }
+            if (mpiGrid[ids[i]]->parameters[CellParams::TIMECLASS] != timeclass){ 
+               mpiGrid[ids[i]]->requested_timeclass_ghosts.insert(timeclass);
             }
          }
       }
@@ -1027,13 +1039,13 @@ void buildPencilsWithNeighbors( const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_
       // in case some of them are remote.
       for (int tmpPath = 0; tmpPath < 4; ++tmpPath) {
          nextNeighbor = selectNeighbor(grid,id,dimension,tmpPath);
-         if(P::tc_test_type == 3){ // Should allow for pencil splitting down the line, but not for now.
-            if(grid[nextNeighbor]->parameters[CellParams::TIMECLASS] != timeclass){
-               neighborExists = false;
-               break;
-            }
-         }
          if(nextNeighbor != INVALID_CELLID) {
+            if(P::tc_test_type == 3){ // Should allow for pencil splitting down the line, but not for now.
+               if(grid[nextNeighbor]->parameters[CellParams::TIMECLASS] != timeclass){
+                  neighborExists = false;
+                  break;
+               }
+            }
             refLvl = max(refLvl,grid.get_refinement_level(nextNeighbor));
             neighborExists = true;
          }
@@ -1551,6 +1563,28 @@ void printPencilsFunc(const setOfPencils& pencils, const uint dimension, const i
    std::cout<<ss.str();
 }
 
+/* Wrapper function for calling seed ID selection and pencil generation, for all dimensions.
+ * Includes threading and gathering of pencils into thread-containers.
+ *
+ * @param [in] mpiGrid DCCRG grid object
+ */
+void prepareSeedIdsAndPencils(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid) {
+      phiprof::Timer timer {"GetSeedIdsAndBuildPencils"};
+      // Clear all request setss for timeclass ghosts before recalculating
+      for (int dimension=0; dimension<3; dimension++) {
+         for(auto id : DimensionPencils[dimension].ids){
+            mpiGrid[id]->requested_timeclass_ghosts.clear();
+         }
+      }
+      // Remove all old pencils now - above needed the source ids from pencils
+      for (int dimension=0; dimension<3; dimension++) {
+         DimensionPencils[dimension].removeAllPencils();
+      }
+      for (int dimension=0; dimension<3; dimension++) {
+         prepareSeedIdsAndPencils(mpiGrid, dimension);
+      }
+}
+
 /* Wrapper function for calling seed ID selection and pencil generation, per dimension.
  * Includes threading and gathering of pencils into thread-containers.
  *
@@ -1621,8 +1655,8 @@ void prepareSeedIdsAndPencils(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Ge
    }
 
    phiprof::Timer buildPencilsTimer {"buildPencils"};
-   // Clear previous set
-   DimensionPencils[dimension].removeAllPencils();
+   // Clear previous set - moved to wrapper
+   // DimensionPencils[dimension].removeAllPencils();
 
 #pragma omp parallel
    {
@@ -1675,7 +1709,7 @@ void prepareSeedIdsAndPencils(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Ge
       CellID *pencilIds = DimensionPencils[dimension].ids.data() + DimensionPencils[dimension].idsStart[i];
       Realf* pencilDZ = DimensionPencils[dimension].sourceDZ.data() + DimensionPencils[dimension].idsStart[i];
       Realf* pencilAreaRatio = DimensionPencils[dimension].targetRatios.data() + DimensionPencils[dimension].idsStart[i];
-      computeSpatialSourceCellsForPencil(mpiGrid,pencilIds,L,dimension,DimensionPencils[dimension].path[i],pencilDZ,pencilAreaRatio);
+      computeSpatialSourceCellsForPencil(mpiGrid,pencilIds,L,dimension,DimensionPencils[dimension].path[i],pencilDZ,pencilAreaRatio,DimensionPencils[dimension].timeclasses[i]);
    }
    findSourceRatiosTimer.stop();
 

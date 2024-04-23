@@ -615,6 +615,11 @@ std::cerr <<std::scientific << "calculateAcceleration at t="<<P::t << ", for dtf
                   // Include inflow-Maxwellian
                   (P::vlasovAccelerateMaxwellianBoundaries && (SC->sysBoundaryFlag == sysboundarytype::MAXWELLIAN)) ) {
                      if (vmesh.size() != 0){   //do not propagate spatial cells with no blocks
+                           std::cerr << myRank <<": CellID " << cells[c] << " requested timeghosts: ";
+                           for (auto i : SC->requested_timeclass_ghosts){
+                              std::cerr << i << " ";
+                           }
+                           std::cerr << "\n";
                            if ( SC->get_timeclass_turn_v() == true){ // propagate only if it is the cell's turn)
                               propagatedCells.push_back(cells[c]);
                            }

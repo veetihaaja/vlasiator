@@ -66,10 +66,7 @@ struct setOfPencils {
       N++;
       // If necessary, add the zero cells to the beginning and end
       if (idsIn.front() != 0) {
-         for (int i = 0; i < VLASOV_STENCIL_WIDTH; i++)
-         {
-            idsIn.insert(idsIn.begin(),0); // ugly
-         }
+            idsIn.insert(idsIn.begin(),VLASOV_STENCIL_WIDTH,0);
       }
       if (idsIn.back() != 0) {
          for (int i = 0; i < VLASOV_STENCIL_WIDTH; i++)
@@ -202,6 +199,8 @@ struct setOfPencils {
 
 bool do_translate_cell(spatial_cell::SpatialCell* SC, int tc = -1);
 
+// grid.cpp calls this function to both find seed cells and build pencils for all dimensions
+void prepareSeedIdsAndPencils(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid);
 // grid.cpp calls this function to both find seed cells and build pencils
 void prepareSeedIdsAndPencils(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
                               const uint dimension);

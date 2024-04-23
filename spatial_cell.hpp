@@ -363,7 +363,7 @@ namespace spatial_cell {
       static bool mpiTransferInAMRTranslation;                                /**< Do we only transfer cells which are required by AMR translation. */
       static int mpiTransferXYZTranslation;                                   /**< Dimension in which AMR translation is happening */
 
-      std::vector<int> requested_timeclass_ghosts = {};                       /**< See Pencil construction. Translation stencil neighbours may want v-space values at
+      std::set<int> requested_timeclass_ghosts = {};                       /**< See Pencil construction. Translation stencil neighbours may want v-space values at
                                                                                *   varying timeclass synchronizations. This keeps track which levels are requested of this
                                                                                *   cell. Populations struct contains mappings of these timeclasses to ghost vmeshes. */
 
