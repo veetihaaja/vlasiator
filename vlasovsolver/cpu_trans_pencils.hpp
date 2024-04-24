@@ -201,7 +201,7 @@ bool do_translate_cell(spatial_cell::SpatialCell* SC, int tc = -1);
 
 // grid.cpp calls this function to both find seed cells and build pencils for all dimensions
 void prepareSeedIdsAndPencils(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid);
-// grid.cpp calls this function to both find seed cells and build pencils
+// find seed cells and build pencils for one dimension
 void prepareSeedIdsAndPencils(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
                               const uint dimension);
 

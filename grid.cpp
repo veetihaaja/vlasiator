@@ -491,15 +491,11 @@ void balanceLoad(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid, S
    //set weights based on each cells LB weight counter
    const vector<CellID>& cells = getLocalCells();
    for (size_t i=0; i<cells.size(); ++i){
-      //Set weight. If acceleration is enabled then we use the weight
-      //counter which is updated in acceleration, otherwise we just
-      //use the number of blocks.
-//      if (P::propagateVlasovAcceleration) 
-      mpiGrid.set_cell_weight(cells[i], mpiGrid[cells[i]]->parameters[CellParams::LBWEIGHTCOUNTER]* ((int)pow(P::timeclassLBmantissa, mpiGrid[cells[i]]->parameters[CellParams::TIMECLASS])));
-//      else
-//         mpiGrid.set_cell_weight(cells[i], mpiGrid[cells[i]]->get_number_of_all_velocity_blocks());
-      //reset counter
-      //mpiGrid[cells[i]]->parameters[CellParams::LBWEIGHTCOUNTER] = 0.0;
+      // Set cell weight. We could use different counters or number of blocks if different solvers are active.     
+      // if (P::propagateVlasovAcceleration)
+      // When using the FS-SPLIT functionality, Jaro Hokkanen reported issues with using the regular
+      // CellParams::LBWEIGHTCOUNTER, so use of blockscounts + 1 might be required.
+      mpiGrid.set_cell_weight(cells[i], (Real)1 + mpiGrid[cells[i]]->parameters[CellParams::LBWEIGHTCOUNTER] * ((int)pow(P::timeclassLBmantissa, mpiGrid[cells[i]]->parameters[CellParams::TIMECLASS])));
    }
 
    phiprof::Timer initLBTimer {"dccrg.initialize_balance_load"};
@@ -654,10 +650,6 @@ void balanceLoad(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid, S
    // Prepare cellIDs and pencils for AMR translation
    if(P::amrMaxSpatialRefLevel > 0) {
       prepareSeedIdsAndPencils(mpiGrid);
-      // phiprof::Timer timer {"GetSeedIdsAndBuildPencils"};
-      // for (int dimension=0; dimension<3; dimension++) {
-      //    prepareSeedIdsAndPencils(mpiGrid, dimension);
-      // }
    }
 }
 

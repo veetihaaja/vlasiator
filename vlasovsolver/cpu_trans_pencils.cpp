@@ -169,7 +169,6 @@ void flagSpatialCellsForAmrCommunication(const dccrg::Dccrg<SpatialCell,dccrg::C
 
    // return if there's no cells to flag
    if(localPropagatedCells.size() == 0) {
-      std::cerr<<"Warning! Pencils flagSpatialCellsForAmrCommunication found no cells to propagate!"<<std::endl;
       return;
    }
 
@@ -1274,7 +1273,7 @@ void getSeedIds(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGr
       } // Finish B check
 
       if ( addToSeedIds ) {
-#pragma omp critical (pencil_seedIds_push_back)
+#pragma omp critical
          seedIds.push_back(celli);
          continue;
       }
@@ -1655,8 +1654,6 @@ void prepareSeedIdsAndPencils(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Ge
    }
 
    phiprof::Timer buildPencilsTimer {"buildPencils"};
-   // Clear previous set - moved to wrapper
-   // DimensionPencils[dimension].removeAllPencils();
 
 #pragma omp parallel
    {
