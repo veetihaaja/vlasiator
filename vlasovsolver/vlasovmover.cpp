@@ -467,6 +467,20 @@ void calculateSpatialTranslation(
       }
    }
 
+   // This loop saves the _R-moments before updating into a previous buffer so they can be used for interpolating
+   // for timeclasses. //TODO get another pair of eyes on this.
+   for (size_t c=0; c<localcells.size(); ++c) {
+      const CellID cellID = cells[c];
+      SpatialCell* SC = mpiGrid[cellID];
+      SC->parameters[CellParams::RHOM_R_PREV] = SC->parameters[CellParams::RHOM_R];
+      SC->parameters[CellParams::VX_R_PREV] = SC->parameters[CellParams::VX_R];
+      SC->parameters[CellParams::VY_R_PREV] = SC->parameters[CellParams::VY_R];
+      SC->parameters[CellParams::VZ_R_PREV] = SC->parameters[CellParams::VZ_R];
+      SC->parameters[CellParams::RHOQ_R_PREV] = SC->parameters[CellParams::RHOQ_R];
+      SC->parameters[CellParams::P_11_R_PREV] = SC->parameters[CellParams::P_11_R];
+      SC->parameters[CellParams::P_22_R_PREV] = SC->parameters[CellParams::P_22_R];
+      SC->parameters[CellParams::P_33_R_PREV] = SC->parameters[CellParams::P_33_R];
+   }
    // Mapping complete, update moments and maximum dt limits //
    calculateMoments_R(mpiGrid,localCells,true);
 }
@@ -732,6 +746,62 @@ void calculateInterpolatedVelocityMoments(
       }
    }
 }
+
+double linearInterpolation(double x0, double y0, double x1, double y1, double x) {
+    // https://en.wikipedia.org/wiki/Linear_interpolation
+    // this is used in the function below.
+    return (y0 * (x1 - x) + y1 * (x - x0))/(x1 - x0);
+}
+
+void interpolateMomentsForTimeclasses(
+  dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
+   const int cp_rhom,
+   const int cp_vx,
+   const int cp_vy,
+   const int cp_vz,
+   const int cp_rhoq,
+   const int cp_p11,
+   const int cp_p22,
+   const int cp_p33,
+   const int iteration, // ! starts from 0, maybe a cellparam? fractionaltimestep?
+   const bool dt2 // true if second 
+) {
+   
+   const vector<CellID>& cells = getLocalCells();
+
+   for (size_t c=0; c<cells.size(); ++c) {
+      const CellID cellID = cells[c];
+      SpatialCell* SC = mpiGrid[cellID];
+      //const double tr = SC->parameters[CellParams::TIME_R];
+      //const double tv = SC->parameters[CellParams::TIME_V]; // check what these are (probably not needed)
+      const int timeclass = SC->parameters[CellParams::TIMECLASS]; // ! do i need to convert this? is 0 the regular rate?
+      unsigned int nStates = pow(2, timeclass+2)+1; // this defines the "resolution" of the interpolated values. could tr, tv be used instead?
+
+      int index = iteration*4+1;
+      if (dt2 == true) index+=2;
+
+      if (index < nStates/2) {
+         SC->parameters[cp_rhom] = linearInterpolation(0.0, SC->parameters[CellParams::RHOM_R_PREV], (double)(nStates/2), SC->parameters[CellParams::RHOM_V], double(index));
+         SC->parameters[cp_vx] = linearInterpolation(0.0, SC->parameters[CellParams::VX_R_PREV], (double)(nStates/2), SC->parameters[CellParams::VX_V], double(index));
+         SC->parameters[cp_vy] = linearInterpolation(0.0, SC->parameters[CellParams::VY_R_PREV], (double)(nStates/2), SC->parameters[CellParams::VY_V], double(index));
+         SC->parameters[cp_vz] = linearInterpolation(0.0, SC->parameters[CellParams::VZ_R_PREV], (double)(nStates/2), SC->parameters[CellParams::VZ_V], double(index));
+         SC->parameters[cp_rhoq] = linearInterpolation(0.0, SC->parameters[CellParams::RHOQ_R_PREV], (double)(nStates/2), SC->parameters[CellParams::RHOQ_V], double(index));
+         SC->parameters[cp_p11] = linearInterpolation(0.0, SC->parameters[CellParams::P_11_R_PREV], (double)(nStates/2), SC->parameters[CellParams::P_11_V], double(index));
+         SC->parameters[cp_p22] = linearInterpolation(0.0, SC->parameters[CellParams::P_22_R_PREV], (double)(nStates/2), SC->parameters[CellParams::P_22_V], double(index));
+         SC->parameters[cp_p33] = linearInterpolation(0.0, SC->parameters[CellParams::P_33_R_PREV], (double)(nStates/2), SC->parameters[CellParams::P_33_V], double(index));
+      } else {
+         SC->parameters[cp_rhom] = linearInterpolation((double)(nStates/2), SC->parameters[CellParams::RHOM_V], (double)(nStates), SC->parameters[CellParams::RHOM_R], double(index));
+         SC->parameters[cp_vx] = linearInterpolation((double)(nStates/2), SC->parameters[CellParams::VX_V], (double)(nStates), SC->parameters[CellParams::VX_R], double(index));
+         SC->parameters[cp_vy] = linearInterpolation((double)(nStates/2), SC->parameters[CellParams::VY_V], (double)(nStates), SC->parameters[CellParams::VY_R], double(index));
+         SC->parameters[cp_vz] = linearInterpolation((double)(nStates/2), SC->parameters[CellParams::VZ_V], (double)(nStates), SC->parameters[CellParams::VZ_R], double(index));
+         SC->parameters[cp_rhoq] = linearInterpolation((double)(nStates/2), SC->parameters[CellParams::RHOQ_V], (double)(nStates), SC->parameters[CellParams::RHOQ_R], double(index));
+         SC->parameters[cp_p11] = linearInterpolation((double)(nStates/2), SC->parameters[CellParams::P_11_V], (double)(nStates), SC->parameters[CellParams::P_11_R], double(index));
+         SC->parameters[cp_p22] = linearInterpolation((double)(nStates/2), SC->parameters[CellParams::P_22_V], (double)(nStates), SC->parameters[CellParams::P_22_R], double(index));
+         SC->parameters[cp_p33] = linearInterpolation((double)(nStates/2), SC->parameters[CellParams::P_33_V], (double)(nStates), SC->parameters[CellParams::P_33_R], double(index));
+      }
+   }
+}
+
 
 void calculateInitialVelocityMoments(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid) {
    const vector<CellID>& cells = getLocalCells();

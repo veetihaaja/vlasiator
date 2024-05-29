@@ -174,6 +174,22 @@ namespace CellParams {
       P_11_V,   /*!< P_xx component after propagation in velocity space */
       P_22_V,   /*!< P_yy component after propagation in velocity space */
       P_33_V,   /*!< P_zz component after propagation in velocity space */
+      
+      // start of new tc-interpolation cellparams
+      // these contain the values of moments from the previous timestep.
+      // Used for interpolating necessary moments for field solver. 
+      //
+      RHOM_R_PREV,
+      VX_R_PREV,
+      VY_R_PREV,
+      VZ_R_PREV,
+      RHOQ_R_PREV,
+      P_11_R_PREV,
+      P_22_R_PREV,
+      P_33_R_PREV,
+      // end of new tc-interpolation cellparams
+      // TODO clean these comments and formatting, add descriptions
+      
       EXVOL,    /*!< Volume electric field averaged over spatial cell, x-component.*/
       EYVOL,    /*!< Volume electric field averaged over spatial cell, y-component.*/
       EZVOL,    /*!< Volume electric field averaged over spatial cell, z-component.*/
@@ -182,6 +198,7 @@ namespace CellParams {
       MAXRDT,             /*!< maximum timestep allowed in ordinary space for this cell,
                            * this is the max allowed timestep over all particle species.*/
       MAXFDT,             /*!< maximum timestep allowed in ordinary space by fieldsolver for this cell**/
+
       TIMECLASS,           /*!< timeclass of this cell*/
       TIMECLASSDT,           /*!< timeclass-adjusted timestep, ...*/
       TIME_R,           /*!< Current time of the cell due to timeclass timestepping*/
@@ -192,7 +209,6 @@ namespace CellParams {
       TIME_V,           /*!< Current time of the cell due to timeclass timestepping*/
       TIMESTEP_V,           /*!< Current timestep of the cell due to timeclass timestepping - obs float precision*/
       TIMESTEP_FRACTIONAL_V,           /*!< Current timestep of the cell due to timeclass timestepping*/
-
       TIMECLASS_RANK,           /*!< timeclass of this rank*/
       TIMECLASSDT_RANK,           /*!< timeclass-adjusted timestep, ...*/
 

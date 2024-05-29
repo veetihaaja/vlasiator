@@ -1435,6 +1435,13 @@ int main(int argn,char* args[]) {
          CellParams::P_33_DT2
       );
       momentsTimer.stop();
+   
+      // TODO Add here the timeclass interpolation:
+      // Workplan:
+      // here a function that takes in _R moments and _V moments, that interpolates them
+      // to the necessary moments needed by FS. These are then fed into feedMomentsIntoFsGrid, which the
+      // fieldsolver uses. Does this need 16 new cellparams? probably.
+      // Does this replace or supplement CIVM? dunno.
       
       // Propagate fields forward in time by dt. This needs to be done before the
       // moments for t + dt are computed (field uses t and t+0.5dt)
