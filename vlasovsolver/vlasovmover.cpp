@@ -763,42 +763,122 @@ void interpolateMomentsForTimeclasses(
    const int cp_p11,
    const int cp_p22,
    const int cp_p33,
-   const int iteration, // ! starts from 0, maybe a cellparam? fractionaltimestep?
-   const bool dt2 // true if second 
+   const int fracTimeStep, // goes from 0 to 2^maxtimeclass-1
+   const int maxTC,
+   const bool dt2 // true if second moment / dt2
 ) {
-   
+
    const vector<CellID>& cells = getLocalCells();
 
    for (size_t c=0; c<cells.size(); ++c) {
       const CellID cellID = cells[c];
       SpatialCell* SC = mpiGrid[cellID];
+
       //const double tr = SC->parameters[CellParams::TIME_R];
-      //const double tv = SC->parameters[CellParams::TIME_V]; // check what these are (probably not needed)
-      const int timeclass = SC->parameters[CellParams::TIMECLASS]; // ! do i need to convert this? is 0 the regular rate?
-      unsigned int nStates = pow(2, timeclass+2)+1; // this defines the "resolution" of the interpolated values. could tr, tv be used instead?
+      //const double tv = SC->parameters[CellParams::TIME_V];
+      const int timeclass = SC->parameters[CellParams::TIMECLASS];
 
-      int index = iteration*4+1;
-      if (dt2 == true) index+=2;
 
-      if (index < nStates/2) {
-         SC->parameters[cp_rhom] = linearInterpolation(0.0, SC->parameters[CellParams::RHOM_R_PREV], (double)(nStates/2), SC->parameters[CellParams::RHOM_V], double(index));
-         SC->parameters[cp_vx] = linearInterpolation(0.0, SC->parameters[CellParams::VX_R_PREV], (double)(nStates/2), SC->parameters[CellParams::VX_V], double(index));
-         SC->parameters[cp_vy] = linearInterpolation(0.0, SC->parameters[CellParams::VY_R_PREV], (double)(nStates/2), SC->parameters[CellParams::VY_V], double(index));
-         SC->parameters[cp_vz] = linearInterpolation(0.0, SC->parameters[CellParams::VZ_R_PREV], (double)(nStates/2), SC->parameters[CellParams::VZ_V], double(index));
-         SC->parameters[cp_rhoq] = linearInterpolation(0.0, SC->parameters[CellParams::RHOQ_R_PREV], (double)(nStates/2), SC->parameters[CellParams::RHOQ_V], double(index));
-         SC->parameters[cp_p11] = linearInterpolation(0.0, SC->parameters[CellParams::P_11_R_PREV], (double)(nStates/2), SC->parameters[CellParams::P_11_V], double(index));
-         SC->parameters[cp_p22] = linearInterpolation(0.0, SC->parameters[CellParams::P_22_R_PREV], (double)(nStates/2), SC->parameters[CellParams::P_22_V], double(index));
-         SC->parameters[cp_p33] = linearInterpolation(0.0, SC->parameters[CellParams::P_33_R_PREV], (double)(nStates/2), SC->parameters[CellParams::P_33_V], double(index));
-      } else {
-         SC->parameters[cp_rhom] = linearInterpolation((double)(nStates/2), SC->parameters[CellParams::RHOM_V], (double)(nStates), SC->parameters[CellParams::RHOM_R], double(index));
-         SC->parameters[cp_vx] = linearInterpolation((double)(nStates/2), SC->parameters[CellParams::VX_V], (double)(nStates), SC->parameters[CellParams::VX_R], double(index));
-         SC->parameters[cp_vy] = linearInterpolation((double)(nStates/2), SC->parameters[CellParams::VY_V], (double)(nStates), SC->parameters[CellParams::VY_R], double(index));
-         SC->parameters[cp_vz] = linearInterpolation((double)(nStates/2), SC->parameters[CellParams::VZ_V], (double)(nStates), SC->parameters[CellParams::VZ_R], double(index));
-         SC->parameters[cp_rhoq] = linearInterpolation((double)(nStates/2), SC->parameters[CellParams::RHOQ_V], (double)(nStates), SC->parameters[CellParams::RHOQ_R], double(index));
-         SC->parameters[cp_p11] = linearInterpolation((double)(nStates/2), SC->parameters[CellParams::P_11_V], (double)(nStates), SC->parameters[CellParams::P_11_R], double(index));
-         SC->parameters[cp_p22] = linearInterpolation((double)(nStates/2), SC->parameters[CellParams::P_22_V], (double)(nStates), SC->parameters[CellParams::P_22_R], double(index));
-         SC->parameters[cp_p33] = linearInterpolation((double)(nStates/2), SC->parameters[CellParams::P_33_V], (double)(nStates), SC->parameters[CellParams::P_33_R], double(index));
+      if (timeclass == maxTC) {
+         // calculateInterpolatedVelocityMoments functionality here, cant call directly tho (double loop)
+         if (!dt2) {
+            SC->parameters[cp_rhom  ] = 0.5* ( SC->parameters[CellParams::RHOM_R_PREV] + SC->parameters[CellParams::RHOM_V] );
+            SC->parameters[cp_vx]   = 0.5* ( SC->parameters[CellParams::VX_R_PREV] + SC->parameters[CellParams::VX_V] );
+            SC->parameters[cp_vy] = 0.5* ( SC->parameters[CellParams::VY_R_PREV] + SC->parameters[CellParams::VY_V] );
+            SC->parameters[cp_vz] = 0.5* ( SC->parameters[CellParams::VZ_R_PREV] + SC->parameters[CellParams::VZ_V] );
+            SC->parameters[cp_rhoq  ] = 0.5* ( SC->parameters[CellParams::RHOQ_R_PREV] + SC->parameters[CellParams::RHOQ_V] );
+            SC->parameters[cp_p11]   = 0.5* ( SC->parameters[CellParams::P_11_R_PREV] + SC->parameters[CellParams::P_11_V] );
+            SC->parameters[cp_p22]   = 0.5* ( SC->parameters[CellParams::P_22_R_PREV] + SC->parameters[CellParams::P_22_V] );
+            SC->parameters[cp_p33]   = 0.5* ( SC->parameters[CellParams::P_33_R_PREV] + SC->parameters[CellParams::P_33_V] );
+
+            // ! this needs new params
+            for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
+               spatial_cell::Population& pop = SC->get_population(popID);
+               pop.RHO = 0.5 * ( pop.RHO_R_PREV + pop.RHO_V );
+               for(int i=0; i<3; i++) {
+                  pop.V[i] = 0.5 * ( pop.V_R_PREV[i] + pop.V_V[i] );
+                  pop.P[i] = 0.5 * ( pop.P_R_PREV[i] + pop.P_V[i] );
+               }
+            }
+         } else {
+            SC->parameters[cp_rhom  ] = 0.5* ( SC->parameters[CellParams::RHOM_R] + SC->parameters[CellParams::RHOM_V] );
+            SC->parameters[cp_vx]   = 0.5* ( SC->parameters[CellParams::VX_R] + SC->parameters[CellParams::VX_V] );
+            SC->parameters[cp_vy] = 0.5* ( SC->parameters[CellParams::VY_R] + SC->parameters[CellParams::VY_V] );
+            SC->parameters[cp_vz] = 0.5* ( SC->parameters[CellParams::VZ_R] + SC->parameters[CellParams::VZ_V] );
+            SC->parameters[cp_rhoq  ] = 0.5* ( SC->parameters[CellParams::RHOQ_R] + SC->parameters[CellParams::RHOQ_V] );
+            SC->parameters[cp_p11]   = 0.5* ( SC->parameters[CellParams::P_11_R] + SC->parameters[CellParams::P_11_V] );
+            SC->parameters[cp_p22]   = 0.5* ( SC->parameters[CellParams::P_22_R] + SC->parameters[CellParams::P_22_V] );
+            SC->parameters[cp_p33]   = 0.5* ( SC->parameters[CellParams::P_33_R] + SC->parameters[CellParams::P_33_V] );
+
+            // ! this needs new params
+            for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
+               spatial_cell::Population& pop = SC->get_population(popID);
+               pop.RHO = 0.5 * ( pop.RHO_R + pop.RHO_V );
+               for(int i=0; i<3; i++) {
+                  pop.V[i] = 0.5 * ( pop.V_R[i] + pop.V_V[i] );
+                  pop.P[i] = 0.5 * ( pop.P_R[i] + pop.P_V[i] );
+               }
+            }
+         }
+
+      //here a return so the rest of the function doesnt get used. is there a better way?
+      return;
       }
+
+      int reverseTC = maxTC - timeclass;
+      double reverseTCpow = pow(2, reverseTC);
+
+      double modul = fracTimeStep % (int)reverseTCpow;
+      double normalizedModul = modul/reverseTCpow;
+
+      if (!dt2) {
+         normModul += 0.25/RTCpow;
+      } else {
+         normModul += 0.25/RTCpow+0.5/RTCpow;
+      }
+
+      // ! TODO for population value interpolation, the _PREV values do not get updated yet. fix this
+      // Add OMP pragma?
+
+      if (normModul < 0.5) {
+         SC->parameters[cp_rhom] = linearInterpolation(0.0, SC->parameters[CellParams::RHOM_R_PREV], 0.5, SC->parameters[CellParams::RHOM_V], normModul);
+         SC->parameters[cp_vx] = linearInterpolation(0.0, SC->parameters[CellParams::VX_R_PREV], 0.5, SC->parameters[CellParams::VX_V], normModul);
+         SC->parameters[cp_vy] = linearInterpolation(0.0, SC->parameters[CellParams::VY_R_PREV], 0.5, SC->parameters[CellParams::VY_V], normModul);
+         SC->parameters[cp_vz] = linearInterpolation(0.0, SC->parameters[CellParams::VZ_R_PREV], 0.5, SC->parameters[CellParams::VZ_V], normModul);
+         SC->parameters[cp_rhoq] = linearInterpolation(0.0, SC->parameters[CellParams::RHOQ_R_PREV], 0.5, SC->parameters[CellParams::RHOQ_V], normModul);
+         SC->parameters[cp_p11] = linearInterpolation(0.0, SC->parameters[CellParams::P_11_R_PREV], 0.5, SC->parameters[CellParams::P_11_V], normModul);
+         SC->parameters[cp_p22] = linearInterpolation(0.0, SC->parameters[CellParams::P_22_R_PREV], 0.5, SC->parameters[CellParams::P_11_V], normModul);
+         SC->parameters[cp_p33] = linearInterpolation(0.0, SC->parameters[CellParams::P_33_R_PREV], 0.5, SC->parameters[CellParams::P_11_V], normModul);
+         
+         for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
+            spatial_cell::Population& pop = SC->get_population(popID);
+            pop.RHO = linearInterpolation(0.0, pop.RHO_R_PREV, 0.5, pop.RHO_V, normModul);
+            for(int i=0; i<3; i++) {
+               pop.V[i] = linearInterpolation(0.0, pop.V_R_PREV[i], 0.5, pop.V_V[i], normModul);
+               pop.P[i] = linearInterpolation(0.0, pop.P_R_PREV[i], 0.5, pop.P_V[i], normModul);
+            }
+         }     
+
+      } else {
+         SC->parameters[cp_rhom] = linearInterpolation(0.5, SC->parameters[CellParams::RHOM_V], 1.0, SC->parameters[CellParams::RHOM_R], normModul);
+         SC->parameters[cp_vx] = linearInterpolation(0.5, SC->parameters[CellParams::VX_V], 1.0, SC->parameters[CellParams::VX_R], normModul);
+         SC->parameters[cp_vy] = linearInterpolation(0.5, SC->parameters[CellParams::VY_V], 1.0, SC->parameters[CellParams::VY_R], normModul);
+         SC->parameters[cp_vz] = linearInterpolation(0.5, SC->parameters[CellParams::VZ_V], 1.0, SC->parameters[CellParams::VZ_R], normModul);
+         SC->parameters[cp_rhoq] = linearInterpolation(0.5, SC->parameters[CellParams::RHOQ_V], 1.0, SC->parameters[CellParams::RHOQ_R], normModul);
+         SC->parameters[cp_p11] = linearInterpolation(0.5, SC->parameters[CellParams::P_11_V], 1.0, SC->parameters[CellParams::P_11_R], normModul);
+         SC->parameters[cp_p22] = linearInterpolation(0.5, SC->parameters[CellParams::P_22_V], 1.0, SC->parameters[CellParams::P_11_R], normModul);
+         SC->parameters[cp_p33] = linearInterpolation(0.5, SC->parameters[CellParams::P_33_V], 1.0, SC->parameters[CellParams::P_11_R], normModul);
+
+         for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
+            spatial_cell::Population& pop = SC->get_population(popID);
+            pop.RHO = linearInterpolation(0.5, pop.RHO_V, 1.0, pop.RHO_R, normModul);
+            for(int i=0; i<3; i++) {
+               pop.V[i] = linearInterpolation(0.5, pop.V_V[i], 1.0, pop.V_R[i], normModul);
+               pop.P[i] = linearInterpolation(0.5, pop.P_V[i], 1.0, pop.P_R[i], normModul);
+            }
+         }
+
+      }   
    }
 }
 

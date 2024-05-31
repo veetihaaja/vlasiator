@@ -149,6 +149,9 @@ namespace spatial_cell {
     * All Real fields should be consecutive, as they are communicated as a block.
     * 
     */
+
+   // TODO Add new parameters here for timeclass moment interpolation? probably
+   // Need RHO_R_PREV, V_R_PREV[3] and P_R_PREV[3]. where do these get updated??
    struct Population {
       Real RHO;
       Real V[3];
@@ -159,6 +162,9 @@ namespace spatial_cell {
       Real P[3];
       Real P_R[3];
       Real P_V[3];
+      Real RHO_R_PREV;
+      Real V_R_PREV[3];
+      Real P_R_PREV[3];
       Real RHOLOSSADJUST = 0.0;      /*!< Counter for particle number loss from the destroying blocks in blockadjustment*/
       Real max_dt[2];                                                /**< Element[0] is max_r_dt, element[1] max_v_dt.*/
       Real velocityBlockMinValue;

@@ -67,6 +67,10 @@ void calculateInterpolatedVelocityMoments(
    const int cp_p33
 );
 
+// TODO add doxygen thingies
+
+double linearInterpolation(double x0, double y0, double x1, double y1, double x);
+
 void interpolateMomentsForTimeclasses(
   dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
    const int cp_rhom,
@@ -77,9 +81,10 @@ void interpolateMomentsForTimeclasses(
    const int cp_p11,
    const int cp_p22,
    const int cp_p33,
-   const int iteration, // starts from 0, maybe a cellparam?
-   const bool dt2 // true if second 
-);
+   const int fracTimeStep,
+   const int maxTC,
+   const bool dt2
+)
 
 /*!
   \brief Compute 0th, 1st and 2nd velocity moments (RHO,VX,VY,VZ,P_11,P_22,P_33 and *_DT2) for all cells in the grid directly from distribution function. The simulation should be at a true time-step! This is at the moment only called at initialisation.
