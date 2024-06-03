@@ -1471,8 +1471,10 @@ int main(int argn,char* args[]) {
 
       momentsTimer.stop();
 
-      // ! figure out what breaks when CIVM is no longer called :D
-      
+      // TODO: updating population moment values, initializing values of all _PREV moments (where)
+      // figure out what breaks when CIVM is no longer called 
+      // 
+             
       // Propagate fields forward in time by dt. This needs to be done before the
       // moments for t + dt are computed (field uses t and t+0.5dt)
       if (P::propagateField) {

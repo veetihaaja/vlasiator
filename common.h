@@ -175,20 +175,14 @@ namespace CellParams {
       P_22_V,   /*!< P_yy component after propagation in velocity space */
       P_33_V,   /*!< P_zz component after propagation in velocity space */
       
-      // start of new tc-interpolation cellparams
-      // these contain the values of moments from the previous timestep.
-      // Used for interpolating necessary moments for field solver. 
-      //
-      RHOM_R_PREV,
-      VX_R_PREV,
-      VY_R_PREV,
-      VZ_R_PREV,
-      RHOQ_R_PREV,
-      P_11_R_PREV,
-      P_22_R_PREV,
-      P_33_R_PREV,
-      // end of new tc-interpolation cellparams
-      // TODO clean these comments and formatting, add descriptions
+      RHOM_R_PREV, /* !< Previous value of RHOM_R, used for timeclass interpolation */
+      VX_R_PREV, /* !< Previous value of VX_R, used for timeclass interpolation */
+      VY_R_PREV, /* !< Previous value of VY_R, used for timeclass interpolation */
+      VZ_R_PREV, /* !< Previous value of VZ_R, used for timeclass interpolation */
+      RHOQ_R_PREV, /* !< Previous value of RHOQ_R, used for timeclass interpolation */
+      P_11_R_PREV, /* !< Previous value of P_11_R, used for timeclass interpolation */
+      P_22_R_PREV, /* !< Previous value of P_22_R, used for timeclass interpolation */
+      P_33_R_PREV, /* !< Previous value of P_33_R, used for timeclass interpolation */
       
       EXVOL,    /*!< Volume electric field averaged over spatial cell, x-component.*/
       EYVOL,    /*!< Volume electric field averaged over spatial cell, y-component.*/

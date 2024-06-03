@@ -149,9 +149,7 @@ namespace spatial_cell {
     * All Real fields should be consecutive, as they are communicated as a block.
     * 
     */
-
-   // TODO Add new parameters here for timeclass moment interpolation? probably
-   // Need RHO_R_PREV, V_R_PREV[3] and P_R_PREV[3]. where do these get updated??
+    
    struct Population {
       Real RHO;
       Real V[3];
