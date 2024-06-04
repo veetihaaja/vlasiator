@@ -469,8 +469,8 @@ void calculateSpatialTranslation(
 
    // This loop saves the _R-moments before updating into a previous buffer so they can be used for interpolating
    // for timeclasses. //TODO get another pair of eyes on this.
-   for (size_t c=0; c<localcells.size(); ++c) {
-      const CellID cellID = cells[c];
+   for (size_t c=0; c<localCells.size(); ++c) {
+      const CellID cellID = localCells[c];
       SpatialCell* SC = mpiGrid[cellID];
       SC->parameters[CellParams::RHOM_R_PREV] = SC->parameters[CellParams::RHOM_R];
       SC->parameters[CellParams::VX_R_PREV] = SC->parameters[CellParams::VX_R];
@@ -819,10 +819,10 @@ void interpolateMomentsForTimeclasses(
       } else { // this block if timeclass != maxTC
 
          int reverseTC = maxTC - timeclass;
-         double reverseTCpow = pow(2, reverseTC);
+         double RTCpow = pow(2, reverseTC);
 
-         double modul = fracTimeStep % (int)reverseTCpow;
-         double normalizedModul = modul/reverseTCpow;
+         double modul = fracTimeStep % (int)RTCpow;
+         double normModul = modul/RTCpow;
 
          if (!dt2) {
             normModul += 0.25/RTCpow;

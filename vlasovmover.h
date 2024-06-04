@@ -84,7 +84,7 @@ void interpolateMomentsForTimeclasses(
    const int fracTimeStep,
    const int maxTC,
    const bool dt2
-)
+);
 
 /*!
   \brief Compute 0th, 1st and 2nd velocity moments (RHO,VX,VY,VZ,P_11,P_22,P_33 and *_DT2) for all cells in the grid directly from distribution function. The simulation should be at a true time-step! This is at the moment only called at initialisation.
