@@ -341,7 +341,19 @@ void calculateSpatialTranslation(
 
    // If dt=0 we are either initializing or distribution functions are not translated.
    // In both cases go to the end of this function and calculate the moments.
-   if (dt == 0.0) {
+   if (dt == 0.0) {   
+      for (size_t c=0; c<localCells.size(); ++c) {
+         const CellID cellID = localCells[c];
+         SpatialCell* SC = mpiGrid[cellID];
+         SC->parameters[CellParams::RHOM_R_PREV] = SC->parameters[CellParams::RHOM_R];
+         SC->parameters[CellParams::VX_R_PREV] = SC->parameters[CellParams::VX_R];
+         SC->parameters[CellParams::VY_R_PREV] = SC->parameters[CellParams::VY_R];
+         SC->parameters[CellParams::VZ_R_PREV] = SC->parameters[CellParams::VZ_R];
+         SC->parameters[CellParams::RHOQ_R_PREV] = SC->parameters[CellParams::RHOQ_R];
+         SC->parameters[CellParams::P_11_R_PREV] = SC->parameters[CellParams::P_11_R];
+         SC->parameters[CellParams::P_22_R_PREV] = SC->parameters[CellParams::P_22_R];
+         SC->parameters[CellParams::P_33_R_PREV] = SC->parameters[CellParams::P_33_R];
+      }
       calculateMoments_R(mpiGrid,localCells,true);
       return;
    }
