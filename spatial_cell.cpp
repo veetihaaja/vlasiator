@@ -186,7 +186,7 @@ namespace spatial_cell {
                this->populations[popID].RHOLOSSADJUST += DV3*sum;
 	       
                // and finally remove block
-               this->remove_velocity_block(blockGID,popID);
+               this->remove_velocity_block(blockGID,popID, populations[popID].vmesh, populations[popID].blockContainer);
             }
          }
       }
@@ -280,7 +280,7 @@ namespace spatial_cell {
                this->populations[popID].RHOLOSSADJUST += DV3*sum;
 	       
                // and finally remove block
-               this->remove_velocity_block(blockGID,popID);
+               this->remove_velocity_block(blockGID,popID, populations[popID].vmesh, populations[popID].blockContainer);
             }
          }
       }
@@ -418,7 +418,7 @@ namespace spatial_cell {
 
       // Remove the children
       for (size_t c=0; c<children.size(); ++c) {
-         remove_velocity_block(children[c],popID);
+         remove_velocity_block(children[c],popID, populations[popID].vmesh, populations[popID].blockContainer);
       }
    }
 
@@ -577,6 +577,10 @@ namespace spatial_cell {
    */
    const Real& SpatialCell::get_tc_dt() const {
       return P::timeclassDt[this->parameters[CellParams::TIMECLASS]];
+   }
+
+   const int SpatialCell::get_tc() const {      
+      return (int)this->parameters[CellParams::TIMECLASS];
    }
 
    const bool SpatialCell::get_timeclass_turn_v() const {

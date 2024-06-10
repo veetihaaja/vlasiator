@@ -90,6 +90,7 @@ namespace vmesh {
    template<typename LID> inline VelocityBlockContainer<LID>::VelocityBlockContainer(const VelocityBlockContainer& other) {
       block_data = std::vector<Realf,aligned_allocator<Realf,WID3>>(other.block_data);
       parameters = std::vector<Real,aligned_allocator<Real,BlockParams::N_VELOCITY_BLOCK_PARAMS>>(other.parameters);
+      std::cerr << "Vblockcontainer copy construction\n";
       currentCapacity = other.currentCapacity;
       numberOfBlocks = other.numberOfBlocks;
    }

@@ -118,7 +118,8 @@ bool map_1d(SpatialCell* spatial_cell,
             const uint popID,     
             Realv intersection, Realv intersection_di, Realv intersection_dj,Realv intersection_dk,
             const uint dimension,
-            bool doGhost) {
+            vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& vmesh,
+            vmesh::VelocityBlockContainer<vmesh::LocalID>& blockContainer) {
    no_subnormals();
 
    Realv dv,v_min;
@@ -126,8 +127,8 @@ bool map_1d(SpatialCell* spatial_cell,
    int max_v_length;
    uint block_indices_to_id[3] = {0, 0, 0}; /*< used when computing id of target block, 0 for compiler */
    uint cell_indices_to_id[3] = {0, 0, 0}; /*< used when computing id of target cell in block, 0 for compiler */
-   vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& vmesh = spatial_cell->get_velocity_mesh(popID);;
-   vmesh::VelocityBlockContainer<vmesh::LocalID>& blockContainer = spatial_cell->get_velocity_blocks(popID);;
+   // vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& vmesh = spatial_cell->get_velocity_mesh(popID);;
+   // vmesh::VelocityBlockContainer<vmesh::LocalID>& blockContainer = spatial_cell->get_velocity_blocks(popID);;
    // if(!doGhost){
    //    // vmesh    = spatial_cell->get_velocity_mesh(popID);
    //    // blockContainer = spatial_cell->get_velocity_blocks(popID);
@@ -378,7 +379,7 @@ bool map_1d(SpatialCell* spatial_cell,
                setFirstBlockIndices[1] * block_indices_to_id[1] +
                blockK                  * block_indices_to_id[2];
 
-            spatial_cell->remove_velocity_block(targetBlock, popID);
+            spatial_cell->remove_velocity_block(targetBlock, popID, vmesh, blockContainer);
          }
       }
 

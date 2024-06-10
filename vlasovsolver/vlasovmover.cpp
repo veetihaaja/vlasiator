@@ -245,7 +245,8 @@ void calculateSpatialLocalTranslation(
    vector<uint>& nPencils,
    creal dt,
    const uint popID,
-   Real &time
+   Real &time,
+   int tc
    ) {
 
    int trans_timer;
@@ -270,7 +271,7 @@ void calculateSpatialLocalTranslation(
       if(P::amrMaxSpatialRefLevel == 0) {
          //trans_map_1d(mpiGrid,local_propagated_cells, remoteTargetCellsz, 2, dt,popID); // map along z//
       } else {
-         trans_map_1d_amr(mpiGrid,local_propagated_cells, nullTargetCells, nPencils, 2, dt, 0, popID); // map along z//
+         trans_map_1d_amr(mpiGrid,local_propagated_cells, nullTargetCells, nPencils, 2, dt, tc, popID); // map along z//
       }
       phiprof::stop("compute-mapping-z");
    }
@@ -281,7 +282,7 @@ void calculateSpatialLocalTranslation(
       if(P::amrMaxSpatialRefLevel == 0) {
          //trans_map_1d(mpiGrid,local_propagated_cells, remoteTargetCellsx, 0,dt,popID); // map along x//
       } else {
-         trans_map_1d_amr(mpiGrid,local_propagated_cells, nullTargetCells, nPencils, 0, dt, 0, popID); // map along x//
+         trans_map_1d_amr(mpiGrid,local_propagated_cells, nullTargetCells, nPencils, 0, dt, tc, popID); // map along x//
       }
       phiprof::stop("compute-mapping-x");
    }
@@ -292,7 +293,7 @@ void calculateSpatialLocalTranslation(
       if(P::amrMaxSpatialRefLevel == 0) {
          //trans_map_1d(mpiGrid,local_propagated_cells, remoteTargetCellsy, 1,dt,popID); // map along y//
       } else {
-         trans_map_1d_amr(mpiGrid,local_propagated_cells, nullTargetCells, nPencils, 1, dt, 0, popID); // map along y//
+         trans_map_1d_amr(mpiGrid,local_propagated_cells, nullTargetCells, nPencils, 1, dt, tc, popID); // map along y//
       }
       phiprof::stop("compute-mapping-y");
    }
@@ -424,7 +425,8 @@ void calculateSpatialTranslation(
                   nPencils,
                   P::timeclassDt[tc],
                   popID,
-                  time
+                  time,
+                  tc
                   );
             } else {
                calculateSpatialTranslation(
@@ -533,7 +535,7 @@ void calculateAcceleration(const uint popID,const uint globalMaxSubcycles,const 
       #endif
       map_order=1;
       phiprof::Timer semilagAccTimer {"cell-semilag-acc"};
-      cpu_accelerate_cell(mpiGrid[cellID],popID,map_order,subcycleDt);
+      cpu_accelerate_cell(mpiGrid[cellID],popID,map_order,subcycleDt, 0);
       // if (cellID == 16)
       //    #pragma omp critical(output)
       //    {
@@ -615,11 +617,14 @@ std::cerr <<std::scientific << "calculateAcceleration at t="<<P::t << ", for dtf
                   // Include inflow-Maxwellian
                   (P::vlasovAccelerateMaxwellianBoundaries && (SC->sysBoundaryFlag == sysboundarytype::MAXWELLIAN)) ) {
                      if (vmesh.size() != 0){   //do not propagate spatial cells with no blocks
-                           std::cerr << myRank <<": CellID " << cells[c] << " requested timeghosts: ";
-                           for (auto i : SC->requested_timeclass_ghosts){
-                              std::cerr << i << " ";
+                           if(SC->requested_timeclass_ghosts.size() > 0) {
+                              std::cerr << myRank <<": CellID " << cells[c] << " requested timeghosts: ";
+                              for (auto i : SC->requested_timeclass_ghosts){
+                                 std::cerr << i << " ";
+                              }
+                              std::cerr << "\n";
                            }
-                           std::cerr << "\n";
+                           
                            if ( SC->get_timeclass_turn_v() == true){ // propagate only if it is the cell's turn)
                               propagatedCells.push_back(cells[c]);
                            }
