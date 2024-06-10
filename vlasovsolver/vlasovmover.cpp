@@ -342,18 +342,7 @@ void calculateSpatialTranslation(
    // If dt=0 we are either initializing or distribution functions are not translated.
    // In both cases go to the end of this function and calculate the moments.
    if (dt == 0.0) {   
-      for (size_t c=0; c<localCells.size(); ++c) {
-         const CellID cellID = localCells[c];
-         SpatialCell* SC = mpiGrid[cellID];
-         SC->parameters[CellParams::RHOM_R_PREV] = SC->parameters[CellParams::RHOM_R];
-         SC->parameters[CellParams::VX_R_PREV] = SC->parameters[CellParams::VX_R];
-         SC->parameters[CellParams::VY_R_PREV] = SC->parameters[CellParams::VY_R];
-         SC->parameters[CellParams::VZ_R_PREV] = SC->parameters[CellParams::VZ_R];
-         SC->parameters[CellParams::RHOQ_R_PREV] = SC->parameters[CellParams::RHOQ_R];
-         SC->parameters[CellParams::P_11_R_PREV] = SC->parameters[CellParams::P_11_R];
-         SC->parameters[CellParams::P_22_R_PREV] = SC->parameters[CellParams::P_22_R];
-         SC->parameters[CellParams::P_33_R_PREV] = SC->parameters[CellParams::P_33_R];
-      }
+      // !! if timeclasses are turned on and translation is not, _PREV moments will not be updated !!
       calculateMoments_R(mpiGrid,localCells,true);
       return;
    }
@@ -480,21 +469,35 @@ void calculateSpatialTranslation(
    }
 
    // This loop saves the _R-moments before updating into a previous buffer so they can be used for interpolating
-   // for timeclasses. //TODO get another pair of eyes on this.
-   for (size_t c=0; c<localCells.size(); ++c) {
-      const CellID cellID = localCells[c];
-      SpatialCell* SC = mpiGrid[cellID];
-      SC->parameters[CellParams::RHOM_R_PREV] = SC->parameters[CellParams::RHOM_R];
-      SC->parameters[CellParams::VX_R_PREV] = SC->parameters[CellParams::VX_R];
-      SC->parameters[CellParams::VY_R_PREV] = SC->parameters[CellParams::VY_R];
-      SC->parameters[CellParams::VZ_R_PREV] = SC->parameters[CellParams::VZ_R];
-      SC->parameters[CellParams::RHOQ_R_PREV] = SC->parameters[CellParams::RHOQ_R];
-      SC->parameters[CellParams::P_11_R_PREV] = SC->parameters[CellParams::P_11_R];
-      SC->parameters[CellParams::P_22_R_PREV] = SC->parameters[CellParams::P_22_R];
-      SC->parameters[CellParams::P_33_R_PREV] = SC->parameters[CellParams::P_33_R];
+   // for timeclasses.
+
+   for (int tc=0; tc <= P::currentMaxTimeclass; tc++) {
+      int mod = 1 << (P::currentMaxTimeclass - tc);
+      if ((P::fractionalTimestep % mod) == 0) {
+         for (size_t c=0; c<tc_propagated_cells.at(tc).size(); ++c) {
+            const CellID cellID = tc_propagated_cells.at(tc).at(c);
+            SpatialCell* SC = mpiGrid[cellID];
+            SC->parameters[CellParams::RHOM_R_PREV] = SC->parameters[CellParams::RHOM_R];
+            SC->parameters[CellParams::VX_R_PREV] = SC->parameters[CellParams::VX_R];
+            SC->parameters[CellParams::VY_R_PREV] = SC->parameters[CellParams::VY_R];
+            SC->parameters[CellParams::VZ_R_PREV] = SC->parameters[CellParams::VZ_R];
+            SC->parameters[CellParams::RHOQ_R_PREV] = SC->parameters[CellParams::RHOQ_R];
+            SC->parameters[CellParams::P_11_R_PREV] = SC->parameters[CellParams::P_11_R];
+            SC->parameters[CellParams::P_22_R_PREV] = SC->parameters[CellParams::P_22_R];
+            SC->parameters[CellParams::P_33_R_PREV] = SC->parameters[CellParams::P_33_R];
+            //SC->parameters[CellParams::TIME_R_PREV] = SC->parameters[CellParams::TIME_R]; this segfaults for some reason ?
+         }
+      }
    }
    // Mapping complete, update moments and maximum dt limits //
-   calculateMoments_R(mpiGrid,localCells,true);
+
+   //calculating moments based on timeclass
+   for (int tc=0; tc <= P::currentMaxTimeclass; tc++) {
+      int mod = 1 << (P::currentMaxTimeclass - tc);
+      if ((P::fractionalTimestep % mod) == 0) {
+         calculateMoments_R(mpiGrid,tc_propagated_cells.at(tc),true);
+      }
+   }
 }
 
 /*
@@ -593,6 +596,8 @@ void calculateAcceleration(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& 
                           ) {
    typedef Parameters P;
    const vector<CellID>& cells = getLocalCells();
+   set<CellID> cellsToPropagateSet;
+   vector<CellID> cellsToPropagateVector;
    int myRank;
    MPI_Comm_rank(MPI_COMM_WORLD,&myRank);
 std::cerr <<std::scientific << "calculateAcceleration at t="<<P::t << ", for dtfactor="<<dt<<"\n";
@@ -610,6 +615,7 @@ std::cerr <<std::scientific << "calculateAcceleration at t="<<P::t << ", for dtf
    } else {
       // Fairly ugly but no goto
       phiprof::Timer timer {"semilag-acc"};
+
       
       // Accelerate all particle species
       for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
@@ -648,6 +654,7 @@ std::cerr <<std::scientific << "calculateAcceleration at t="<<P::t << ", for dtf
                            std::cerr << "\n";
                            if ( SC->get_timeclass_turn_v() == true){ // propagate only if it is the cell's turn)
                               propagatedCells.push_back(cells[c]);
+                              cellsToPropagateSet.insert(cells[c]);
                            }
                      }
                      //prepare for acceleration, updates max dt for each cell, it
@@ -689,10 +696,18 @@ std::cerr <<std::scientific << "calculateAcceleration at t="<<P::t << ", for dtf
          adjustVelocityBlocks(mpiGrid, cells, true, popID);
       } // for-loop over particle species
       timer.stop();
+
+      //now cellsToPropagateSet contains all cells which have been propagated and whose moments need updating
+
    } //else
 
+   //converting cellsToPropagateSet to vector
+   for (auto cell : cellsToPropagateSet) {
+      cellsToPropagateVector.push_back(cell);
+   }
+
    // Recalculate "_V" velocity moments
-   calculateMoments_V(mpiGrid,cells,true);
+   calculateMoments_V(mpiGrid,cellsToPropagateVector,true);
 
    // Set CellParams::MAXVDT to be the minimum dt of all per-species values
    #pragma omp parallel for
@@ -808,6 +823,8 @@ void interpolateMomentsForTimeclasses(
                   pop.P[i] = 0.5 * ( pop.P_R_PREV[i] + pop.P_V[i] );
                }
             }
+            // cerr << "ekatesti: " << timeclass << " " << fracTimeStep << " " << SC->parameters[cp_vx] << " " <<  SC->parameters[CellParams::VX_R_PREV] << " " << SC->parameters[CellParams::VX_V] << endl;
+
          } else {
             SC->parameters[cp_rhom  ] = 0.5* ( SC->parameters[CellParams::RHOM_R] + SC->parameters[CellParams::RHOM_V] );
             SC->parameters[cp_vx]   = 0.5* ( SC->parameters[CellParams::VX_R] + SC->parameters[CellParams::VX_V] );
@@ -827,8 +844,9 @@ void interpolateMomentsForTimeclasses(
                }
             }
          }
+            // cerr << "tokatesti: " << timeclass << " " << fracTimeStep <<  " " << SC->parameters[cp_vx] << " " <<  SC->parameters[CellParams::VX_V] << " " << SC->parameters[CellParams::VX_R] << endl;
 
-      } else { // this block if timeclass != maxTC
+     } else { // this block if timeclass != maxTC
 
          int reverseTC = maxTC - timeclass;
          double RTCpow = pow(2, reverseTC);
@@ -860,7 +878,7 @@ void interpolateMomentsForTimeclasses(
                   pop.P[i] = linearInterpolation(0.0, pop.P_R_PREV[i], 0.5, pop.P_V[i], normModul);
                }
             }     
-
+         // cerr << "kolmastesti: " << timeclass << " " << fracTimeStep << " " << normModul << " " <<  SC->parameters[cp_vx] << " " <<  SC->parameters[CellParams::VX_R_PREV] << " " << SC->parameters[CellParams::VX_V] << endl;
          } else {
             SC->parameters[cp_rhom] = linearInterpolation(0.5, SC->parameters[CellParams::RHOM_V], 1.0, SC->parameters[CellParams::RHOM_R], normModul);
             SC->parameters[cp_vx] = linearInterpolation(0.5, SC->parameters[CellParams::VX_V], 1.0, SC->parameters[CellParams::VX_R], normModul);
@@ -879,6 +897,7 @@ void interpolateMomentsForTimeclasses(
                   pop.P[i] = linearInterpolation(0.5, pop.P_V[i], 1.0, pop.P_R[i], normModul);
                }
             }
+            // cerr << "neljastesti: " << timeclass << " " << fracTimeStep << " " << normModul << " " << SC->parameters[cp_vx] << " " <<  SC->parameters[CellParams::VX_V] << " " << SC->parameters[CellParams::VX_R] << endl;
          }
       } // if / else (if timeclass = maxTC)
    } // for loop over cells

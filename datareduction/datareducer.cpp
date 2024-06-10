@@ -362,6 +362,41 @@ void initializeDataReducers(DataReducer * outputReducer, DataReducer * diagnosti
             continue;
          }
       }
+      if(P::systemWriteAllDROs || lowercase == "v_r" || lowercase == "vg_v_r") { // Overall effective bulk density defining the center-of-mass frame from all populations
+         outputReducer->addOperator(new DRO::DataReductionOperatorCellParams("vg_v_r",CellParams::VX_R,3));
+         outputReducer->addMetadata(outputReducer->size()-1,"m/s","$\\mathrm{m}\\,\\mathrm{s}^{-1}$","$V$","1.0");
+         if(!P::systemWriteAllDROs) {
+            continue;
+         }
+      }
+      if(P::systemWriteAllDROs || lowercase == "v_v" || lowercase == "vg_v_v") { // Overall effective bulk density defining the center-of-mass frame from all populations
+         outputReducer->addOperator(new DRO::DataReductionOperatorCellParams("vg_v_v",CellParams::VX_V,3));
+         outputReducer->addMetadata(outputReducer->size()-1,"m/s","$\\mathrm{m}\\,\\mathrm{s}^{-1}$","$V$","1.0");
+         if(!P::systemWriteAllDROs) {
+            continue;
+         }
+      }
+      // if(P::systemWriteAllDROs || lowercase == "v_v_prev" || lowercase == "vg_v_v_prev") { // Overall effective bulk density defining the center-of-mass frame from all populations
+      //    outputReducer->addOperator(new DRO::DataReductionOperatorCellParams("vg_v_v",CellParams::VX_V_PREV,3));
+      //    outputReducer->addMetadata(outputReducer->size()-1,"m/s","$\\mathrm{m}\\,\\mathrm{s}^{-1}$","$V$","1.0");
+      //    if(!P::systemWriteAllDROs) {
+      //       continue;
+      //    }
+      // }
+      if(P::systemWriteAllDROs || lowercase == "v_r_prev" || lowercase == "vg_v_r_prev") { // Overall effective bulk density defining the center-of-mass frame from all populations
+         outputReducer->addOperator(new DRO::DataReductionOperatorCellParams("vg_v_r_prev",CellParams::VX_R_PREV,3));
+         outputReducer->addMetadata(outputReducer->size()-1,"m/s","$\\mathrm{m}\\,\\mathrm{s}^{-1}$","$V$","1.0");
+         if(!P::systemWriteAllDROs) {
+            continue;
+         }
+      }
+      if(P::systemWriteAllDROs || lowercase == "v_dt2" || lowercase == "vg_v_dt2") { // Overall effective bulk density defining the center-of-mass frame from all populations
+         outputReducer->addOperator(new DRO::DataReductionOperatorCellParams("vg_v_dt2",CellParams::VX_DT2,3));
+         outputReducer->addMetadata(outputReducer->size()-1,"m/s","$\\mathrm{m}\\,\\mathrm{s}^{-1}$","$V$","1.0");
+         if(!P::systemWriteAllDROs) {
+            continue;
+         }
+      }
       if(P::systemWriteAllDROs || lowercase == "fg_v") { // Overall effective bulk density defining the center-of-mass frame from all populations
          outputReducer->addOperator(new DRO::DataReductionOperatorFsGrid("fg_v",[](
                       FsGrid< std::array<Real, fsgrids::bfield::N_BFIELD>, FS_STENCIL_WIDTH> & perBGrid,
