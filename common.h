@@ -174,6 +174,15 @@ namespace CellParams {
       P_11_V,   /*!< P_xx component after propagation in velocity space */
       P_22_V,   /*!< P_yy component after propagation in velocity space */
       P_33_V,   /*!< P_zz component after propagation in velocity space */
+
+      RHOM_V_PREV, /* !< Previous value of RHOM_V, used for timeclass interpolation */
+      VX_V_PREV, /* !< Previous value of VX_V, used for timeclass interpolation */
+      VY_V_PREV, /* !< Previous value of VY_V, used for timeclass interpolation */
+      VZ_V_PREV, /* !< Previous value of VZ_V, used for timeclass interpolation */
+      RHOQ_V_PREV, /* !< Previous value of RHOQ_V, used for timeclass interpolation */
+      P_11_V_PREV, /* !< Previous value of P_11_V, used for timeclass interpolation */
+      P_22_V_PREV, /* !< Previous value of P_22_V, used for timeclass interpolation */
+      P_33_V_PREV, /* !< Previous value of P_33_V, used for timeclass interpolation */
       
       RHOM_R_PREV, /* !< Previous value of RHOM_R, used for timeclass interpolation */
       VX_R_PREV, /* !< Previous value of VX_R, used for timeclass interpolation */
