@@ -594,7 +594,7 @@ void calculateAcceleration(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& 
                            Real dt
                           ) {
    typedef Parameters P;
-   const vector<CellID>& cells = getLocalCells();
+   const vector<CellID>& cells = getLocalCells();   
    set<CellID> cellsToPropagateSet;
    vector<CellID> cellsToPropagateVector;
    int myRank;
@@ -704,20 +704,6 @@ std::cerr <<std::scientific << "calculateAcceleration at t="<<P::t << ", for dtf
    for (auto cell : cellsToPropagateSet) {
       cellsToPropagateVector.push_back(cell);
    }
-
-   //updating moments to _V_PREV buffer before updating them, for interpolating
-   for (size_t c=0; c<cellsToPropagateVector.size(); c++) {
-      const CellID cellID = cellsToPropagateVector[c];
-      SpatialCell* SC = mpiGrid[cellID];
-      SC->parameters[CellParams::RHOM_V_PREV] = SC->parameters[CellParams::RHOM_V];
-      SC->parameters[CellParams::VX_V_PREV] = SC->parameters[CellParams::VX_V];
-      SC->parameters[CellParams::VY_V_PREV] = SC->parameters[CellParams::VY_V];
-      SC->parameters[CellParams::VZ_V_PREV] = SC->parameters[CellParams::VZ_V];
-      SC->parameters[CellParams::RHOQ_V_PREV] = SC->parameters[CellParams::RHOQ_V];
-      SC->parameters[CellParams::P_11_V_PREV] = SC->parameters[CellParams::P_11_V];
-      SC->parameters[CellParams::P_22_V_PREV] = SC->parameters[CellParams::P_22_V];
-      SC->parameters[CellParams::P_33_V_PREV] = SC->parameters[CellParams::P_33_V];
-   } 
 
    // Recalculate "_V" velocity moments
    calculateMoments_V(mpiGrid,cellsToPropagateVector,true);

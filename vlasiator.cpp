@@ -371,10 +371,10 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
       std::cerr << "TC test 2\n";
       if(P::maxTimeclass > 1){
          std::cerr << "This test requires P::maxTimeclass=0 or 1\n";
-         abort();
+         // abort();
       }
       if(P::maxTimeclass > 0) {
-         P::currentMaxTimeclass = 1;
+         P::currentMaxTimeclass = P::maxTimeclass;
       }
       else{
          P::currentMaxTimeclass = 0;
@@ -394,7 +394,14 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
          SpatialCell* cell = mpiGrid[*cell_id];
 
          // cell->parameters[CellParams::TIMECLASS] = min(localTimeClass, P::maxTimeclass);
-         cell->parameters[CellParams::TIMECLASS] = min(int(cell->parameters[CellParams::XCRD] > -100/*epsilon*/), P::maxTimeclass);
+         cell->parameters[CellParams::TIMECLASS] = min(int(cell->parameters[CellParams::XCRD] > -100/*epsilon*/)*P::maxTimeclass, P::maxTimeclass);
+         // if (cell->parameters[CellParams::XCRD] < -15*(cell->parameters[CellParams::DX])) {
+         //    cell->parameters[CellParams::TIMECLASS] = 2;
+         // } else if (cell->parameters[CellParams::XCRD] > 15*(cell->parameters[CellParams::DX])) {
+         //    cell->parameters[CellParams::TIMECLASS] = 0;
+         // } else {
+         //    cell->parameters[CellParams::TIMECLASS] = 1;
+         // }
          cell->parameters[CellParams::TIMECLASSDT] = cell->get_tc_dt();
       }
       
@@ -1469,6 +1476,13 @@ int main(int argn,char* args[]) {
          true
       );
 
+      if (myRank == MASTER_RANK) {
+         SpatialCell* SCtest = mpiGrid[cells[5]];
+         cerr << "VX of cell: " <<  SCtest->parameters[CellParams::VX] << ", VX_DT2 of cell: " << SCtest->parameters[CellParams::VX_DT2] << ", timeclass: " << SCtest->parameters[CellParams::TIMECLASS] << ", CmaxTC: " << P::currentMaxTimeclass <<  ", fractimestep: " << P::fractionalTimestep << endl;
+         cerr << "_R of cell: " <<  SCtest->parameters[CellParams::VX_R] << ", _V of cell:" << SCtest->parameters[CellParams::VX_V] << ", _R_PREV of cell: " << SCtest->parameters[CellParams::VX_R_PREV] << ", _V_PREV of cell: " << SCtest->parameters[CellParams::VX_V_PREV] << endl;
+         cerr << "TIME_R of cell: " <<  SCtest->parameters[CellParams::TIME_R] << ", TIME_V of cell:" << SCtest->parameters[CellParams::TIME_V] << endl;
+      }
+
       momentsTimer.stop();
 
       // TODO: updating population moment values, initializing values of all _PREV moments (where)
@@ -1555,6 +1569,24 @@ int main(int argn,char* args[]) {
             }
          }
       }
+
+      // updating _V moments here works but is ugly, move somewhere else later
+
+      for (size_t c=0; c<cells.size(); c++) {
+         const CellID cellID = cells[c];
+         SpatialCell* SC = mpiGrid[cellID];
+
+         if (SC->get_timeclass_turn_v() == true) {
+            SC->parameters[CellParams::RHOM_V_PREV] = SC->parameters[CellParams::RHOM_V];
+            SC->parameters[CellParams::VX_V_PREV] = SC->parameters[CellParams::VX_V];
+            SC->parameters[CellParams::VY_V_PREV] = SC->parameters[CellParams::VY_V];
+            SC->parameters[CellParams::VZ_V_PREV] = SC->parameters[CellParams::VZ_V];
+            SC->parameters[CellParams::RHOQ_V_PREV] = SC->parameters[CellParams::RHOQ_V];
+            SC->parameters[CellParams::P_11_V_PREV] = SC->parameters[CellParams::P_11_V];
+            SC->parameters[CellParams::P_22_V_PREV] = SC->parameters[CellParams::P_22_V];
+            SC->parameters[CellParams::P_33_V_PREV] = SC->parameters[CellParams::P_33_V];   
+         }
+      }  
       
       phiprof::Timer vspaceTimer {"Velocity-space"};
       if ( P::propagateVlasovAcceleration ) {
