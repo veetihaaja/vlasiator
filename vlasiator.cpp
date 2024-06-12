@@ -369,8 +369,8 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
    }
    else if(P::tc_test_type == 2 || P::tc_test_type == 3){ 
       std::cerr << "TC test 2\n";
-      if(P::maxTimeclass > 1){
-         std::cerr << "This test requires P::maxTimeclass=0 or 1\n";
+      if(P::maxTimeclass > 2){
+         std::cerr << "This test works best with timeclass 1 or 2\n";
          // abort();
       }
       if(P::maxTimeclass > 0) {
@@ -392,16 +392,21 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
       
       for (vector<CellID>::const_iterator cell_id=cells.begin(); cell_id!=cells.end(); ++cell_id) {
          SpatialCell* cell = mpiGrid[*cell_id];
-
          // cell->parameters[CellParams::TIMECLASS] = min(localTimeClass, P::maxTimeclass);
-         cell->parameters[CellParams::TIMECLASS] = min(int(cell->parameters[CellParams::XCRD] > -100/*epsilon*/)*P::maxTimeclass, P::maxTimeclass);
-         // if (cell->parameters[CellParams::XCRD] < -15*(cell->parameters[CellParams::DX])) {
-         //    cell->parameters[CellParams::TIMECLASS] = 2;
-         // } else if (cell->parameters[CellParams::XCRD] > 15*(cell->parameters[CellParams::DX])) {
-         //    cell->parameters[CellParams::TIMECLASS] = 0;
-         // } else {
-         //    cell->parameters[CellParams::TIMECLASS] = 1;
-         // }
+
+         // first block: one half timeclass0 and other timeclassmax
+         // second block: three parts: timeclassmax-2, timeclassmax-1, timeclassmax
+         if (P::maxTimeclass == 1) {
+            cell->parameters[CellParams::TIMECLASS] = min(int(cell->parameters[CellParams::XCRD] > -100/*epsilon*/)*P::maxTimeclass, P::maxTimeclass);
+         } else {
+            if (cell->parameters[CellParams::XCRD] < -15*(cell->parameters[CellParams::DX])) {
+               cell->parameters[CellParams::TIMECLASS] = 0;
+            } else if (cell->parameters[CellParams::XCRD] > 15*(cell->parameters[CellParams::DX])) {
+               cell->parameters[CellParams::TIMECLASS] = 2;
+            } else {
+               cell->parameters[CellParams::TIMECLASS] = 1;
+            }
+         }
          cell->parameters[CellParams::TIMECLASSDT] = cell->get_tc_dt();
       }
       
@@ -891,7 +896,7 @@ int main(int argn,char* args[]) {
       phiprof::Timer timer {"compute-dt"};
       // Run Vlasov solver once with zero dt to initialize
       // per-cell dt limits. In restarts, we read the dt from file.
-      calculateSpatialTranslation(mpiGrid,0.0);
+      calculateSpatialTranslation(mpiGrid,0.0,true);
       calculateAcceleration(mpiGrid,0.0);      
    }
 
@@ -1308,7 +1313,7 @@ int main(int argn,char* args[]) {
 
             // Calculate new dt limits since we might break CFL when refining
             phiprof::Timer computeDtimer {"compute-dt-amr"};
-            calculateSpatialTranslation(mpiGrid,0.0);
+            calculateSpatialTranslation(mpiGrid,0.0,true);
             calculateAcceleration(mpiGrid,0.0);
          }
          // This now uses the block-based count just copied between the two refinement calls above.
@@ -1415,9 +1420,9 @@ int main(int argn,char* args[]) {
 
       phiprof::Timer spatialSpaceTimer {"Spatial-space"};
       if( P::propagateVlasovTranslation) {
-         calculateSpatialTranslation(mpiGrid,1.0);
+         calculateSpatialTranslation(mpiGrid,1.0,false);
       } else {
-         calculateSpatialTranslation(mpiGrid,0.0);
+         calculateSpatialTranslation(mpiGrid,0.0,false);
       }
       spatialSpaceTimer.stop(computedCells, "Cells");
       

@@ -320,7 +320,8 @@ void calculateSpatialLocalTranslation(
 */
 void calculateSpatialTranslation(
         dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
-        creal dt) {
+        creal dt,
+        const bool initializationOrLB) {
    typedef Parameters P;
    std::cerr << std::scientific << "calculateSpatialTranslation at t="<<P::t << "\n";//", for dtfactor="<<dt<<"\n";
    phiprof::Timer semilagTimer {"semilag-trans"};
@@ -340,12 +341,13 @@ void calculateSpatialTranslation(
    Real time=0.0;
 
    // If dt=0 we are either initializing or distribution functions are not translated.
-   // In both cases go to the end of this function and calculate the moments.
-   if (dt == 0.0) {   
-      // !! if timeclasses are turned on and translation is not, _PREV moments will not be updated !!
+   if (dt == 0.0 && initializationOrLB == true) {
+      // if dt=0.0 and initialization == true, we are either initializing or load balancing.
+      // hence we can just calculate the moments and return.
       calculateMoments_R(mpiGrid,localCells,true);
       return;
    }
+
    // TC propagation lists, TODO move out of here somewhere sensible and less often called
    for (int tc = 0; tc <= P::maxTimeclass; tc++)
    {
@@ -403,6 +405,38 @@ void calculateSpatialTranslation(
    }
    computeTimer.stop();
 
+   //
+   if (dt == 0.0 && initializationOrLB == false) {
+      // If we are not initializing, we are in the main loop, and we are not propagating.
+      // Here we have to update _R_PREV moments, update _R moments on a timeclass basis, and return.
+
+      for (int tc=0; tc <= P::currentMaxTimeclass; tc++) {
+      int mod = 1 << (P::currentMaxTimeclass - tc);
+      if ((P::fractionalTimestep % mod) == 0) {
+         for (size_t c=0; c<tc_propagated_cells.at(tc).size(); ++c) {
+            const CellID cellID = tc_propagated_cells.at(tc).at(c);
+            SpatialCell* SC = mpiGrid[cellID];
+            SC->parameters[CellParams::RHOM_R_PREV] = SC->parameters[CellParams::RHOM_R];
+            SC->parameters[CellParams::VX_R_PREV] = SC->parameters[CellParams::VX_R];
+            SC->parameters[CellParams::VY_R_PREV] = SC->parameters[CellParams::VY_R];
+            SC->parameters[CellParams::VZ_R_PREV] = SC->parameters[CellParams::VZ_R];
+            SC->parameters[CellParams::RHOQ_R_PREV] = SC->parameters[CellParams::RHOQ_R];
+            SC->parameters[CellParams::P_11_R_PREV] = SC->parameters[CellParams::P_11_R];
+            SC->parameters[CellParams::P_22_R_PREV] = SC->parameters[CellParams::P_22_R];
+            SC->parameters[CellParams::P_33_R_PREV] = SC->parameters[CellParams::P_33_R];
+         }
+      }
+   }
+
+   //calculating moments based on timeclass
+   for (int tc=0; tc <= P::currentMaxTimeclass; tc++) {
+      int mod = 1 << (P::currentMaxTimeclass - tc);
+      if ((P::fractionalTimestep % mod) == 0) {
+         calculateMoments_R(mpiGrid,tc_propagated_cells.at(tc),true);
+      }
+   }
+      return;
+   }
 
    int myRank;
    MPI_Comm_rank(MPI_COMM_WORLD,&myRank);

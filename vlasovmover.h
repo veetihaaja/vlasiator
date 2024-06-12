@@ -40,7 +40,8 @@ void calculateAcceleration(
 
 void calculateSpatialTranslation(
                                  dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
-                                 Real dt);
+                                 Real dt,
+                                 const bool initializationOrLB);
 
 /** Calculate velocity moments for the given spatial cell.
  * This function is defined in cpu_moments.cpp file.*/
