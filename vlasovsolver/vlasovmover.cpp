@@ -998,3 +998,23 @@ void calculateInitialVelocityMoments(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_G
       SC->parameters[CellParams::P_33_DT2] = SC->parameters[CellParams::P_33];
    } // for-loop over spatial cells
 }
+
+void updatePreviousVMoments(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid) {
+
+   const vector<CellID>& cells = getLocalCells();
+   for (size_t c=0; c<cells.size(); c++) {
+      const CellID cellID = cells[c];
+      SpatialCell* SC = mpiGrid[cellID];
+
+      if (SC->get_timeclass_turn_v() == true) {
+         SC->parameters[CellParams::RHOM_V_PREV] = SC->parameters[CellParams::RHOM_V];
+         SC->parameters[CellParams::VX_V_PREV] = SC->parameters[CellParams::VX_V];
+         SC->parameters[CellParams::VY_V_PREV] = SC->parameters[CellParams::VY_V];
+         SC->parameters[CellParams::VZ_V_PREV] = SC->parameters[CellParams::VZ_V];
+         SC->parameters[CellParams::RHOQ_V_PREV] = SC->parameters[CellParams::RHOQ_V];
+         SC->parameters[CellParams::P_11_V_PREV] = SC->parameters[CellParams::P_11_V];
+         SC->parameters[CellParams::P_22_V_PREV] = SC->parameters[CellParams::P_22_V];
+         SC->parameters[CellParams::P_33_V_PREV] = SC->parameters[CellParams::P_33_V];   
+      }
+   }  
+}

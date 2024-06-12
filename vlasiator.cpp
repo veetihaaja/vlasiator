@@ -1465,7 +1465,6 @@ int main(int argn,char* args[]) {
          P::currentMaxTimeclass,
          false
       );
-
       interpolateMomentsForTimeclasses(
          mpiGrid,
          CellParams::RHOM_DT2,
@@ -1481,18 +1480,7 @@ int main(int argn,char* args[]) {
          true
       );
 
-      if (myRank == MASTER_RANK) {
-         SpatialCell* SCtest = mpiGrid[cells[5]];
-         cerr << "VX of cell: " <<  SCtest->parameters[CellParams::VX] << ", VX_DT2 of cell: " << SCtest->parameters[CellParams::VX_DT2] << ", timeclass: " << SCtest->parameters[CellParams::TIMECLASS] << ", CmaxTC: " << P::currentMaxTimeclass <<  ", fractimestep: " << P::fractionalTimestep << endl;
-         cerr << "_R of cell: " <<  SCtest->parameters[CellParams::VX_R] << ", _V of cell:" << SCtest->parameters[CellParams::VX_V] << ", _R_PREV of cell: " << SCtest->parameters[CellParams::VX_R_PREV] << ", _V_PREV of cell: " << SCtest->parameters[CellParams::VX_V_PREV] << endl;
-         cerr << "TIME_R of cell: " <<  SCtest->parameters[CellParams::TIME_R] << ", TIME_V of cell:" << SCtest->parameters[CellParams::TIME_V] << endl;
-      }
-
       momentsTimer.stop();
-
-      // TODO: updating population moment values, initializing values of all _PREV moments (where)
-      // figure out what breaks when CIVM is no longer called 
-      // 
              
       // Propagate fields forward in time by dt. This needs to be done before the
       // moments for t + dt are computed (field uses t and t+0.5dt)
@@ -1575,23 +1563,8 @@ int main(int argn,char* args[]) {
          }
       }
 
-      // updating _V moments here works but is ugly, move somewhere else later
-
-      for (size_t c=0; c<cells.size(); c++) {
-         const CellID cellID = cells[c];
-         SpatialCell* SC = mpiGrid[cellID];
-
-         if (SC->get_timeclass_turn_v() == true) {
-            SC->parameters[CellParams::RHOM_V_PREV] = SC->parameters[CellParams::RHOM_V];
-            SC->parameters[CellParams::VX_V_PREV] = SC->parameters[CellParams::VX_V];
-            SC->parameters[CellParams::VY_V_PREV] = SC->parameters[CellParams::VY_V];
-            SC->parameters[CellParams::VZ_V_PREV] = SC->parameters[CellParams::VZ_V];
-            SC->parameters[CellParams::RHOQ_V_PREV] = SC->parameters[CellParams::RHOQ_V];
-            SC->parameters[CellParams::P_11_V_PREV] = SC->parameters[CellParams::P_11_V];
-            SC->parameters[CellParams::P_22_V_PREV] = SC->parameters[CellParams::P_22_V];
-            SC->parameters[CellParams::P_33_V_PREV] = SC->parameters[CellParams::P_33_V];   
-         }
-      }  
+      // updating _V_PREV moments here, before _V moments are updated 
+      updatePreviousVMoments(mpiGrid);
       
       phiprof::Timer vspaceTimer {"Velocity-space"};
       if ( P::propagateVlasovAcceleration ) {

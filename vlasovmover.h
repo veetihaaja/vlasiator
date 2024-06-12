@@ -68,10 +68,15 @@ void calculateInterpolatedVelocityMoments(
    const int cp_p33
 );
 
-// TODO add doxygen thingies
-
+/*!
+  \brief Function for interpolating y(x) with y_0(x_0) and y_1(x_1) given.
+*/
 double linearInterpolation(double x0, double y0, double x1, double y1, double x);
 
+
+/*!
+  \brief Function for interpolating moments for field solver with moments from vlasov solver, combatible with timeclasses.
+*/
 void interpolateMomentsForTimeclasses(
   dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
    const int cp_rhom,
@@ -94,7 +99,10 @@ void interpolateMomentsForTimeclasses(
 */
 void calculateInitialVelocityMoments(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid);
 
-
+/*!
+  \brief Update _V_PREV buffers with the values from _V. Compatible with timeclass turns.
+*/
+void updatePreviousVMoments(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid);
 
 #endif
 
