@@ -990,6 +990,8 @@ int main(int argn,char* args[]) {
       }
       propagateHalfTimer.stop();
 
+      updatePreviousVMoments(mpiGrid, true);
+
       // Apply boundary conditions
       if (P::propagateVlasovTranslation || P::propagateVlasovAcceleration ) {
          phiprof::Timer updateBoundariesTimer {("update system boundaries (Vlasov post-acceleration)")};
@@ -1564,7 +1566,7 @@ int main(int argn,char* args[]) {
       }
 
       // updating _V_PREV moments here, before _V moments are updated 
-      updatePreviousVMoments(mpiGrid);
+      updatePreviousVMoments(mpiGrid, false);
       
       phiprof::Timer vspaceTimer {"Velocity-space"};
       if ( P::propagateVlasovAcceleration ) {
