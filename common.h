@@ -183,6 +183,15 @@ namespace CellParams {
       P_11_V_PREV, /* !< Previous value of P_11_V, used for timeclass interpolation */
       P_22_V_PREV, /* !< Previous value of P_22_V, used for timeclass interpolation */
       P_33_V_PREV, /* !< Previous value of P_33_V, used for timeclass interpolation */
+
+      RHOM_V_PREV_PREV, /* !< Value of RHOM_V from two updates back*/
+      VX_V_PREV_PREV, /* !< Value of VX_V from two updates back*/
+      VY_V_PREV_PREV, /* !< Value of VY_V from two updates back*/
+      VZ_V_PREV_PREV, /* !< Value of VZ_V from two updates back*/
+      RHOQ_V_PREV_PREV, /* !< Value of RHOQ_V from two updates back*/
+      P_11_V_PREV_PREV, /* !< Value of P_11_V from two updates back*/
+      P_22_V_PREV_PREV, /* !< Value of P_22_V from two updates back*/
+      P_33_V_PREV_PREV, /* !< Value of P_33_V from two updates back*/
       
       RHOM_R_PREV, /* !< Previous value of RHOM_R, used for timeclass interpolation */
       VX_R_PREV, /* !< Previous value of VX_R, used for timeclass interpolation */
