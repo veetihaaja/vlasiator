@@ -398,7 +398,7 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
          // second block: three parts: timeclassmax-2, timeclassmax-1, timeclassmax
          if (P::maxTimeclass == 1) {
             cell->parameters[CellParams::TIMECLASS] = min(int(cell->parameters[CellParams::XCRD] > -100/*epsilon*/)*P::maxTimeclass, P::maxTimeclass);
-         } else {
+         } else if (P::maxTimeclass == 2) {
             if (cell->parameters[CellParams::XCRD] < -15*(cell->parameters[CellParams::DX])) {
                cell->parameters[CellParams::TIMECLASS] = 0;
             } else if (cell->parameters[CellParams::XCRD] > 15*(cell->parameters[CellParams::DX])) {
@@ -406,6 +406,8 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
             } else {
                cell->parameters[CellParams::TIMECLASS] = 1;
             }
+         } else if (P::maxTimeclass == 3) {
+            cell->parameters[CellParams::TIMECLASS] = min(int(cell->parameters[CellParams::XCRD] > -100/*epsilon*/)*P::maxTimeclass, P::maxTimeclass);
          }
          cell->parameters[CellParams::TIMECLASSDT] = cell->get_tc_dt();
       }

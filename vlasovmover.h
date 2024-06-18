@@ -73,6 +73,9 @@ void calculateInterpolatedVelocityMoments(
 */
 double linearInterpolation(double x0, double y0, double x1, double y1, double x);
 
+double lagrangeInterpolation3(double x0, double y0, double x1, double y1, double x2, double y2, double x);
+
+double lagrangeInterpolation4(double x0, double y0, double x1, double y1, double x2, double y2, double x3, double y3, double x);
 
 /*!
   \brief Function for interpolating moments for field solver with moments from vlasov solver, combatible with timeclasses.
