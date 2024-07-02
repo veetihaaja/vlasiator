@@ -929,6 +929,11 @@ void Parameters::getParameters() {
 
    RP::get("gridbuilder.tcDebugBox", P::tcDebugBox);
    RP::get("gridbuilder.tcOverrideTimeclass", P::tcOverrideTimeclass);
+   if (P::tcOverrideTimeclass > -1 && P::maxTimeclass < P::tcOverrideTimeclass) {
+      std::cout << "Adjusting P::maxTimeclass ("<< P::maxTimeclass << ") to include tcOverrideTimeclass (" << P::tcOverrideTimeclass << ")" << std::endl;
+      P::maxTimeclass = P::tcOverrideTimeclass;
+   }
+
    RP::get("gridbuilder.tcBoxHalfWidthX", P::tcBoxHalfWidthX);
    RP::get("gridbuilder.tcBoxHalfWidthY", P::tcBoxHalfWidthY);
    RP::get("gridbuilder.tcBoxHalfWidthZ", P::tcBoxHalfWidthZ);
