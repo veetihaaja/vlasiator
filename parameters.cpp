@@ -70,6 +70,7 @@ Real P::dt0 = NAN;
 int P::maxTimeclass = 0;
 int P::currentMaxTimeclass = 0;
 bool P::tcRankwise = false;
+bool P::forcedConvection = false;
 
 vector<Real> P::timeclassDt;
 vector<Real> P::timeclassTime;
@@ -335,6 +336,7 @@ bool P::addParameters() {
    RP::add("gridbuilder.dt", "Initial timestep in seconds.", 0.0);
    RP::add("gridbuilder.timeclass_max", "Maximum number of timeclasses.", 0);
    RP::add("gridbuilder.tcRankwise", "Use timeclasses at MPI rank level insted of cell-wise timeclasses.", false);
+   RP::add("gridbuilder.forcedConvection", "Force a convection velocity of 200 km/s along +x [false]", false);
 
    RP::add("gridbuilder.tc_test_type", "Enumerated tc test", 0);
    RP::add("gridbuilder.tcDebugBox", "Use a forced timeclass box.", false);
@@ -923,9 +925,15 @@ void Parameters::getParameters() {
 
    RP::get("gridbuilder.timeclass_max", P::maxTimeclass);
    RP::get("gridbuilder.tcRankwise", P::tcRankwise);
+   RP::get("gridbuilder.forcedConvection", P::forcedConvection);
 
    RP::get("gridbuilder.tcDebugBox", P::tcDebugBox);
    RP::get("gridbuilder.tcOverrideTimeclass", P::tcOverrideTimeclass);
+   if (P::tcOverrideTimeclass > -1 && P::maxTimeclass < P::tcOverrideTimeclass) {
+      std::cout << "Adjusting P::maxTimeclass ("<< P::maxTimeclass << ") to include tcOverrideTimeclass (" << P::tcOverrideTimeclass << ")" << std::endl;
+      P::maxTimeclass = P::tcOverrideTimeclass;
+   }
+
    RP::get("gridbuilder.tcBoxHalfWidthX", P::tcBoxHalfWidthX);
    RP::get("gridbuilder.tcBoxHalfWidthY", P::tcBoxHalfWidthY);
    RP::get("gridbuilder.tcBoxHalfWidthZ", P::tcBoxHalfWidthZ);

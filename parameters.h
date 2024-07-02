@@ -73,6 +73,7 @@ struct Parameters {
    static bool tcDebugBox;          // Force timeclass 1 with the box
    static int tcOverrideTimeclass;  // Set fixed timeclass everywhere [debugging, default -1 i.e. off]
    static bool tcRankwise;          // are cell timeclasses chosen by MPI rank? 
+   static bool forcedConvection;
 
    static Realf tcBoxHalfWidthX;
    static Realf tcBoxHalfWidthY;

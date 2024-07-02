@@ -299,7 +299,7 @@ bool trans_map_1d_amr(const dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartes
       }
    }
 
-   // Get a pointer to the velocity mesh of the first spatial cell
+   // Get a pointer to the velocity mesh of the first spatial cell // is this even used?
    const vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& vmesh = allCellsPointer[0]->get_velocity_mesh(popID);
    
    phiprof::Timer buildBlockListimer {"trans-amr-buildBlockList"};
@@ -316,6 +316,16 @@ bool trans_map_1d_amr(const dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartes
          const vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& cvmesh = (*cell)->get_velocity_mesh(popID);
          for (vmesh::LocalID block_i=0; block_i< cvmesh.size(); ++block_i) {
             thread_unionOfBlocksSet.insert(cvmesh.getGlobalID(block_i));
+         }
+         
+         // for (auto tc : (*cell)->requested_timeclass_ghosts){
+         if ((*cell)->requested_timeclass_ghosts.count(timeclass) > 0 && (*cell)->get_tc() > timeclass){
+            std::cerr << "\tChecked ghost data in cell " << (*cell)->parameters[CellParams::CELLID] << "\n";
+
+            const vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& cvmeshg = (*cell)->get_velocity_mesh_ghost(popID, timeclass);
+            for (vmesh::LocalID block_i=0; block_i< cvmeshg.size(); ++block_i) {
+               thread_unionOfBlocksSet.insert(cvmeshg.getGlobalID(block_i));
+            }
          }
       }
 #pragma omp critical
@@ -363,7 +373,17 @@ bool trans_map_1d_amr(const dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartes
                // Store block data pointer for both loading of data and writing back to the cell
                if (blockLID != srcCell->invalid_local_id()) {
                   // Get data pointer
-                  cellBlockData[start + b] = srcCell->get_data(blockLID,popID);
+                  if (srcCell->get_tc() < timeclass && srcCell->requested_timeclass_ghosts.count(timeclass) > 0){
+                     // std::cerr << "\tLoaded ghost data in cell " << srcCell->parameters[CellParams::CELLID] << " for tc " << timeclass << "\n";
+                     cellBlockData[start + b] = srcCell->get_data(blockLID,popID, timeclass);
+                  }
+                  else if (srcCell->get_tc() > timeclass && srcCell->requested_timeclass_ghosts.count(timeclass) > 0){
+                     std::cerr << "\t Loaded regular data in cell " << srcCell->parameters[CellParams::CELLID] << " for tc " << timeclass << "\n";
+                     cellBlockData[start + b] = srcCell->get_data(blockLID,popID, timeclass); //, timeclass);
+                  }
+                  else {
+                     cellBlockData[start + b] = srcCell->get_data(blockLID,popID);
+                  }
                   nonEmptyBlocks++;
                } else {
                   cellBlockData[start + b] = NULL;
@@ -372,6 +392,7 @@ bool trans_map_1d_amr(const dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartes
             if(nonEmptyBlocks == 0) {
                continue;
             }
+            
             pencilBlocksCount.at(pencili) = nonEmptyBlocks;
             // Transpose and copy block data from cells to source buffer
             Vec* blockDataSource = blockDataBuffer.data() + start*WID3/VECL;
@@ -385,7 +406,7 @@ bool trans_map_1d_amr(const dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartes
          // reset blocks in all non-sysboundary neighbor spatial cells for this block id
          for (CellID target_cell_id: DimensionTargetCells[dimension]) {
             SpatialCell* target_cell = mpiGrid[target_cell_id];
-            if (target_cell) {
+            if (target_cell && target_cell->get_tc() == timeclass) {
                // Get local velocity block id
                const vmesh::LocalID blockLID = target_cell->get_velocity_block_local_id(blockGID, popID);
                // Check for invalid block id
@@ -414,7 +435,7 @@ bool trans_map_1d_amr(const dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartes
             Realf* pencilDZ = DimensionPencils[dimension].sourceDZ.data() + start;
             Realf* pencilRatios = DimensionPencils[dimension].targetRatios.data() + start;
             Realf** pencilBlockData = cellBlockData.data() + start;
-            Vec* blockDataSource = blockDataBuffer.data() +start*WID3/VECL;
+            Vec* blockDataSource = blockDataBuffer.data() + start*WID3/VECL;
             propagatePencil(pencilDZ,
                             blockDataSource,
                             dimension,
