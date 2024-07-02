@@ -1039,7 +1039,7 @@ void buildPencilsWithNeighbors( const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_
       for (int tmpPath = 0; tmpPath < 4; ++tmpPath) {
          nextNeighbor = selectNeighbor(grid,id,dimension,tmpPath);
          if(nextNeighbor != INVALID_CELLID) {
-            if(P::tc_test_type == 3){ // Should allow for pencil splitting down the line, but not for now.
+            if(P::tc_test_type == 3 || true){ // Should allow for pencil splitting down the line, but not for now.
                if(grid[nextNeighbor]->parameters[CellParams::TIMECLASS] != timeclass){
                   neighborExists = false;
                   break;
