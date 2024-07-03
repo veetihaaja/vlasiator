@@ -1346,7 +1346,7 @@ int main(int argn,char* args[]) {
       //      ... but updated V moments needed?
       //   -> do the acc shuffle for all cells to begin with
       std::vector<Real> newTimeclassDts = std::vector<Real>(P::maxTimeclass+1);
-      if(P::dynamicTimestep  && P::tstep > P::tstep_min) {
+      if(P::dynamicTimestep  && P::tstep > P::tstep_min && P::fractionalTimestep == 0) {
          std::cout << "Computing new dts\n";
          computeNewTimeStep(mpiGrid, technicalGrid, newDt, dtIsChanged, newTimeclassDts);
          if(myRank == MASTER_RANK){
