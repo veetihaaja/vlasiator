@@ -932,38 +932,46 @@ void interpolateMomentsForTimeclasses(
          // first testcase: propagating V_R_PREV by tdiff*normModul
          // 2nd testcase: propagating a placeholder moment little by little
 
-         if (true) {
-            Eigen::Transform<Real,3,Eigen::Affine> vUpdateMatrix = compute_acceleration_transformation(SC, 0, tdiff*normModul);
-            const Eigen::Matrix<Real,3,1> V_R_PREV(SC->parameters[CellParams::VX_R_PREV], SC->parameters[CellParams::VY_R_PREV], SC->parameters[CellParams::VZ_R_PREV]);
-            const Eigen::Matrix<Real,3,1> V_V_PREV(SC->parameters[CellParams::VX_V_PREV], SC->parameters[CellParams::VY_V_PREV], SC->parameters[CellParams::VZ_V_PREV]);
-            // Eigen::Matrix<Real,3,1> V_updated;
-            Eigen::Matrix<Real,3,1> V_updated = vUpdateMatrix * V_R_PREV;
+         // 1 = interpolate all moments, 2 = propagate velocity moments and interpolate the rest.
+         const int calculationType = 2;
 
-            SC->parameters[cp_vx] = V_updated(0);
-            SC->parameters[cp_vy] = V_updated(1);
-            SC->parameters[cp_vz] = V_updated(2);
-         } else {
-            if (modul == 0) {
+         if (calculationType == 2) {
+            if (true) {
+               Eigen::Transform<Real,3,Eigen::Affine> vUpdateMatrix = compute_acceleration_transformation(SC, 0, tdiff*normModul);
+               const Eigen::Matrix<Real,3,1> V_R_PREV(SC->parameters[CellParams::VX_R], SC->parameters[CellParams::VY_R], SC->parameters[CellParams::VZ_R]);
+               const Eigen::Matrix<Real,3,1> V_V_PREV(SC->parameters[CellParams::VX_V_PREV], SC->parameters[CellParams::VY_V_PREV], SC->parameters[CellParams::VZ_V_PREV]);
+               // Eigen::Matrix<Real,3,1> V_updated;
+               Eigen::Matrix<Real,3,1> V_updated = vUpdateMatrix * V_R_PREV;
 
+               SC->parameters[cp_vx] = V_updated(0);
+               SC->parameters[cp_vy] = V_updated(1);
+               SC->parameters[cp_vz] = V_updated(2);
             } else {
+               if (modul == 0) {
 
+               } else {
+
+               }
             }
          }
 
+         int nMomentsToInterp;
+         if (calculationType == 1) nMomentsToInterp = 8;
+         if (calculationType == 2) nMomentsToInterp = 5;
 
          // temporary arrays for true moments.
-         double avgMoments1[5];
-         double avgMoments2[5];
-         double avgMoments3[5];
-         double avgMoments4[5];
-         double avgMoments5[5];
+         double avgMoments1[nMomentsToInterp];
+         double avgMoments2[nMomentsToInterp];
+         double avgMoments3[nMomentsToInterp];
+         double avgMoments4[nMomentsToInterp];
+         double avgMoments5[nMomentsToInterp];
 
          int degreeOfInterpolation = 1;
          // -1 is cubic C^1 Hermite spline, 1 is linear, 2 is lagrange 2nd order, 3 is lagrange 3rd order.
 
          if (modul == 0) { // aka if translation moments are ahead of acceleration moments
             // here, temporal order from newest to oldest is _R, _V, _R_PREV, _V_PREV, _R_PREV_PREV, _V_PREV_PREV
-            for (int i=0; i<5; i++) {
+            for (int i=0; i<nMomentsToInterp; i++) {
                avgMoments1[i] = 0.5*( SC->parameters[CellParams::RHOM_R+i] + SC->parameters[CellParams::RHOM_V+i] ); // at 0.75
                avgMoments2[i] = 0.5*( SC->parameters[CellParams::RHOM_V+i] + SC->parameters[CellParams::RHOM_R_PREV+i] ); // at 0.25
                avgMoments3[i] = 0.5*( SC->parameters[CellParams::RHOM_R_PREV+i] + SC->parameters[CellParams::RHOM_V_PREV+i] );  // at -0.25
@@ -971,7 +979,7 @@ void interpolateMomentsForTimeclasses(
                avgMoments5[i] = 0.5*( SC->parameters[CellParams::RHOM_R_PREV_PREV+i] + SC->parameters[CellParams::RHOM_V_PREV_PREV+i] ); // at -1.25
             }
 
-            for (int i=0; i<5; i++) {
+            for (int i=0; i<nMomentsToInterp; i++) {
                if (degreeOfInterpolation == 1) {
                   if (normModul < 0.25) {
                      SC->parameters[cp_rhom+i] = linearInterpolation(-0.25, avgMoments3[i], 0.25, avgMoments2[i], normModul);
@@ -991,7 +999,7 @@ void interpolateMomentsForTimeclasses(
 
          } else { // if modul != 0, aka acceleration moments are ahead of translation moments
             // here, temporal order from newest to oldest is _V, _R, _V_PREV, _R_PREV, _V_PREV_PREV, _R_PREV_PREV
-            for (int i=0; i<5; i++) {
+            for (int i=0; i<nMomentsToInterp; i++) {
                avgMoments1[i] = 0.5*( SC->parameters[CellParams::RHOM_V+i] + SC->parameters[CellParams::RHOM_R+i] ); // at 1.25
                avgMoments2[i] = 0.5*( SC->parameters[CellParams::RHOM_R+i] + SC->parameters[CellParams::RHOM_V_PREV+i] ); // at 0.75
                avgMoments3[i] = 0.5*( SC->parameters[CellParams::RHOM_V_PREV+i] + SC->parameters[CellParams::RHOM_R_PREV+i] ); // at 0.25
@@ -999,7 +1007,7 @@ void interpolateMomentsForTimeclasses(
                avgMoments5[i] = 0.5*( SC->parameters[CellParams::RHOM_V_PREV_PREV+i] + SC->parameters[CellParams::RHOM_R_PREV_PREV+i] ); // at -0.75
             }
 
-            for (int i=0; i<5; i++) {
+            for (int i=0; i<nMomentsToInterp; i++) {
                if (degreeOfInterpolation == 1) {
                   if (normModul < 0.25) {
                      SC->parameters[cp_rhom+i] = linearInterpolation(-0.25, avgMoments4[i], 0.25, avgMoments3[i], normModul);

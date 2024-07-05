@@ -396,7 +396,7 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
 
          // first block: one half timeclass0 and other timeclassmax
          // second block: three parts: timeclassmax-2, timeclassmax-1, timeclassmax
-         if (P::maxTimeclass == 1) {
+         if (P::maxTimeclass == 1 || P::maxTimeclass == 3) {
             cell->parameters[CellParams::TIMECLASS] = min(int(cell->parameters[CellParams::XCRD] > -100/*epsilon*/)*P::maxTimeclass, P::maxTimeclass);
          } else {
             if (cell->parameters[CellParams::XCRD] < -15*(cell->parameters[CellParams::DX])) {
