@@ -45,6 +45,8 @@
 #include "cpu_trans_pencils.hpp"
 #include "cpu_trans_map_amr.hpp"
 
+#include "spline.h"
+
 using namespace std;
 using namespace spatial_cell;
 
@@ -813,6 +815,37 @@ double linearInterpolation(double x0, double y0, double x1, double y1, double x)
     return (y0 * (x1 - x) + y1 * (x - x0))/(x1 - x0);
 }
 
+double lagrangeInterpolation2order(double x0, double y0, double x1, double y1, double x2, double y2, double x) {
+    // https://mathworld.wolfram.com/LagrangeInterpolatingPolynomial.html
+    // Lagrange polynomial for interpolation between three points.
+
+    return (y0 * (x - x1) * (x - x2) / ((x0 - x1) * (x0 - x2)) +
+            y1 * (x - x0) * (x - x2) / ((x1 - x0) * (x1 - x2)) +
+            y2 * (x - x0) * (x - x1) / ((x2 - x0) * (x2 - x1)));
+}
+
+double lagrangeInterpolation3order(double x0, double y0, double x1, double y1, double x2, double y2, double x3, double y3, double x) {
+    // https://mathworld.wolfram.com/LagrangeInterpolatingPolynomial.html
+    // Lagrange polynomial for interpolation between four points.
+
+    return (y0 * (x - x1) * (x - x2) * (x - x3) / ((x0 - x1) * (x0 - x2) * (x0 - x3)) +
+            y1 * (x - x0) * (x - x2) * (x - x3) / ((x1 - x0) * (x1 - x2) * (x1 - x3)) +
+            y2 * (x - x0) * (x - x1) * (x - x3) / ((x2 - x0) * (x2 - x1) * (x2 - x3)) +
+            y3 * (x - x0) * (x - x1) * (x - x2) / ((x3 - x0) * (x3 - x1) * (x3 - x2)));
+}
+
+double cubicHermiteSplineInterpolation(double x0, double y0, double x1, double y1, double x2, double y2, double x3, double y3, double x) {
+   // https://kluge.in-chemnitz.de/opensource/spline/
+   // Cubic Hermite spline interpolation between four points.
+
+   vector<double> xvals = {x0, x1, x2, x3};
+   vector<double> yvals = {y0, y1, y2, y3};
+   tk::spline s(xvals,yvals,tk::spline::cspline_hermite);
+
+   return s(x);
+}
+
+
 void interpolateMomentsForTimeclasses(
   dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
    const int cp_rhom,
@@ -892,187 +925,75 @@ void interpolateMomentsForTimeclasses(
          }
 
          // TODO: add population moment updating (same thing as in calculateinterpolatedvelocitymoments)
-         // could this be done in a cleaner way?
-         // !! if translation or acceleration is off, this breaks !!
-         // ^^ this is because tr and tv are not updated, and the interpolation is based which step is farther in time.
+         // !! if translation and acceleration are changed to not update both on fractimestep 0, this will break
 
 
-         if (tr > tv) {
-            if (normModul < 0.25) {
-               SC->parameters[cp_rhom] = linearInterpolation(-0.25, 
-               0.5*(SC->parameters[CellParams::RHOM_V_PREV] + SC->parameters[CellParams::RHOM_R_PREV]), 0.25, 
-               0.5*(SC->parameters[CellParams::RHOM_R_PREV] + SC->parameters[CellParams::RHOM_V]), normModul);
+         // temporary arrays for true moments.
+         double avgMoments1[8];
+         double avgMoments2[8];
+         double avgMoments3[8];
+         double avgMoments4[8];
+         double avgMoments5[8];
 
-               SC->parameters[cp_vx] = linearInterpolation(-0.25,
-               0.5*(SC->parameters[CellParams::VX_V_PREV] + SC->parameters[CellParams::VX_R_PREV]), 0.25,
-               0.5*(SC->parameters[CellParams::VX_R_PREV] + SC->parameters[CellParams::VX_V]), normModul);
+         int degreeOfInterpolation = 1;
+         // -1 is cubic C^1 Hermite spline, 1 is linear, 2 is lagrange 2nd order, 3 is lagrange 3rd order.
 
-               SC->parameters[cp_vy] = linearInterpolation(-0.25,
-               0.5*(SC->parameters[CellParams::VY_V_PREV] + SC->parameters[CellParams::VY_R_PREV]), 0.25,
-               0.5*(SC->parameters[CellParams::VY_R_PREV] + SC->parameters[CellParams::VY_V]), normModul);
-
-               SC->parameters[cp_vz] = linearInterpolation(-0.25,
-               0.5*(SC->parameters[CellParams::VZ_V_PREV] + SC->parameters[CellParams::VZ_R_PREV]), 0.25,
-               0.5*(SC->parameters[CellParams::VZ_R_PREV] + SC->parameters[CellParams::VZ_V]), normModul);
-
-               SC->parameters[cp_rhoq] = linearInterpolation(-0.25,
-               0.5*(SC->parameters[CellParams::RHOQ_V_PREV] + SC->parameters[CellParams::RHOQ_R_PREV]), 0.25,
-               0.5*(SC->parameters[CellParams::RHOQ_R_PREV] + SC->parameters[CellParams::RHOQ_V]), normModul);
-
-               SC->parameters[cp_p11] = linearInterpolation(-0.25,
-               0.5*(SC->parameters[CellParams::P_11_V_PREV] + SC->parameters[CellParams::P_11_R_PREV]), 0.25,
-               0.5*(SC->parameters[CellParams::P_11_R_PREV] + SC->parameters[CellParams::P_11_V]), normModul);
-
-               SC->parameters[cp_p22] = linearInterpolation(-0.25,
-               0.5*(SC->parameters[CellParams::P_22_V_PREV] + SC->parameters[CellParams::P_22_R_PREV]), 0.25,
-               0.5*(SC->parameters[CellParams::P_22_R_PREV] + SC->parameters[CellParams::P_22_V]), normModul);
-
-               SC->parameters[cp_p33] = linearInterpolation(-0.25,
-               0.5*(SC->parameters[CellParams::P_33_V_PREV] + SC->parameters[CellParams::P_33_R_PREV]), 0.25,
-               0.5*(SC->parameters[CellParams::P_33_R_PREV] + SC->parameters[CellParams::P_33_V]), normModul);
-               
-            } else if (normModul < 0.75) {
-
-               SC->parameters[cp_rhom] = linearInterpolation(0.25, 
-               0.5*(SC->parameters[CellParams::RHOM_R_PREV] + SC->parameters[CellParams::RHOM_V]), 0.75, 
-               0.5*(SC->parameters[CellParams::RHOM_V] + SC->parameters[CellParams::RHOM_R]), normModul);
-               
-               SC->parameters[cp_vx] = linearInterpolation(0.25, 
-               0.5*(SC->parameters[CellParams::VX_R_PREV] + SC->parameters[CellParams::VX_V]), 0.75, 
-               0.5*(SC->parameters[CellParams::VX_V] + SC->parameters[CellParams::VX_R]), normModul);
-               
-               SC->parameters[cp_vy] = linearInterpolation(0.25, 
-               0.5*(SC->parameters[CellParams::VY_R_PREV] + SC->parameters[CellParams::VY_V]), 0.75, 
-               0.5*(SC->parameters[CellParams::VY_V] + SC->parameters[CellParams::VY_R]), normModul);
-               
-               SC->parameters[cp_vz] = linearInterpolation(0.25, 
-               0.5*(SC->parameters[CellParams::VZ_R_PREV] + SC->parameters[CellParams::VZ_V]), 0.75, 
-               0.5*(SC->parameters[CellParams::VZ_V] + SC->parameters[CellParams::VZ_R]), normModul);
-               
-               SC->parameters[cp_rhoq] = linearInterpolation(0.25, 
-               0.5*(SC->parameters[CellParams::RHOQ_R_PREV] + SC->parameters[CellParams::RHOQ_V]), 0.75, 
-               0.5*(SC->parameters[CellParams::RHOQ_V] + SC->parameters[CellParams::RHOQ_R]), normModul);
-               
-               SC->parameters[cp_p11] = linearInterpolation(0.25, 
-               0.5*(SC->parameters[CellParams::P_11_R_PREV] + SC->parameters[CellParams::P_11_V]), 0.75, 
-               0.5*(SC->parameters[CellParams::P_11_V] + SC->parameters[CellParams::P_11_R]), normModul);
-               
-               SC->parameters[cp_p22] = linearInterpolation(0.25, 
-               0.5*(SC->parameters[CellParams::P_22_R_PREV] + SC->parameters[CellParams::P_22_V]), 0.75, 
-               0.5*(SC->parameters[CellParams::P_22_V] + SC->parameters[CellParams::P_22_R]), normModul);
-               
-               SC->parameters[cp_p33] = linearInterpolation(0.25, 
-               0.5*(SC->parameters[CellParams::P_33_R_PREV] + SC->parameters[CellParams::P_33_V]), 0.75, 
-               0.5*(SC->parameters[CellParams::P_33_V] + SC->parameters[CellParams::P_33_R]), normModul);
-                
-            } else {
-
-               // note: this block is never reached, as normModul cant be over 0.75 with tr > tv, with accel and trans updating at the same time.
-
+         if (modul == 0) { // aka if translation moments are ahead of acceleration moments
+            // here, temporal order from newest to oldest is _R, _V, _R_PREV, _V_PREV, _R_PREV_PREV, _V_PREV_PREV
+            for (int i=0; i<8; i++) {
+               avgMoments1[i] = 0.5*( SC->parameters[CellParams::RHOM_R+i] + SC->parameters[CellParams::RHOM_V+i] ); // at 0.75
+               avgMoments2[i] = 0.5*( SC->parameters[CellParams::RHOM_V+i] + SC->parameters[CellParams::RHOM_R_PREV+i] ); // at 0.25
+               avgMoments3[i] = 0.5*( SC->parameters[CellParams::RHOM_R_PREV+i] + SC->parameters[CellParams::RHOM_V_PREV+i] );  // at -0.25
+               avgMoments4[i] = 0.5*( SC->parameters[CellParams::RHOM_V_PREV+i] + SC->parameters[CellParams::RHOM_R_PREV_PREV+i] ); // at -0.75
+               avgMoments5[i] = 0.5*( SC->parameters[CellParams::RHOM_R_PREV_PREV+i] + SC->parameters[CellParams::RHOM_V_PREV_PREV+i] ); // at -1.25
             }
-         } else { // tr < tv
-            if (normModul < 0.25) {
-               SC->parameters[cp_rhom] = linearInterpolation(-0.25, 
-               0.5*(SC->parameters[CellParams::RHOM_V_PREV_PREV] + SC->parameters[CellParams::RHOM_R_PREV]), 0.25, 
-               0.5*(SC->parameters[CellParams::RHOM_R_PREV] + SC->parameters[CellParams::RHOM_V_PREV]), normModul);
 
-               SC->parameters[cp_vx] = linearInterpolation(-0.25,
-               0.5*(SC->parameters[CellParams::VX_V_PREV_PREV] + SC->parameters[CellParams::VX_R_PREV]), 0.25,
-               0.5*(SC->parameters[CellParams::VX_R_PREV] + SC->parameters[CellParams::VX_V_PREV]), normModul);
+            for (int i=0; i<8; i++) {
+               if (degreeOfInterpolation == 1) {
+                  if (normModul < 0.25) {
+                     SC->parameters[cp_rhom+i] = linearInterpolation(-0.25, avgMoments3[i], 0.25, avgMoments2[i], normModul);
+                  } else if (normModul < 0.75) {
+                     SC->parameters[cp_rhom+i] = linearInterpolation(0.25, avgMoments2[i], 0.75, avgMoments1[i], normModul);
+                  } else {
+                     // this is never reached
+                  }
+               } else if (degreeOfInterpolation == 2) {
+                  SC->parameters[cp_rhom+i] = lagrangeInterpolation2order(-0.25, avgMoments3[i], 0.25, avgMoments2[i], 0.75, avgMoments1[i], normModul);
+               } else if (degreeOfInterpolation == 3) {
+                  SC->parameters[cp_rhom+i] = lagrangeInterpolation3order(-0.75, avgMoments4[i], -0.25, avgMoments3[i], 0.25, avgMoments2[i], 0.75, avgMoments1[i], normModul);
+               } else if (degreeOfInterpolation == -1) {
+                  SC->parameters[cp_rhom+i] = cubicHermiteSplineInterpolation(-0.75, avgMoments4[i], -0.25, avgMoments3[i], 0.25, avgMoments2[i], 0.75, avgMoments1[i], normModul);
+               }
+            }
 
-               SC->parameters[cp_vy] = linearInterpolation(-0.25,
-               0.5*(SC->parameters[CellParams::VY_V_PREV_PREV] + SC->parameters[CellParams::VY_R_PREV]), 0.25,
-               0.5*(SC->parameters[CellParams::VY_R_PREV] + SC->parameters[CellParams::VY_V_PREV]), normModul);
+         } else { // if modul != 0, aka acceleration moments are ahead of translation moments
+            // here, temporal order from newest to oldest is _V, _R, _V_PREV, _R_PREV, _V_PREV_PREV, _R_PREV_PREV
+            for (int i=0; i<8; i++) {
+               avgMoments1[i] = 0.5*( SC->parameters[CellParams::RHOM_V+i] + SC->parameters[CellParams::RHOM_R+i] ); // at 1.25
+               avgMoments2[i] = 0.5*( SC->parameters[CellParams::RHOM_R+i] + SC->parameters[CellParams::RHOM_V_PREV+i] ); // at 0.75
+               avgMoments3[i] = 0.5*( SC->parameters[CellParams::RHOM_V_PREV+i] + SC->parameters[CellParams::RHOM_R_PREV+i] ); // at 0.25
+               avgMoments4[i] = 0.5*( SC->parameters[CellParams::RHOM_R_PREV+i] + SC->parameters[CellParams::RHOM_V_PREV_PREV+i] ); // at -0.25
+               avgMoments5[i] = 0.5*( SC->parameters[CellParams::RHOM_V_PREV_PREV+i] + SC->parameters[CellParams::RHOM_R_PREV_PREV+i] ); // at -0.75
+            }
 
-               SC->parameters[cp_vz] = linearInterpolation(-0.25,
-               0.5*(SC->parameters[CellParams::VZ_V_PREV_PREV] + SC->parameters[CellParams::VZ_R_PREV]), 0.25,
-               0.5*(SC->parameters[CellParams::VZ_R_PREV] + SC->parameters[CellParams::VZ_V_PREV]), normModul);
+            for (int i=0; i<8; i++) {
+               if (degreeOfInterpolation == 1) {
+                  if (normModul < 0.25) {
+                     SC->parameters[cp_rhom+i] = linearInterpolation(-0.25, avgMoments4[i], 0.25, avgMoments3[i], normModul);
+                  } else if (normModul < 0.75) {
+                     SC->parameters[cp_rhom+i] = linearInterpolation(0.25, avgMoments3[i], 0.75, avgMoments2[i], normModul);
+                  } else {
+                     SC->parameters[cp_rhom+i] = linearInterpolation(0.75, avgMoments2[i], 1.25, avgMoments1[i], normModul);
+                  }
+               } else if (degreeOfInterpolation == 2) {
+                  SC->parameters[cp_rhom+i] = lagrangeInterpolation2order(0.25, avgMoments3[i], 0.75, avgMoments2[i], 1.25, avgMoments1[i], normModul);
+               } else if (degreeOfInterpolation == 3) {
+                  SC->parameters[cp_rhom+i] = lagrangeInterpolation3order(-0.25, avgMoments4[i], 0.25, avgMoments3[i], 0.75, avgMoments2[i], 1.25, avgMoments1[i], normModul);
+               } else if (degreeOfInterpolation == -1) {
+                  SC->parameters[cp_rhom+i] = cubicHermiteSplineInterpolation(-0.25, avgMoments4[i], 0.25, avgMoments3[i], 0.75, avgMoments2[i], 1.25, avgMoments1[i], normModul);
+               }
+            }
 
-               SC->parameters[cp_rhoq] = linearInterpolation(-0.25,
-               0.5*(SC->parameters[CellParams::RHOQ_V_PREV_PREV] + SC->parameters[CellParams::RHOQ_R_PREV]), 0.25,
-               0.5*(SC->parameters[CellParams::RHOQ_R_PREV] + SC->parameters[CellParams::RHOQ_V_PREV]), normModul);
-
-               SC->parameters[cp_p11] = linearInterpolation(-0.25,
-               0.5*(SC->parameters[CellParams::P_11_V_PREV_PREV] + SC->parameters[CellParams::P_11_R_PREV]), 0.25,
-               0.5*(SC->parameters[CellParams::P_11_R_PREV] + SC->parameters[CellParams::P_11_V_PREV]), normModul);
-
-               SC->parameters[cp_p22] = linearInterpolation(-0.25,
-               0.5*(SC->parameters[CellParams::P_22_V_PREV_PREV] + SC->parameters[CellParams::P_22_R_PREV]), 0.25,
-               0.5*(SC->parameters[CellParams::P_22_R_PREV] + SC->parameters[CellParams::P_22_V_PREV]), normModul);
-
-               SC->parameters[cp_p33] = linearInterpolation(-0.25,
-               0.5*(SC->parameters[CellParams::P_33_V_PREV_PREV] + SC->parameters[CellParams::P_33_R_PREV]), 0.25,
-               0.5*(SC->parameters[CellParams::P_33_R_PREV] + SC->parameters[CellParams::P_33_V_PREV]), normModul);
-
-            } else if (normModul < 0.75) {
-
-               SC->parameters[cp_rhom] = linearInterpolation(0.25, 
-               0.5*(SC->parameters[CellParams::RHOM_R_PREV] + SC->parameters[CellParams::RHOM_V_PREV]), 0.75, 
-               0.5*(SC->parameters[CellParams::RHOM_V_PREV] + SC->parameters[CellParams::RHOM_R]), normModul);
-
-               SC->parameters[cp_vx] = linearInterpolation(0.25, 
-               0.5*(SC->parameters[CellParams::VX_R_PREV] + SC->parameters[CellParams::VX_V_PREV]), 0.75, 
-               0.5*(SC->parameters[CellParams::VX_V_PREV] + SC->parameters[CellParams::VX_R]), normModul);
-
-               SC->parameters[cp_vy] = linearInterpolation(0.25, 
-               0.5*(SC->parameters[CellParams::VY_R_PREV] + SC->parameters[CellParams::VY_V_PREV]), 0.75, 
-               0.5*(SC->parameters[CellParams::VY_V_PREV] + SC->parameters[CellParams::VY_R]), normModul);
-
-               SC->parameters[cp_vz] = linearInterpolation(0.25, 
-               0.5*(SC->parameters[CellParams::VZ_R_PREV] + SC->parameters[CellParams::VZ_V_PREV]), 0.75, 
-               0.5*(SC->parameters[CellParams::VZ_V_PREV] + SC->parameters[CellParams::VZ_R]), normModul);
-
-               SC->parameters[cp_rhoq] = linearInterpolation(0.25, 
-               0.5*(SC->parameters[CellParams::RHOQ_R_PREV] + SC->parameters[CellParams::RHOQ_V_PREV]), 0.75, 
-               0.5*(SC->parameters[CellParams::RHOQ_V_PREV] + SC->parameters[CellParams::RHOQ_R]), normModul);
-
-               SC->parameters[cp_p11] = linearInterpolation(0.25, 
-               0.5*(SC->parameters[CellParams::P_11_R_PREV] + SC->parameters[CellParams::P_11_V_PREV]), 0.75, 
-               0.5*(SC->parameters[CellParams::P_11_V_PREV] + SC->parameters[CellParams::P_11_R]), normModul);
-
-               SC->parameters[cp_p22] = linearInterpolation(0.25, 
-               0.5*(SC->parameters[CellParams::P_22_R_PREV] + SC->parameters[CellParams::P_22_V_PREV]), 0.75, 
-               0.5*(SC->parameters[CellParams::P_22_V_PREV] + SC->parameters[CellParams::P_22_R]), normModul);
-
-               SC->parameters[cp_p33] = linearInterpolation(0.25, 
-               0.5*(SC->parameters[CellParams::P_33_R_PREV] + SC->parameters[CellParams::P_33_V_PREV]), 0.75, 
-               0.5*(SC->parameters[CellParams::P_33_V_PREV] + SC->parameters[CellParams::P_33_R]), normModul);
-
-            } else {
-
-               SC->parameters[cp_rhom] = linearInterpolation(0.75, 
-               0.5*(SC->parameters[CellParams::RHOM_V_PREV] + SC->parameters[CellParams::RHOM_R]), 1.25, 
-               0.5*(SC->parameters[CellParams::RHOM_R] + SC->parameters[CellParams::RHOM_V]), normModul);
-               
-               SC->parameters[cp_vx] = linearInterpolation(0.75, 
-               0.5*(SC->parameters[CellParams::VX_V_PREV] + SC->parameters[CellParams::VX_R]), 1.25, 
-               0.5*(SC->parameters[CellParams::VX_R] + SC->parameters[CellParams::VX_V]), normModul);
-               
-               SC->parameters[cp_vy] = linearInterpolation(0.75, 
-               0.5*(SC->parameters[CellParams::VY_V_PREV] + SC->parameters[CellParams::VY_R]), 1.25, 
-               0.5*(SC->parameters[CellParams::VY_R] + SC->parameters[CellParams::VY_V]), normModul);
-               
-               SC->parameters[cp_vz] = linearInterpolation(0.75, 
-               0.5*(SC->parameters[CellParams::VZ_V_PREV] + SC->parameters[CellParams::VZ_R]), 1.25, 
-               0.5*(SC->parameters[CellParams::VZ_R] + SC->parameters[CellParams::VZ_V]), normModul);
-               
-               SC->parameters[cp_rhoq] = linearInterpolation(0.75, 
-               0.5*(SC->parameters[CellParams::RHOQ_V_PREV] + SC->parameters[CellParams::RHOQ_R]), 1.25, 
-               0.5*(SC->parameters[CellParams::RHOQ_R] + SC->parameters[CellParams::RHOQ_V]), normModul);
-               
-               SC->parameters[cp_p11] = linearInterpolation(0.75, 
-               0.5*(SC->parameters[CellParams::P_11_V_PREV] + SC->parameters[CellParams::P_11_R]), 1.25, 
-               0.5*(SC->parameters[CellParams::P_11_R] + SC->parameters[CellParams::P_11_V]), normModul);
-               
-               SC->parameters[cp_p22] = linearInterpolation(0.75, 
-               0.5*(SC->parameters[CellParams::P_22_V_PREV] + SC->parameters[CellParams::P_22_R]), 1.25, 
-               0.5*(SC->parameters[CellParams::P_22_R] + SC->parameters[CellParams::P_22_V]), normModul);
-               
-               SC->parameters[cp_p33] = linearInterpolation(0.75, 
-               0.5*(SC->parameters[CellParams::P_33_V_PREV] + SC->parameters[CellParams::P_33_R]), 1.25, 
-               0.5*(SC->parameters[CellParams::P_33_R] + SC->parameters[CellParams::P_33_V]), normModul);
-
-            } 
          } // if tv > tr
       } // if / else (if timeclass = maxTC)
    } // for loop over cells
@@ -1131,6 +1052,24 @@ void updatePreviousVMoments(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>&
          SC->parameters[CellParams::P_11_V_PREV] = SC->parameters[CellParams::P_11_V];
          SC->parameters[CellParams::P_22_V_PREV] = SC->parameters[CellParams::P_22_V];
          SC->parameters[CellParams::P_33_V_PREV] = SC->parameters[CellParams::P_33_V];
+
+         SC->parameters[CellParams::RHOM_R_PREV_PREV] = SC->parameters[CellParams::RHOM_R];
+         SC->parameters[CellParams::VX_R_PREV_PREV] = SC->parameters[CellParams::VX_R];
+         SC->parameters[CellParams::VY_R_PREV_PREV] = SC->parameters[CellParams::VY_R];
+         SC->parameters[CellParams::VZ_R_PREV_PREV] = SC->parameters[CellParams::VZ_R];
+         SC->parameters[CellParams::RHOQ_R_PREV_PREV] = SC->parameters[CellParams::RHOQ_R];
+         SC->parameters[CellParams::P_11_R_PREV_PREV] = SC->parameters[CellParams::P_11_R];
+         SC->parameters[CellParams::P_22_R_PREV_PREV] = SC->parameters[CellParams::P_22_R];
+         SC->parameters[CellParams::P_33_R_PREV_PREV] = SC->parameters[CellParams::P_33_R];
+
+         SC->parameters[CellParams::RHOM_R_PREV] = SC->parameters[CellParams::RHOM_R];
+         SC->parameters[CellParams::VX_R_PREV] = SC->parameters[CellParams::VX_R];
+         SC->parameters[CellParams::VY_R_PREV] = SC->parameters[CellParams::VY_R];
+         SC->parameters[CellParams::VZ_R_PREV] = SC->parameters[CellParams::VZ_R];
+         SC->parameters[CellParams::RHOQ_R_PREV] = SC->parameters[CellParams::RHOQ_R];
+         SC->parameters[CellParams::P_11_R_PREV] = SC->parameters[CellParams::P_11_R];
+         SC->parameters[CellParams::P_22_R_PREV] = SC->parameters[CellParams::P_22_R];
+         SC->parameters[CellParams::P_33_R_PREV] = SC->parameters[CellParams::P_33_R];
 
       } else {
          if (SC->get_timeclass_turn_v() == true) {
