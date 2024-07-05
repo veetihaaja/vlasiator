@@ -871,7 +871,7 @@ void interpolateMomentsForTimeclasses(
       const int timeclass = SC->parameters[CellParams::TIMECLASS];
       const double tr = SC->parameters[CellParams::TIME_R];
       const double tv = SC->parameters[CellParams::TIME_V];
-      double tdiff = abs(tr-tv);
+      double tdiff = 2*abs(tr-tv);
 
       if (timeclass == maxTC) {
          // calculateInterpolatedVelocityMoments functionality here, if timeclass is the max one.
@@ -933,7 +933,7 @@ void interpolateMomentsForTimeclasses(
          // 2nd testcase: propagating a placeholder moment little by little
 
          if (true) {
-            Eigen::Transform<Real,3,Eigen::Affine> vUpdateMatrix = compute_acceleration_transformation(SC, 0, RTCpow*tdiff*normModul/2);
+            Eigen::Transform<Real,3,Eigen::Affine> vUpdateMatrix = compute_acceleration_transformation(SC, 0, tdiff*normModul);
             const Eigen::Matrix<Real,3,1> V_R_PREV(SC->parameters[CellParams::VX_R_PREV], SC->parameters[CellParams::VY_R_PREV], SC->parameters[CellParams::VZ_R_PREV]);
             const Eigen::Matrix<Real,3,1> V_V_PREV(SC->parameters[CellParams::VX_V_PREV], SC->parameters[CellParams::VY_V_PREV], SC->parameters[CellParams::VZ_V_PREV]);
             // Eigen::Matrix<Real,3,1> V_updated;
