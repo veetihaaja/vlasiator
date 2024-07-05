@@ -33,6 +33,9 @@ using namespace spatial_cell;
 #include <dccrg.hpp>
 #include <dccrg_cartesian_geometry.hpp>
 
+#include "Eigen/Core"
+#include "Eigen/Geometry"
+
 void calculateAcceleration(
                            dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
                            Real dt
