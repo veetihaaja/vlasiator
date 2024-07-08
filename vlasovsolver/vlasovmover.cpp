@@ -930,7 +930,7 @@ void interpolateMomentsForTimeclasses(
          // !! if translation and acceleration are changed to not update both on fractimestep 0, this will break
 
          // first testcase: propagating V_R_PREV by tdiff*normModul
-         // 2nd testcase: propagating a placeholder moment little by little
+         // 2nd testcase: propagating velocity moment little by little
 
          // 1 = interpolate all moments, 2 = propagate velocity moments and interpolate the rest.
          const int calculationType = 2;
@@ -938,21 +938,67 @@ void interpolateMomentsForTimeclasses(
          if (calculationType == 2) {
             if (true) {
                Eigen::Transform<Real,3,Eigen::Affine> vUpdateMatrix = compute_acceleration_transformation(SC, 0, tdiff*normModul);
-               const Eigen::Matrix<Real,3,1> V_R_PREV(SC->parameters[CellParams::VX_R], SC->parameters[CellParams::VY_R], SC->parameters[CellParams::VZ_R]);
-               const Eigen::Matrix<Real,3,1> V_V_PREV(SC->parameters[CellParams::VX_V_PREV], SC->parameters[CellParams::VY_V_PREV], SC->parameters[CellParams::VZ_V_PREV]);
-               // Eigen::Matrix<Real,3,1> V_updated;
+               if (modul == 0) {
+               Eigen::Matrix<Real,3,1> V_R_PREV(0.25*(2*SC->parameters[CellParams::VX_R_PREV] + SC->parameters[CellParams::VX_V_PREV] + SC->parameters[CellParams::VX_V]),
+               0.25*(2*SC->parameters[CellParams::VY_R_PREV] + SC->parameters[CellParams::VY_V_PREV] + SC->parameters[CellParams::VY_V]),
+               0.25*(2*SC->parameters[CellParams::VZ_R_PREV] + SC->parameters[CellParams::VZ_V_PREV] + SC->parameters[CellParams::VZ_V]));
                Eigen::Matrix<Real,3,1> V_updated = vUpdateMatrix * V_R_PREV;
 
                SC->parameters[cp_vx] = V_updated(0);
                SC->parameters[cp_vy] = V_updated(1);
                SC->parameters[cp_vz] = V_updated(2);
-            } else {
-               if (modul == 0) {
 
                } else {
+               Eigen::Matrix<Real,3,1> V_R_PREV(0.25*(2*SC->parameters[CellParams::VX_R_PREV] + SC->parameters[CellParams::VX_V_PREV] + SC->parameters[CellParams::VX_V_PREV_PREV]),
+               0.25*(2*SC->parameters[CellParams::VY_R_PREV] + SC->parameters[CellParams::VY_V_PREV] + SC->parameters[CellParams::VY_V_PREV_PREV]), 
+               0.25*(2*SC->parameters[CellParams::VZ_R_PREV] + SC->parameters[CellParams::VZ_V_PREV] + SC->parameters[CellParams::VZ_V_PREV_PREV]));
+               Eigen::Matrix<Real,3,1> V_updated = vUpdateMatrix * V_R_PREV;
+
+               SC->parameters[cp_vx] = V_updated(0);
+               SC->parameters[cp_vy] = V_updated(1);
+               SC->parameters[cp_vz] = V_updated(2);
 
                }
+
+            } else if (false) {
+               Eigen::Transform<Real,3,Eigen::Affine> vUpdateMatrix;
+
+               if (P::tstep == 0 && fracTimeStep == 0) { //initialization of propagation + first propagation
+                  SC -> parameters[cp_vx] = (SC->parameters[CellParams::VX_R]);
+                  SC -> parameters[cp_vy] = (SC->parameters[CellParams::VY_R]);
+                  SC -> parameters[cp_vz] = (SC->parameters[CellParams::VZ_R]);
+
+                  if (!dt2) {
+                     vUpdateMatrix = compute_acceleration_transformation(SC, 0, tdiff*(0.25/RTCpow));
+                  } else {
+                     vUpdateMatrix = compute_acceleration_transformation(SC, 0, tdiff*(0.25/RTCpow) + tdiff*(0.5/RTCpow));
+                  }
+
+                  const Eigen::Matrix<Real,3,1> V(SC->parameters[cp_vx], SC->parameters[cp_vy], SC->parameters[cp_vz]);
+                  Eigen::Matrix<Real,3,1> V_updated = vUpdateMatrix * V;
+
+                  SC->parameters[cp_vx] = V_updated(0);
+                  SC->parameters[cp_vy] = V_updated(1);
+                  SC->parameters[cp_vz] = V_updated(2);
+
+               } else {
+                  // if (modul == 0) {
+                     //SC->parameters[cp_vx] = SC->parameters[CellParams::VX_R];
+                     //SC->parameters[cp_vy] = SC->parameters[CellParams::VY_R];
+                     //SC->parameters[cp_vz] = SC->parameters[CellParams::VZ_R];
+                  // }
+                  vUpdateMatrix = compute_acceleration_transformation(SC, 0, tdiff*(1.0/RTCpow));
+                  const Eigen::Matrix<Real,3,1> V(SC->parameters[cp_vx], SC->parameters[cp_vy], SC->parameters[cp_vz]);
+                  Eigen::Matrix<Real,3,1> V_updated = vUpdateMatrix * V;
+
+                  SC->parameters[cp_vx] = V_updated(0);
+                  SC->parameters[cp_vy] = V_updated(1);
+                  SC->parameters[cp_vz] = V_updated(2);
+               }
+            } else {
+
             }
+
          }
 
          int nMomentsToInterp;
