@@ -419,6 +419,16 @@ void calculateSpatialTranslation(
          for (size_t c=0; c<tc_propagated_cells.at(tc).size(); ++c) {
             const CellID cellID = tc_propagated_cells.at(tc).at(c);
             SpatialCell* SC = mpiGrid[cellID];
+            
+            SC->parameters[CellParams::RHOM_R_PREV_PREV] = SC->parameters[CellParams::RHOM_R_PREV];
+            SC->parameters[CellParams::VX_R_PREV_PREV] = SC->parameters[CellParams::VX_R_PREV];
+            SC->parameters[CellParams::VY_R_PREV_PREV] = SC->parameters[CellParams::VY_R_PREV];
+            SC->parameters[CellParams::VZ_R_PREV_PREV] = SC->parameters[CellParams::VZ_R_PREV];
+            SC->parameters[CellParams::RHOQ_R_PREV_PREV] = SC->parameters[CellParams::RHOQ_R_PREV];
+            SC->parameters[CellParams::P_11_R_PREV_PREV] = SC->parameters[CellParams::P_11_R_PREV];
+            SC->parameters[CellParams::P_22_R_PREV_PREV] = SC->parameters[CellParams::P_22_R_PREV];
+            SC->parameters[CellParams::P_33_R_PREV_PREV] = SC->parameters[CellParams::P_33_R_PREV];
+
             SC->parameters[CellParams::RHOM_R_PREV] = SC->parameters[CellParams::RHOM_R];
             SC->parameters[CellParams::VX_R_PREV] = SC->parameters[CellParams::VX_R];
             SC->parameters[CellParams::VY_R_PREV] = SC->parameters[CellParams::VY_R];
@@ -514,6 +524,16 @@ void calculateSpatialTranslation(
          for (size_t c=0; c<tc_propagated_cells.at(tc).size(); ++c) {
             const CellID cellID = tc_propagated_cells.at(tc).at(c);
             SpatialCell* SC = mpiGrid[cellID];
+
+            SC->parameters[CellParams::RHOM_R_PREV_PREV] = SC->parameters[CellParams::RHOM_R_PREV];
+            SC->parameters[CellParams::VX_R_PREV_PREV] = SC->parameters[CellParams::VX_R_PREV];
+            SC->parameters[CellParams::VY_R_PREV_PREV] = SC->parameters[CellParams::VY_R_PREV];
+            SC->parameters[CellParams::VZ_R_PREV_PREV] = SC->parameters[CellParams::VZ_R_PREV];
+            SC->parameters[CellParams::RHOQ_R_PREV_PREV] = SC->parameters[CellParams::RHOQ_R_PREV];
+            SC->parameters[CellParams::P_11_R_PREV_PREV] = SC->parameters[CellParams::P_11_R_PREV];
+            SC->parameters[CellParams::P_22_R_PREV_PREV] = SC->parameters[CellParams::P_22_R_PREV];
+            SC->parameters[CellParams::P_33_R_PREV_PREV] = SC->parameters[CellParams::P_33_R_PREV];
+
             SC->parameters[CellParams::RHOM_R_PREV] = SC->parameters[CellParams::RHOM_R];
             SC->parameters[CellParams::VX_R_PREV] = SC->parameters[CellParams::VX_R];
             SC->parameters[CellParams::VY_R_PREV] = SC->parameters[CellParams::VY_R];
@@ -871,7 +891,9 @@ void interpolateMomentsForTimeclasses(
       const int timeclass = SC->parameters[CellParams::TIMECLASS];
       const double tr = SC->parameters[CellParams::TIME_R];
       const double tv = SC->parameters[CellParams::TIME_V];
-      double tdiff = 2*abs(tr-tv);
+      
+      // double tdiff = 2*abs(tr-tv);
+      double tdiff = SC->parameters[CellParams::TIMECLASSDT];
 
       if (timeclass == maxTC) {
          // calculateInterpolatedVelocityMoments functionality here, if timeclass is the max one.
@@ -933,72 +955,22 @@ void interpolateMomentsForTimeclasses(
          // 2nd testcase: propagating velocity moment little by little
 
          // 1 = interpolate all moments, 2 = propagate velocity moments and interpolate the rest.
-         const int calculationType = 2;
+         const int calculationType = 1;
 
          if (calculationType == 2) {
-            if (true) {
-               Eigen::Transform<Real,3,Eigen::Affine> vUpdateMatrix = compute_acceleration_transformation(SC, 0, tdiff*normModul);
-               if (modul == 0) {
-               Eigen::Matrix<Real,3,1> V_R_PREV(0.25*(2*SC->parameters[CellParams::VX_R_PREV] + SC->parameters[CellParams::VX_V_PREV] + SC->parameters[CellParams::VX_V]),
-               0.25*(2*SC->parameters[CellParams::VY_R_PREV] + SC->parameters[CellParams::VY_V_PREV] + SC->parameters[CellParams::VY_V]),
-               0.25*(2*SC->parameters[CellParams::VZ_R_PREV] + SC->parameters[CellParams::VZ_V_PREV] + SC->parameters[CellParams::VZ_V]));
-               Eigen::Matrix<Real,3,1> V_updated = vUpdateMatrix * V_R_PREV;
-
-               SC->parameters[cp_vx] = V_updated(0);
-               SC->parameters[cp_vy] = V_updated(1);
-               SC->parameters[cp_vz] = V_updated(2);
-
-               } else {
-               Eigen::Matrix<Real,3,1> V_R_PREV(0.25*(2*SC->parameters[CellParams::VX_R_PREV] + SC->parameters[CellParams::VX_V_PREV] + SC->parameters[CellParams::VX_V_PREV_PREV]),
-               0.25*(2*SC->parameters[CellParams::VY_R_PREV] + SC->parameters[CellParams::VY_V_PREV] + SC->parameters[CellParams::VY_V_PREV_PREV]), 
-               0.25*(2*SC->parameters[CellParams::VZ_R_PREV] + SC->parameters[CellParams::VZ_V_PREV] + SC->parameters[CellParams::VZ_V_PREV_PREV]));
-               Eigen::Matrix<Real,3,1> V_updated = vUpdateMatrix * V_R_PREV;
-
-               SC->parameters[cp_vx] = V_updated(0);
-               SC->parameters[cp_vy] = V_updated(1);
-               SC->parameters[cp_vz] = V_updated(2);
-
-               }
-
-            } else if (false) {
-               Eigen::Transform<Real,3,Eigen::Affine> vUpdateMatrix;
-
-               if (P::tstep == 0 && fracTimeStep == 0) { //initialization of propagation + first propagation
-                  SC -> parameters[cp_vx] = (SC->parameters[CellParams::VX_R]);
-                  SC -> parameters[cp_vy] = (SC->parameters[CellParams::VY_R]);
-                  SC -> parameters[cp_vz] = (SC->parameters[CellParams::VZ_R]);
-
-                  if (!dt2) {
-                     vUpdateMatrix = compute_acceleration_transformation(SC, 0, tdiff*(0.25/RTCpow));
-                  } else {
-                     vUpdateMatrix = compute_acceleration_transformation(SC, 0, tdiff*(0.25/RTCpow) + tdiff*(0.5/RTCpow));
-                  }
-
-                  const Eigen::Matrix<Real,3,1> V(SC->parameters[cp_vx], SC->parameters[cp_vy], SC->parameters[cp_vz]);
-                  Eigen::Matrix<Real,3,1> V_updated = vUpdateMatrix * V;
-
-                  SC->parameters[cp_vx] = V_updated(0);
-                  SC->parameters[cp_vy] = V_updated(1);
-                  SC->parameters[cp_vz] = V_updated(2);
-
-               } else {
-                  // if (modul == 0) {
-                     //SC->parameters[cp_vx] = SC->parameters[CellParams::VX_R];
-                     //SC->parameters[cp_vy] = SC->parameters[CellParams::VY_R];
-                     //SC->parameters[cp_vz] = SC->parameters[CellParams::VZ_R];
-                  // }
-                  vUpdateMatrix = compute_acceleration_transformation(SC, 0, tdiff*(1.0/RTCpow));
-                  const Eigen::Matrix<Real,3,1> V(SC->parameters[cp_vx], SC->parameters[cp_vy], SC->parameters[cp_vz]);
-                  Eigen::Matrix<Real,3,1> V_updated = vUpdateMatrix * V;
-
-                  SC->parameters[cp_vx] = V_updated(0);
-                  SC->parameters[cp_vy] = V_updated(1);
-                  SC->parameters[cp_vz] = V_updated(2);
-               }
-            } else {
-
+            if (SC->get_timeclass_turn_v()) { // clamping down values as they get updated
+               SC->parameters[cp_vx] = linearInterpolation(-0.25, 0.5*(SC->parameters[CellParams::VX_V_PREV]+SC->parameters[CellParams::VX_R_PREV]), 0.25, 0.5*(SC->parameters[CellParams::VX_V]+SC->parameters[CellParams::VX_R_PREV]), normModul);
+               SC->parameters[cp_vy] = linearInterpolation(-0.25, 0.5*(SC->parameters[CellParams::VY_V_PREV]+SC->parameters[CellParams::VY_R_PREV]), 0.25, 0.5*(SC->parameters[CellParams::VY_V]+SC->parameters[CellParams::VY_R_PREV]), normModul);
+               SC->parameters[cp_vz] = linearInterpolation(-0.25, 0.5*(SC->parameters[CellParams::VZ_V_PREV]+SC->parameters[CellParams::VZ_R_PREV]), 0.25, 0.5*(SC->parameters[CellParams::VZ_V]+SC->parameters[CellParams::VZ_R_PREV]), normModul);
             }
 
+            Eigen::Transform<Real,3,Eigen::Affine> vUpdateMatrix = compute_acceleration_transformation(SC, 0, tdiff*(1.0/RTCpow));
+            const Eigen::Matrix<Real,3,1> V(SC->parameters[cp_vx], SC->parameters[cp_vy], SC->parameters[cp_vz]);
+            Eigen::Matrix<Real,3,1> V_updated = vUpdateMatrix * V;
+
+            SC->parameters[cp_vx] = V_updated(0);
+            SC->parameters[cp_vy] = V_updated(1);
+            SC->parameters[cp_vz] = V_updated(2);
          }
 
          int nMomentsToInterp;
@@ -1108,45 +1080,91 @@ void updatePreviousVMoments(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>&
    for (size_t c=0; c<cells.size(); c++) {
       const CellID cellID = cells[c];
       SpatialCell* SC = mpiGrid[cellID];
+      double tdiff = SC->parameters[CellParams::TIMECLASSDT];
 
       if (isInitialization == true) {
          // initializiing all _PREV and _PREV_PREV moments to same values as _V moments
          // this block only gets executed once, when the simulation is started
          SC->parameters[CellParams::RHOM_V_PREV_PREV] = SC->parameters[CellParams::RHOM_V];
-         SC->parameters[CellParams::VX_V_PREV_PREV] = SC->parameters[CellParams::VX_V];
-         SC->parameters[CellParams::VY_V_PREV_PREV] = SC->parameters[CellParams::VY_V];
-         SC->parameters[CellParams::VZ_V_PREV_PREV] = SC->parameters[CellParams::VZ_V];
          SC->parameters[CellParams::RHOQ_V_PREV_PREV] = SC->parameters[CellParams::RHOQ_V];
          SC->parameters[CellParams::P_11_V_PREV_PREV] = SC->parameters[CellParams::P_11_V];
          SC->parameters[CellParams::P_22_V_PREV_PREV] = SC->parameters[CellParams::P_22_V];
          SC->parameters[CellParams::P_33_V_PREV_PREV] = SC->parameters[CellParams::P_33_V];
 
          SC->parameters[CellParams::RHOM_V_PREV] = SC->parameters[CellParams::RHOM_V];
-         SC->parameters[CellParams::VX_V_PREV] = SC->parameters[CellParams::VX_V];
-         SC->parameters[CellParams::VY_V_PREV] = SC->parameters[CellParams::VY_V];
-         SC->parameters[CellParams::VZ_V_PREV] = SC->parameters[CellParams::VZ_V];
          SC->parameters[CellParams::RHOQ_V_PREV] = SC->parameters[CellParams::RHOQ_V];
          SC->parameters[CellParams::P_11_V_PREV] = SC->parameters[CellParams::P_11_V];
          SC->parameters[CellParams::P_22_V_PREV] = SC->parameters[CellParams::P_22_V];
          SC->parameters[CellParams::P_33_V_PREV] = SC->parameters[CellParams::P_33_V];
 
          SC->parameters[CellParams::RHOM_R_PREV_PREV] = SC->parameters[CellParams::RHOM_R];
-         SC->parameters[CellParams::VX_R_PREV_PREV] = SC->parameters[CellParams::VX_R];
-         SC->parameters[CellParams::VY_R_PREV_PREV] = SC->parameters[CellParams::VY_R];
-         SC->parameters[CellParams::VZ_R_PREV_PREV] = SC->parameters[CellParams::VZ_R];
          SC->parameters[CellParams::RHOQ_R_PREV_PREV] = SC->parameters[CellParams::RHOQ_R];
          SC->parameters[CellParams::P_11_R_PREV_PREV] = SC->parameters[CellParams::P_11_R];
          SC->parameters[CellParams::P_22_R_PREV_PREV] = SC->parameters[CellParams::P_22_R];
          SC->parameters[CellParams::P_33_R_PREV_PREV] = SC->parameters[CellParams::P_33_R];
 
          SC->parameters[CellParams::RHOM_R_PREV] = SC->parameters[CellParams::RHOM_R];
-         SC->parameters[CellParams::VX_R_PREV] = SC->parameters[CellParams::VX_R];
-         SC->parameters[CellParams::VY_R_PREV] = SC->parameters[CellParams::VY_R];
-         SC->parameters[CellParams::VZ_R_PREV] = SC->parameters[CellParams::VZ_R];
          SC->parameters[CellParams::RHOQ_R_PREV] = SC->parameters[CellParams::RHOQ_R];
          SC->parameters[CellParams::P_11_R_PREV] = SC->parameters[CellParams::P_11_R];
          SC->parameters[CellParams::P_22_R_PREV] = SC->parameters[CellParams::P_22_R];
          SC->parameters[CellParams::P_33_R_PREV] = SC->parameters[CellParams::P_33_R];
+
+         if (true) {
+                  
+            Eigen::Transform<Real,3,Eigen::Affine> vUpdateMatrixRP = compute_acceleration_transformation(SC, 0, tdiff);
+            Eigen::Transform<Real,3,Eigen::Affine> vUpdateMatrixRPP = compute_acceleration_transformation(SC, 0, tdiff*2);
+            Eigen::Transform<Real,3,Eigen::Affine> vUpdateMatrixVP = compute_acceleration_transformation(SC, 0, tdiff);
+            Eigen::Transform<Real,3,Eigen::Affine> vUpdateMatrixVPP = compute_acceleration_transformation(SC, 0, tdiff*2);
+
+            auto bwd_RP = vUpdateMatrixRP.inverse();
+            auto bwd_RPP = vUpdateMatrixRPP.inverse();
+            auto bwd_VP = vUpdateMatrixVP.inverse();
+            auto bwd_VPP = vUpdateMatrixVPP.inverse();
+
+            Eigen::Matrix<Real,3,1> V_R_P(SC->parameters[CellParams::VX_R_PREV], SC->parameters[CellParams::VY_R_PREV], SC->parameters[CellParams::VZ_R_PREV]);
+            Eigen::Matrix<Real,3,1> V_R_PP(SC->parameters[CellParams::VX_R_PREV_PREV], SC->parameters[CellParams::VY_R_PREV_PREV], SC->parameters[CellParams::VZ_R_PREV_PREV]);
+            Eigen::Matrix<Real,3,1> V_V_P(SC->parameters[CellParams::VX_V_PREV], SC->parameters[CellParams::VY_V_PREV], SC->parameters[CellParams::VZ_V_PREV]);
+            Eigen::Matrix<Real,3,1> V_V_PP(SC->parameters[CellParams::VX_V_PREV_PREV], SC->parameters[CellParams::VY_V_PREV_PREV], SC->parameters[CellParams::VZ_V_PREV_PREV]);
+
+            Eigen::Matrix<Real,3,1> V_R_P_updated = bwd_RP * V_R_P;
+            Eigen::Matrix<Real,3,1> V_R_PP_updated = bwd_RPP * V_R_PP;
+            Eigen::Matrix<Real,3,1> V_V_P_updated = bwd_VP * V_V_P;
+            Eigen::Matrix<Real,3,1> V_V_PP_updated = bwd_VPP * V_V_PP;
+
+            SC->parameters[CellParams::VX_R_PREV] = V_R_P_updated(0);
+            SC->parameters[CellParams::VY_R_PREV] = V_R_P_updated(1);
+            SC->parameters[CellParams::VZ_R_PREV] = V_R_P_updated(2);
+
+            SC->parameters[CellParams::VX_R_PREV_PREV] = V_R_PP_updated(0);
+            SC->parameters[CellParams::VY_R_PREV_PREV] = V_R_PP_updated(1);
+            SC->parameters[CellParams::VZ_R_PREV_PREV] = V_R_PP_updated(2);
+
+            SC->parameters[CellParams::VX_V_PREV] = V_V_P_updated(0);
+            SC->parameters[CellParams::VY_V_PREV] = V_V_P_updated(1);
+            SC->parameters[CellParams::VZ_V_PREV] = V_V_P_updated(2);
+
+            SC->parameters[CellParams::VX_V_PREV_PREV] = V_V_PP_updated(0);
+            SC->parameters[CellParams::VY_V_PREV_PREV] = V_V_PP_updated(1);
+            SC->parameters[CellParams::VZ_V_PREV_PREV] = V_V_PP_updated(2);
+
+         } else {
+
+            SC->parameters[CellParams::VX_V_PREV_PREV] = SC->parameters[CellParams::VX_V];
+            SC->parameters[CellParams::VY_V_PREV_PREV] = SC->parameters[CellParams::VY_V];
+            SC->parameters[CellParams::VZ_V_PREV_PREV] = SC->parameters[CellParams::VZ_V];
+            
+            SC->parameters[CellParams::VX_V_PREV] = SC->parameters[CellParams::VX_V];
+            SC->parameters[CellParams::VY_V_PREV] = SC->parameters[CellParams::VY_V];
+            SC->parameters[CellParams::VZ_V_PREV] = SC->parameters[CellParams::VZ_V];
+
+            SC->parameters[CellParams::VX_R_PREV_PREV] = SC->parameters[CellParams::VX_R];
+            SC->parameters[CellParams::VY_R_PREV_PREV] = SC->parameters[CellParams::VY_R];
+            SC->parameters[CellParams::VZ_R_PREV_PREV] = SC->parameters[CellParams::VZ_R];
+
+            SC->parameters[CellParams::VX_R_PREV] = SC->parameters[CellParams::VX_R];
+            SC->parameters[CellParams::VY_R_PREV] = SC->parameters[CellParams::VY_R];
+            SC->parameters[CellParams::VZ_R_PREV] = SC->parameters[CellParams::VZ_R];
+         }
 
       } else {
          if (SC->get_timeclass_turn_v() == true) {
