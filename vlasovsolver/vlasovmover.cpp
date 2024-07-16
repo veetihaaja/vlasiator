@@ -951,11 +951,8 @@ void interpolateMomentsForTimeclasses(
          // TODO: add population moment updating (same thing as in calculateinterpolatedvelocitymoments)
          // !! if translation and acceleration are changed to not update both on fractimestep 0, this will break
 
-         // first testcase: propagating V_R_PREV by tdiff*normModul
-         // 2nd testcase: propagating velocity moment little by little
-
          // 1 = interpolate all moments, 2 = propagate velocity moments and interpolate the rest.
-         const int calculationType = 1;
+         const int calculationType = 2;
 
          if (calculationType == 2) {
             if (SC->get_timeclass_turn_v()) { // clamping down values as they get updated
