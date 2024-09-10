@@ -1440,20 +1440,6 @@ int main(int argn,char* args[]) {
       
       phiprof::Timer momentsTimer {"Compute interp moments"};
       //std::cout << "for dt2 in main loop at t="<<P::t<<"\n";
-      
-      // this is commented out as interpolateMomentsForTimeclasses replaces this function
-
-      // calculateInterpolatedVelocityMoments(
-      //    mpiGrid,
-      //    CellParams::RHOM_DT2,
-      //    CellParams::VX_DT2,
-      //    CellParams::VY_DT2,
-      //    CellParams::VZ_DT2,
-      //    CellParams::RHOQ_DT2,
-      //    CellParams::P_11_DT2,
-      //    CellParams::P_22_DT2,
-      //    CellParams::P_33_DT2
-      // );
 
       interpolateMomentsForTimeclasses(
          mpiGrid,
@@ -1483,6 +1469,8 @@ int main(int argn,char* args[]) {
          P::currentMaxTimeclass,
          true
       );
+
+      updateParticlePopulations(mpiGrid);
 
       momentsTimer.stop();
              
@@ -1591,25 +1579,8 @@ int main(int argn,char* args[]) {
          timer.stop();
          addTimedBarrier("barrier-boundary-conditions");
       }
-
-      // this is commented out as interpolateMomentsForTimeclasses replaces the functionality of this function. check if this breaks something.
       
-      // momentsTimer.start();
-      // *here we compute rho and rho_v for timestep t + dt, so next
-      // timestep * //
-      // Does extra work by computing these for all cells at all timeclasses.
-      // calculateInterpolatedVelocityMoments(
-      //    mpiGrid,
-      //    CellParams::RHOM,
-      //    CellParams::VX,
-      //    CellParams::VY,
-      //    CellParams::VZ,
-      //    CellParams::RHOQ,
-      //    CellParams::P_11,
-      //    CellParams::P_22,
-      //    CellParams::P_33
-      // );
-      // momentsTimer.stop();
+      updateParticlePopulations(mpiGrid);
 
       propagateTimer.stop(computedCells,"Cells");
       
