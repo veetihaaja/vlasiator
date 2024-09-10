@@ -590,6 +590,13 @@ namespace spatial_cell {
       return ret;
    }
 
+   const bool SpatialCell::get_timeclass_turn_v(int tc) const {
+      // If on max timeclass, we propagate on each loop.
+      int mod = 1 << (P::currentMaxTimeclass - (int)tc);
+      bool ret = ((P::fractionalTimestep % mod) == 0);
+      return ret;
+   }
+
    const bool SpatialCell::get_timeclass_turn_r() const {
       return this->get_timeclass_turn_v();
       /* // Obsolete tries for fancy and incorrect stepping

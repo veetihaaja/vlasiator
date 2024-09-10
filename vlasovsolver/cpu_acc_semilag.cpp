@@ -94,29 +94,73 @@ void cpu_accelerate_cell(SpatialCell* spatial_cell,
    // .... of course this is now substepping unnecessarily...
    // std::cout << spatial_cell->parameters[CellParams::CELLID] << "c Accelerate, initial refs" << " vmesh " << &vmesh << " blockContainer " << &blockContainer << "\n";
 
-   if(tc_delta == 0)
+
+
+   if(tc_delta == 0) // Handles the default case (called from vlasovmover)
    {
       for(auto i : spatial_cell->requested_timeclass_ghosts) {
-         if(i - spatial_cell->get_tc() > 0) {
-            spatial_cell->set_velocity_mesh_ghost(popID, i);
-            spatial_cell->set_velocity_blocks_ghost(popID, i);
-            int tc_d = i-spatial_cell->get_tc();
-            cpu_accelerate_cell(spatial_cell, popID, map_order, dt/pow(2,tc_d), tc_d);
+            // Example: On tc-0 cell, tc-1 ghosts requested ghosts of tc-0
+            /*               |0--1/4-2/4-3/4-4/4-5/4-6/4--|
+            tc-1 after-acc   |----x-------x-------x-------|
+            tc-1 after-trans |x-------x-------x-------x---|
+            tc-0 after-acc   |----o---x---o-------o---x---|
+            tc-0 after-trans |x---------------x-----------|
+            legend:
+            - x: true state 
+            - o: ghost state
+            */
+         int tc_d = i-spatial_cell->get_tc(); 
+         if(tc_d > 0) {
+            
+            if (spatial_cell->get_timeclass_turn_v()) {
+               spatial_cell->set_velocity_mesh_ghost(popID, i);
+               spatial_cell->set_velocity_blocks_ghost(popID, i); // this was 0.5x dt, but that was wrong; just copy
+               cpu_accelerate_cell(spatial_cell, popID, map_order, dt/pow(2,tc_d), tc_d);
+            }
+            else {
+               cpu_accelerate_cell(spatial_cell, popID, map_order, dt/pow(2,tc_d), tc_d);
+            }
+            
+            
          }
-         else if (i - spatial_cell->get_tc() < 0){
-            spatial_cell->set_velocity_mesh_ghost(popID, i);
-            spatial_cell->set_velocity_blocks_ghost(popID, i);
-            int tc_d = i-spatial_cell->get_tc();
+         else if (tc_d < 0){
+
+   // Example: on tc-1 cell, tc-0 ghosts requested from us
+   /*                    |0--1/4-2/4-3/4-4/4-5/4-6/4--|
+   tc-1      after-acc   |----x-------x---.---x-------|
+   tc-1      after-trans |x-------x-------x-------x---|
+   tc-1ghost after-acc   |--------o---------------o---|
+   tc-1ghost after-trans |o---------------o-----------|
+   tc-0      after-acc   |--------x---------------x---|
+   tc-0      after-trans |x---------------x-----------|
+   legend:
+   - x: true state 
+   - o: ghost state
+   */
+
+            if (spatial_cell->get_timeclass_turn_v(i)) {
+               // if it is slower-tc's turn, we are synced at after-trans state
+               // -> Copy state, but needs to acc by half-tc-0-dt ("always init")
+               spatial_cell->set_velocity_mesh_ghost(popID, i);
+               spatial_cell->set_velocity_blocks_ghost(popID, i);
+               cpu_accelerate_cell(spatial_cell, popID, map_order, P::timeclassDt[i]/2, tc_d);
+               std::cout << __FILE__<<":"<<__LINE__<< "\tCopying and propagating ghost at tc " << spatial_cell->get_tc() + tc_delta << " by dt = " << dt << " being run at cell " << "\n";
+
+            }
+            else{
+               // ghost can just stay put!
+               std::cout << __FILE__<<":"<<__LINE__<< "\tLeaving ghost as is at tc " << spatial_cell->get_tc() + tc_delta << " by dt = " << dt << " being run at cell " << "\n";
+            }
             // cpu_accelerate_cell(spatial_cell, popID, map_order, dt/pow(2,tc_d), tc_d);
          }
       }
       vmeshPtr = &spatial_cell->get_velocity_mesh(popID);
       blockContainerPtr = &spatial_cell->get_velocity_blocks(popID);
    }
-   // Ghost branch: select the ghost vmesh instead for acc
+   // Ghost branch: select the ghost vmesh defined by tc_delta instead for acc
    // dt we already have adjusted as needed
    else{
-      std::cout << "Request at tc " << spatial_cell->get_tc() + tc_delta << " at dt = " << dt << " being run at cell " << 
+      std::cout << __FILE__<<":"<<__LINE__<< "\tRequest at tc " << spatial_cell->get_tc() + tc_delta << " at dt = " << dt << " being run at cell " << 
       spatial_cell->parameters[CellParams::CELLID] << "\n";
       vmeshPtr = &spatial_cell->get_velocity_mesh_ghost(popID,spatial_cell->get_tc() + tc_delta);
       blockContainerPtr = &spatial_cell->get_velocity_blocks_ghost(popID,spatial_cell->get_tc() + tc_delta);
@@ -125,8 +169,8 @@ void cpu_accelerate_cell(SpatialCell* spatial_cell,
    vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& vmesh = *vmeshPtr;
    vmesh::VelocityBlockContainer<vmesh::LocalID>& blockContainer = *blockContainerPtr;
 
-   std::cout << spatial_cell->parameters[CellParams::CELLID] << "c Accelerate tc " << spatial_cell->get_tc() << " with tcdelta " 
-   << tc_delta << " at dt = " << dt <<"; vmesh " << &vmesh << " blockContainer " << &blockContainer << "\n";
+   std::cout << __FILE__<<":"<<__LINE__ << "\t"<<spatial_cell->parameters[CellParams::CELLID] << "c Accelerate tc " << spatial_cell->get_tc() << " with tcdelta " 
+   << tc_delta << " at dt = " << dt << "\n";//"; vmesh " << &vmesh << " blockContainer " << &blockContainer << "\n";
 
    // vmesh::VelocityBlockContainer<vmesh::LocalID>& blockContainer = spatial_cell->get_velocity_blocks(popID);
 
