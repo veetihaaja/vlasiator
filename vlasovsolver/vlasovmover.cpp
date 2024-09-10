@@ -960,7 +960,7 @@ void interpolateMomentsForTimeclasses(
          double avgMoments4[8];
          double avgMoments5[8];
 
-         int degreeOfInterpolation = -1;
+         int degreeOfInterpolation = P::tcMomentInterpolationType;
          // -1 is cubic C^1 Hermite spline, 1 is linear, 2 is lagrange 2nd order, 3 is lagrange 3rd order.
 
          if (modul == 0) { // aka if translation moments are ahead of acceleration moments
