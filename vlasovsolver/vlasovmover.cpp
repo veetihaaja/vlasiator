@@ -1033,7 +1033,7 @@ void updateParticlePopulations(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometr
       const CellID cellID = cells[c];
       SpatialCell* SC = mpiGrid[cellID];
 
-      if (get_timeclass_turn_v() == true) {
+      if (SC->get_timeclass_turn_v() == true) {
          for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
             spatial_cell::Population& pop = SC->get_population(popID);
             pop.RHO = 0.5 * ( pop.RHO_R + pop.RHO_V );
