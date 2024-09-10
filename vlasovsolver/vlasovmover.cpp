@@ -908,14 +908,14 @@ void interpolateMomentsForTimeclasses(
             SC->parameters[cp_p22]   = 0.5* ( SC->parameters[CellParams::P_22_R_PREV] + SC->parameters[CellParams::P_22_V] );
             SC->parameters[cp_p33]   = 0.5* ( SC->parameters[CellParams::P_33_R_PREV] + SC->parameters[CellParams::P_33_V] );
 
-            for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
-               spatial_cell::Population& pop = SC->get_population(popID);
-               pop.RHO = 0.5 * ( pop.RHO_R_PREV + pop.RHO_V );
-               for(int i=0; i<3; i++) {
-                  pop.V[i] = 0.5 * ( pop.V_R_PREV[i] + pop.V_V[i] );
-                  pop.P[i] = 0.5 * ( pop.P_R_PREV[i] + pop.P_V[i] );
-               }
-            }
+            // for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
+            //    spatial_cell::Population& pop = SC->get_population(popID);
+            //    pop.RHO = 0.5 * ( pop.RHO_R_PREV + pop.RHO_V );
+            //    for(int i=0; i<3; i++) {
+            //       pop.V[i] = 0.5 * ( pop.V_R_PREV[i] + pop.V_V[i] );
+            //       pop.P[i] = 0.5 * ( pop.P_R_PREV[i] + pop.P_V[i] );
+            //    }
+            // }
 
          } else {
             SC->parameters[cp_rhom  ] = 0.5* ( SC->parameters[CellParams::RHOM_R] + SC->parameters[CellParams::RHOM_V] );
@@ -927,15 +927,15 @@ void interpolateMomentsForTimeclasses(
             SC->parameters[cp_p22]   = 0.5* ( SC->parameters[CellParams::P_22_R] + SC->parameters[CellParams::P_22_V] );
             SC->parameters[cp_p33]   = 0.5* ( SC->parameters[CellParams::P_33_R] + SC->parameters[CellParams::P_33_V] );
 
-            for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
-               spatial_cell::Population& pop = SC->get_population(popID);
-               pop.RHO = 0.5 * ( pop.RHO_R + pop.RHO_V );
-               for(int i=0; i<3; i++) {
-                  pop.V[i] = 0.5 * ( pop.V_R[i] + pop.V_V[i] );
-                  pop.P[i] = 0.5 * ( pop.P_R[i] + pop.P_V[i] );
-               }
+         //    for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
+         //       spatial_cell::Population& pop = SC->get_population(popID);
+         //       pop.RHO = 0.5 * ( pop.RHO_R + pop.RHO_V );
+         //       for(int i=0; i<3; i++) {
+         //          pop.V[i] = 0.5 * ( pop.V_R[i] + pop.V_V[i] );
+         //          pop.P[i] = 0.5 * ( pop.P_R[i] + pop.P_V[i] );
+         //       }
+         //    }
             }
-         }
 
      } else { // this block if timeclass != maxTC
 
@@ -1022,6 +1022,28 @@ void interpolateMomentsForTimeclasses(
          } // if tv > tr
       } // if / else (if timeclass = maxTC)
    } // for loop over cells
+}
+
+void updateParticlePopulations(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid) {
+
+   const vector<CellID>& cells = getLocalCells();
+   #pragma omp parallel for
+   for (size_t c=0; c<cells.size(); ++c) {
+
+      const CellID cellID = cells[c];
+      SpatialCell* SC = mpiGrid[cellID];
+
+      if (get_timeclass_turn_v() == true) {
+         for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
+            spatial_cell::Population& pop = SC->get_population(popID);
+            pop.RHO = 0.5 * ( pop.RHO_R + pop.RHO_V );
+            for(int i=0; i<3; i++) {
+               pop.V[i] = 0.5 * ( pop.V_R[i] + pop.V_V[i] );
+               pop.P[i] = 0.5 * ( pop.P_R[i] + pop.P_V[i] );
+            }
+         }
+      }
+   }
 }
 
 
