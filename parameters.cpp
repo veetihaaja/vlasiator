@@ -99,6 +99,7 @@ bool P::tcDebugBox = false;
 int P::tcOverrideTimeclass = -1;
 int P::tc_test_type = 0;
 int P::tcMomentInterpolationType = 1;
+bool P::tcVMomentPropagation = false;
 
 Realf P::tcBoxHalfWidthX = 2e7;
 Realf P::tcBoxHalfWidthY = 2e7;
@@ -344,6 +345,7 @@ bool P::addParameters() {
       "gridbuilder.tcMomentInterpolationType",
       "What interpolation method is used in moment Interpolation. -1 is cubic C^1 Hermite spline, 1 is linear, 2 is lagrange 2nd order, 3 is lagrange 3rd order.", 
       1);
+   RP::add("gridbuilder.tcVMomentPropagation", "If Vx, Vy, Vz moments are propagated, instead of being interpolated", false);
    RP::add("gridbuilder.tcDebugBox", "Use a forced timeclass box.", false);
    RP::add("gridbuilder.tcOverrideTimeclass", "Use a forced timeclass everywhere.", -1);
    RP::add("gridbuilder.tcBoxHalfWidthX", "Forced timeclass box half-width, X, meters", 2e7);
@@ -947,6 +949,7 @@ void Parameters::getParameters() {
    RP::get("gridbuilder.tcBoxCenterZ", P::tcBoxCenterZ);
    RP::get("gridbuilder.tc_test_type", P::tc_test_type);
    RP::get("gridbuilder.tcMomentInterpolationType", P::tcMomentInterpolationType);
+   RP::get("gridbuilder.tcVMomentPropagation", P::tcVMomentPropagation);
 
 
    P::timeclassDt = std::vector<Real>(P::maxTimeclass+1);

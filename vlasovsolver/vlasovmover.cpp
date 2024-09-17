@@ -44,6 +44,7 @@
 #include "cpu_trans_map.hpp"
 #include "cpu_trans_pencils.hpp"
 #include "cpu_trans_map_amr.hpp"
+#include "cpu_acc_transform.hpp"
 
 #include "spline.h"
 
@@ -893,8 +894,8 @@ void interpolateMomentsForTimeclasses(
       const CellID cellID = cells[c];
       SpatialCell* SC = mpiGrid[cellID];
       const int timeclass = SC->parameters[CellParams::TIMECLASS];
-      const double tr = SC->parameters[CellParams::TIME_R];
-      const double tv = SC->parameters[CellParams::TIME_V];
+      // const double tr = SC->parameters[CellParams::TIME_R];
+      // const double tv = SC->parameters[CellParams::TIME_V];
 
       if (timeclass == maxTC) {
          // calculateInterpolatedVelocityMoments functionality here, if timeclass is the max one.
@@ -949,23 +950,38 @@ void interpolateMomentsForTimeclasses(
             normModul += 0.25/RTCpow+0.5/RTCpow;
          }
 
-         // TODO: add population moment updating (same thing as in calculateinterpolatedvelocitymoments)
          // !! if translation and acceleration are changed to not update both on fractimestep 0, this will break
 
+         if (P::tcVMomentPropagation == true) {
+            if (SC->get_timeclass_turn_v()) { // clamping down values as they get updated
+               SC->parameters[cp_vx] = linearInterpolation(-0.25, 0.5*(SC->parameters[CellParams::VX_V_PREV]+SC->parameters[CellParams::VX_R_PREV]), 0.25, 0.5*(SC->parameters[CellParams::VX_V]+SC->parameters[CellParams::VX_R_PREV]), normModul);
+               SC->parameters[cp_vy] = linearInterpolation(-0.25, 0.5*(SC->parameters[CellParams::VY_V_PREV]+SC->parameters[CellParams::VY_R_PREV]), 0.25, 0.5*(SC->parameters[CellParams::VY_V]+SC->parameters[CellParams::VY_R_PREV]), normModul);
+               SC->parameters[cp_vz] = linearInterpolation(-0.25, 0.5*(SC->parameters[CellParams::VZ_V_PREV]+SC->parameters[CellParams::VZ_R_PREV]), 0.25, 0.5*(SC->parameters[CellParams::VZ_V]+SC->parameters[CellParams::VZ_R_PREV]), normModul);
+            }
+
+            Eigen::Transform<Real,3,Eigen::Affine> vUpdateMatrix = compute_acceleration_transformation(SC, 0, SC->parameters[CellParams::TIMECLASSDT]*(1.0/RTCpow));
+            const Eigen::Matrix<Real,3,1> V(SC->parameters[cp_vx], SC->parameters[cp_vy], SC->parameters[cp_vz]);
+            Eigen::Matrix<Real,3,1> V_updated = vUpdateMatrix * V;
+
+            SC->parameters[cp_vx] = V_updated(0);
+            SC->parameters[cp_vy] = V_updated(1);
+            SC->parameters[cp_vz] = V_updated(2);
+         }
 
          // temporary arrays for true moments.
-         double avgMoments1[8];
-         double avgMoments2[8];
-         double avgMoments3[8];
-         double avgMoments4[8];
-         double avgMoments5[8];
+         int nMomentsToInterp = (P::tcVMomentPropagation) ? 5 : 8;
 
-         int degreeOfInterpolation = P::tcMomentInterpolationType;
-         // -1 is cubic C^1 Hermite spline, 1 is linear, 2 is lagrange 2nd order, 3 is lagrange 3rd order.
+         double avgMoments1[nMomentsToInterp];
+         double avgMoments2[nMomentsToInterp];
+         double avgMoments3[nMomentsToInterp];
+         double avgMoments4[nMomentsToInterp];
+         double avgMoments5[nMomentsToInterp];
 
-         if (modul == 0) { // aka if translation moments are ahead of acceleration moments
+         // for type of interpolation (P::tcMomentInterpolationType) -1 is cubic C^1 Hermite spline, 1 is linear, 2 is lagrange 2nd order, 3 is lagrange 3rd order.
+
+         if (SC->get_timeclass_turn_v()) { // aka if translation moments are ahead of acceleration moments
             // here, temporal order from newest to oldest is _R, _V, _R_PREV, _V_PREV, _R_PREV_PREV, _V_PREV_PREV
-            for (int i=0; i<8; i++) {
+            for (int i=0; i<nMomentsToInterp; i++) {
                avgMoments1[i] = 0.5*( SC->parameters[CellParams::RHOM_R+i] + SC->parameters[CellParams::RHOM_V+i] ); // at 0.75
                avgMoments2[i] = 0.5*( SC->parameters[CellParams::RHOM_V+i] + SC->parameters[CellParams::RHOM_R_PREV+i] ); // at 0.25
                avgMoments3[i] = 0.5*( SC->parameters[CellParams::RHOM_R_PREV+i] + SC->parameters[CellParams::RHOM_V_PREV+i] );  // at -0.25
@@ -973,27 +989,32 @@ void interpolateMomentsForTimeclasses(
                avgMoments5[i] = 0.5*( SC->parameters[CellParams::RHOM_R_PREV_PREV+i] + SC->parameters[CellParams::RHOM_V_PREV_PREV+i] ); // at -1.25
             }
 
-            for (int i=0; i<8; i++) {
-               if (degreeOfInterpolation == 1) {
-                  if (normModul < 0.25) {
-                     SC->parameters[cp_rhom+i] = linearInterpolation(-0.25, avgMoments3[i], 0.25, avgMoments2[i], normModul);
-                  } else if (normModul < 0.75) {
-                     SC->parameters[cp_rhom+i] = linearInterpolation(0.25, avgMoments2[i], 0.75, avgMoments1[i], normModul);
-                  } else {
+            for (int i=0; i<nMomentsToInterp; i++) {
+
+               switch(P::tcMomentInterpolationType) {
+                  case 1:
+                     if (normModul < 0.25) {
+                        SC->parameters[cp_rhom+i] = linearInterpolation(-0.25, avgMoments3[i], 0.25, avgMoments2[i], normModul);
+                     } else if (normModul < 0.75) {
+                        SC->parameters[cp_rhom+i] = linearInterpolation(0.25, avgMoments2[i], 0.75, avgMoments1[i], normModul);
+                     } else {
                      // this is never reached
-                  }
-               } else if (degreeOfInterpolation == 2) {
-                  SC->parameters[cp_rhom+i] = lagrangeInterpolation2order(-0.25, avgMoments3[i], 0.25, avgMoments2[i], 0.75, avgMoments1[i], normModul);
-               } else if (degreeOfInterpolation == 3) {
-                  SC->parameters[cp_rhom+i] = lagrangeInterpolation3order(-0.75, avgMoments4[i], -0.25, avgMoments3[i], 0.25, avgMoments2[i], 0.75, avgMoments1[i], normModul);
-               } else if (degreeOfInterpolation == -1) {
-                  SC->parameters[cp_rhom+i] = cubicHermiteSplineInterpolation(-0.75, avgMoments4[i], -0.25, avgMoments3[i], 0.25, avgMoments2[i], 0.75, avgMoments1[i], normModul);
+                     }
+                     break;
+                  case 2:
+                     SC->parameters[cp_rhom+i] = lagrangeInterpolation2order(-0.25, avgMoments3[i], 0.25, avgMoments2[i], 0.75, avgMoments1[i], normModul);
+                     break;
+                  case 3:
+                     SC->parameters[cp_rhom+i] = lagrangeInterpolation3order(-0.75, avgMoments4[i], -0.25, avgMoments3[i], 0.25, avgMoments2[i], 0.75, avgMoments1[i], normModul);
+                     break;
+                  case -1:
+                     SC->parameters[cp_rhom+i] = cubicHermiteSplineInterpolation(-0.75, avgMoments4[i], -0.25, avgMoments3[i], 0.25, avgMoments2[i], 0.75, avgMoments1[i], normModul);
+                     break;
                }
             }
-
-         } else { // if modul != 0, aka acceleration moments are ahead of translation moments
+         } else { // if acceleration moments are ahead of translation moments
             // here, temporal order from newest to oldest is _V, _R, _V_PREV, _R_PREV, _V_PREV_PREV, _R_PREV_PREV
-            for (int i=0; i<8; i++) {
+            for (int i=0; i<nMomentsToInterp; i++) {
                avgMoments1[i] = 0.5*( SC->parameters[CellParams::RHOM_V+i] + SC->parameters[CellParams::RHOM_R+i] ); // at 1.25
                avgMoments2[i] = 0.5*( SC->parameters[CellParams::RHOM_R+i] + SC->parameters[CellParams::RHOM_V_PREV+i] ); // at 0.75
                avgMoments3[i] = 0.5*( SC->parameters[CellParams::RHOM_V_PREV+i] + SC->parameters[CellParams::RHOM_R_PREV+i] ); // at 0.25
@@ -1001,26 +1022,30 @@ void interpolateMomentsForTimeclasses(
                avgMoments5[i] = 0.5*( SC->parameters[CellParams::RHOM_V_PREV_PREV+i] + SC->parameters[CellParams::RHOM_R_PREV_PREV+i] ); // at -0.75
             }
 
-            for (int i=0; i<8; i++) {
-               if (degreeOfInterpolation == 1) {
-                  if (normModul < 0.25) {
-                     SC->parameters[cp_rhom+i] = linearInterpolation(-0.25, avgMoments4[i], 0.25, avgMoments3[i], normModul);
-                  } else if (normModul < 0.75) {
-                     SC->parameters[cp_rhom+i] = linearInterpolation(0.25, avgMoments3[i], 0.75, avgMoments2[i], normModul);
-                  } else {
-                     SC->parameters[cp_rhom+i] = linearInterpolation(0.75, avgMoments2[i], 1.25, avgMoments1[i], normModul);
-                  }
-               } else if (degreeOfInterpolation == 2) {
-                  SC->parameters[cp_rhom+i] = lagrangeInterpolation2order(0.25, avgMoments3[i], 0.75, avgMoments2[i], 1.25, avgMoments1[i], normModul);
-               } else if (degreeOfInterpolation == 3) {
-                  SC->parameters[cp_rhom+i] = lagrangeInterpolation3order(-0.25, avgMoments4[i], 0.25, avgMoments3[i], 0.75, avgMoments2[i], 1.25, avgMoments1[i], normModul);
-               } else if (degreeOfInterpolation == -1) {
-                  SC->parameters[cp_rhom+i] = cubicHermiteSplineInterpolation(-0.25, avgMoments4[i], 0.25, avgMoments3[i], 0.75, avgMoments2[i], 1.25, avgMoments1[i], normModul);
+            for (int i=0; i<nMomentsToInterp; i++) {
+               switch(P::tcMomentInterpolationType) {
+                  case 1:
+                     if (normModul < 0.25) {
+                        SC->parameters[cp_rhom+i] = linearInterpolation(-0.25, avgMoments4[i], 0.25, avgMoments3[i], normModul);
+                     } else if (normModul < 0.75) {
+                        SC->parameters[cp_rhom+i] = linearInterpolation(0.25, avgMoments3[i], 0.75, avgMoments2[i], normModul);
+                     } else {
+                        SC->parameters[cp_rhom+i] = linearInterpolation(0.75, avgMoments2[i], 1.25, avgMoments1[i], normModul);
+                     }
+                     break;
+                  case 2:
+                     SC->parameters[cp_rhom+i] = lagrangeInterpolation2order(0.25, avgMoments3[i], 0.75, avgMoments2[i], 1.25, avgMoments1[i], normModul);
+                     break;
+                  case 3:
+                     SC->parameters[cp_rhom+i] = lagrangeInterpolation3order(-0.25, avgMoments4[i], 0.25, avgMoments3[i], 0.75, avgMoments2[i], 1.25, avgMoments1[i], normModul);
+                     break;
+                  case -1:
+                     SC->parameters[cp_rhom+i] = cubicHermiteSplineInterpolation(-0.25, avgMoments4[i], 0.25, avgMoments3[i], 0.75, avgMoments2[i], 1.25, avgMoments1[i], normModul);
+                     break;
                }
             }
-
-         } // if tv > tr
-      } // if / else (if timeclass = maxTC)
+         }
+      } // if timeclass = maxTC
    } // for loop over cells
 }
 
