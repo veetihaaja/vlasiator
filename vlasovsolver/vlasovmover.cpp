@@ -339,6 +339,8 @@ void calculateSpatialTranslation(
    vector<vector<CellID>> tc_propagated_cells = vector<vector<CellID>>();
    vector<CellID> local_target_cells;
    vector<vector<CellID>> tc_target_cells = vector<vector<CellID>>();
+   vector<set<CellID>> tc_propagated_cell_sets = vector<set<CellID>>();
+   vector<set<CellID>> tc_target_cell_sets = vector<set<CellID>>();
 
    vector<uint> nPencils;
    Real time=0.0;
@@ -357,6 +359,8 @@ void calculateSpatialTranslation(
       // std::cout << "initing up tc " << tc << " vectors \n";
       tc_propagated_cells.push_back(vector<CellID>());
       tc_target_cells.push_back(vector<CellID>());
+      tc_propagated_cell_sets.push_back(set<CellID>());
+      tc_target_cell_sets.push_back(set<CellID>());
    }
    
    phiprof::Timer computeTimer {"compute_cell_lists"};
@@ -371,13 +375,30 @@ void calculateSpatialTranslation(
       int cellTC = (int)mpiGrid[localCells[c]]->parameters[CellParams::TIMECLASS];
       
       if (do_translate_cell(mpiGrid[localCells[c]],-1)) {
-         tc_propagated_cells[cellTC].push_back(localCells[c]);
+         tc_propagated_cell_sets[cellTC].insert(localCells[c]);
+      }
+      for (auto i: mpiGrid[localCells[c]]->requested_timeclass_ghosts){
+         tc_propagated_cell_sets[i].insert(localCells[c]);
       }
       if (do_translate_cell(mpiGrid[localCells[c]],-1) &&
           mpiGrid[localCells[c]]->sysBoundaryFlag == sysboundarytype::NOT_SYSBOUNDARY) {
-            tc_target_cells[cellTC].push_back(localCells[c]);
+            tc_target_cell_sets[cellTC].insert(localCells[c]);
+      }
+      for (auto i: mpiGrid[localCells[c]]->requested_timeclass_ghosts){
+         if(mpiGrid[localCells[c]]->sysBoundaryFlag == sysboundarytype::NOT_SYSBOUNDARY)
+            tc_propagated_cell_sets[i].insert(localCells[c]);
       }
    }
+
+
+   // TC propagation lists, TODO move out of here somewhere sensible and less often called
+   for (int tc = 0; tc <= P::maxTimeclass; tc++)
+   {
+      // std::cout << "initing up tc " << tc << " vectors \n";
+      tc_propagated_cells[tc] = vector<CellID>(tc_propagated_cell_sets[tc].begin(),tc_propagated_cell_sets[tc].end());
+      tc_target_cells[tc] = vector<CellID>(tc_target_cell_sets[tc].begin(),tc_target_cell_sets[tc].end());
+   }
+
    // for (int tc = 0; tc <= P::maxTimeclass; tc++)
    // {
    //    std::cout << "" << tc << " cellvector size "<< tc_propagated_cells[tc].size()<<" \n";
@@ -414,40 +435,40 @@ void calculateSpatialTranslation(
       // Here we have to update _R_PREV moments, update _R moments on a timeclass basis, and return.
 
       for (int tc=0; tc <= P::currentMaxTimeclass; tc++) {
-      int mod = 1 << (P::currentMaxTimeclass - tc);
-      if ((P::fractionalTimestep % mod) == 0) {
-         for (size_t c=0; c<tc_propagated_cells.at(tc).size(); ++c) {
-            const CellID cellID = tc_propagated_cells.at(tc).at(c);
-            SpatialCell* SC = mpiGrid[cellID];
+         int mod = 1 << (P::currentMaxTimeclass - tc);
+         if ((P::fractionalTimestep % mod) == 0) {
+            for (size_t c=0; c<tc_propagated_cells.at(tc).size(); ++c) {
+               const CellID cellID = tc_propagated_cells.at(tc).at(c);
+               SpatialCell* SC = mpiGrid[cellID];
 
-            SC->parameters[CellParams::RHOM_R_PREV_PREV] = SC->parameters[CellParams::RHOM_R_PREV];
-            SC->parameters[CellParams::VX_R_PREV_PREV] = SC->parameters[CellParams::VX_R_PREV];
-            SC->parameters[CellParams::VY_R_PREV_PREV] = SC->parameters[CellParams::VY_R_PREV];
-            SC->parameters[CellParams::VZ_R_PREV_PREV] = SC->parameters[CellParams::VZ_R_PREV];
-            SC->parameters[CellParams::RHOQ_R_PREV_PREV] = SC->parameters[CellParams::RHOQ_R_PREV];
-            SC->parameters[CellParams::P_11_R_PREV_PREV] = SC->parameters[CellParams::P_11_R_PREV];
-            SC->parameters[CellParams::P_22_R_PREV_PREV] = SC->parameters[CellParams::P_22_R_PREV];
-            SC->parameters[CellParams::P_33_R_PREV_PREV] = SC->parameters[CellParams::P_33_R_PREV];
+               SC->parameters[CellParams::RHOM_R_PREV_PREV] = SC->parameters[CellParams::RHOM_R_PREV];
+               SC->parameters[CellParams::VX_R_PREV_PREV] = SC->parameters[CellParams::VX_R_PREV];
+               SC->parameters[CellParams::VY_R_PREV_PREV] = SC->parameters[CellParams::VY_R_PREV];
+               SC->parameters[CellParams::VZ_R_PREV_PREV] = SC->parameters[CellParams::VZ_R_PREV];
+               SC->parameters[CellParams::RHOQ_R_PREV_PREV] = SC->parameters[CellParams::RHOQ_R_PREV];
+               SC->parameters[CellParams::P_11_R_PREV_PREV] = SC->parameters[CellParams::P_11_R_PREV];
+               SC->parameters[CellParams::P_22_R_PREV_PREV] = SC->parameters[CellParams::P_22_R_PREV];
+               SC->parameters[CellParams::P_33_R_PREV_PREV] = SC->parameters[CellParams::P_33_R_PREV];
 
-            SC->parameters[CellParams::RHOM_R_PREV] = SC->parameters[CellParams::RHOM_R];
-            SC->parameters[CellParams::VX_R_PREV] = SC->parameters[CellParams::VX_R];
-            SC->parameters[CellParams::VY_R_PREV] = SC->parameters[CellParams::VY_R];
-            SC->parameters[CellParams::VZ_R_PREV] = SC->parameters[CellParams::VZ_R];
-            SC->parameters[CellParams::RHOQ_R_PREV] = SC->parameters[CellParams::RHOQ_R];
-            SC->parameters[CellParams::P_11_R_PREV] = SC->parameters[CellParams::P_11_R];
-            SC->parameters[CellParams::P_22_R_PREV] = SC->parameters[CellParams::P_22_R];
-            SC->parameters[CellParams::P_33_R_PREV] = SC->parameters[CellParams::P_33_R];
+               SC->parameters[CellParams::RHOM_R_PREV] = SC->parameters[CellParams::RHOM_R];
+               SC->parameters[CellParams::VX_R_PREV] = SC->parameters[CellParams::VX_R];
+               SC->parameters[CellParams::VY_R_PREV] = SC->parameters[CellParams::VY_R];
+               SC->parameters[CellParams::VZ_R_PREV] = SC->parameters[CellParams::VZ_R];
+               SC->parameters[CellParams::RHOQ_R_PREV] = SC->parameters[CellParams::RHOQ_R];
+               SC->parameters[CellParams::P_11_R_PREV] = SC->parameters[CellParams::P_11_R];
+               SC->parameters[CellParams::P_22_R_PREV] = SC->parameters[CellParams::P_22_R];
+               SC->parameters[CellParams::P_33_R_PREV] = SC->parameters[CellParams::P_33_R];
+            }
          }
       }
-   }
 
-   //calculating moments based on timeclass
-   for (int tc=0; tc <= P::currentMaxTimeclass; tc++) {
-      int mod = 1 << (P::currentMaxTimeclass - tc);
-      if ((P::fractionalTimestep % mod) == 0) {
-         calculateMoments_R(mpiGrid,tc_propagated_cells.at(tc),true);
+      //calculating moments based on timeclass
+      for (int tc=0; tc <= P::currentMaxTimeclass; tc++) {
+         int mod = 1 << (P::currentMaxTimeclass - tc);
+         if ((P::fractionalTimestep % mod) == 0) {
+            calculateMoments_R(mpiGrid,tc_propagated_cells.at(tc),true);
+         }
       }
-   }
       return;
    }
 
@@ -459,6 +480,7 @@ void calculateSpatialTranslation(
       phiprof::Timer timer {profName};
       SpatialCell::setCommunicatedSpecies(popID);
       for(int tc = 0; tc <= P::currentMaxTimeclass; tc++){
+         
          int mod = 1 << (P::currentMaxTimeclass - tc);
          if((P::fractionalTimestep % mod) == 0){
             
@@ -585,6 +607,12 @@ void calculateAcceleration(const uint popID,const uint globalMaxSubcycles,const 
    
    // Semi-Lagrangian acceleration for those cells which are subcycled
    #pragma omp parallel for schedule(dynamic,1)
+   std::cout << "Propagating (ACC) cells ";
+   for (size_t c=0; c<propagatedCells.size(); ++c) {
+      const CellID cellID = propagatedCells[c];
+      std::cout << cellID << " ";
+   }
+   std::cout << "\n";
    for (size_t c=0; c<propagatedCells.size(); ++c) {
       const CellID cellID = propagatedCells[c];
       const Real maxVdt = mpiGrid[cellID]->get_max_v_dt(popID);//*mpiGrid[cellID]->parameters[CellParams::TIMECLASSDT];
@@ -657,7 +685,7 @@ void calculateAcceleration(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& 
    vector<CellID> cellsToPropagateVector;
    int myRank;
    MPI_Comm_rank(MPI_COMM_WORLD,&myRank);
-std::cerr <<std::scientific << "calculateAcceleration at t="<<P::t << ", for dtfactor="<<dt<<"\n";
+   std::cout << "-----------------calculateAcceleration at t="<<P::t << ", for dtfactor="<<dt<<"\n";
    if (dt == 0.0 && (P::tstep > 0 || P::fractionalTimestep > 0)) {
 
       // Even if acceleration is turned off we need to adjust velocity blocks
@@ -708,6 +736,10 @@ std::cerr <<std::scientific << "calculateAcceleration at t="<<P::t << ", for dtf
                               std::cerr << myRank <<": CellID " << cells[c] << " requested timeghosts: ";
                               for (auto i : SC->requested_timeclass_ghosts){
                                  std::cerr << i << " ";
+                                 if (SC->get_timeclass_turn_v(i)){
+                                    propagatedCells.push_back(cells[c]);
+                                    cellsToPropagateSet.insert(cells[c]);
+                                 }
                               }
                               std::cerr << "\n";
                            }
@@ -731,13 +763,13 @@ std::cerr <<std::scientific << "calculateAcceleration at t="<<P::t << ", for dtf
          } // for loop over cells
          // Compute global maximum for number of subcycles
          MPI_Allreduce(&maxSubcycles, &globalMaxSubcycles, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
-         
+         propagatedCells = std::vector<CellID>(cellsToPropagateSet.begin(),cellsToPropagateSet.end());
          // substep global max times
          for(uint step=0; step<(uint)globalMaxSubcycles; ++step) {
             if(step > 0) {
                // prune list of cells to propagate to only contained those which are now subcycled
                vector<CellID> temp;
-               for (const auto& cell: propagatedCells) {
+               for (const auto& cell: cellsToPropagateSet) {
                   if (step < getAccelerationSubcycles(mpiGrid[cell], dt*mpiGrid[cell]->get_tc_dt(), popID) ) {
                      temp.push_back(cell);
                   }
@@ -746,6 +778,7 @@ std::cerr <<std::scientific << "calculateAcceleration at t="<<P::t << ", for dtf
                propagatedCells.swap(temp);
             }
             // Accelerate population over one subcycle step
+            std::cout << "--------------------- an ACC subcycle ------------------\n";
             calculateAcceleration(popID,(uint)globalMaxSubcycles,step,mpiGrid,propagatedCells,dt);
          } // for-loop over acceleration substeps
          
@@ -760,6 +793,8 @@ std::cerr <<std::scientific << "calculateAcceleration at t="<<P::t << ", for dtf
       //now cellsToPropagateSet contains all cells which have been propagated and whose moments need updating
 
    } //else
+
+   std::cout << "---------------------------- ACC finished --------------------\n";
 
    //converting cellsToPropagateSet to vector
    for (auto cell : cellsToPropagateSet) {

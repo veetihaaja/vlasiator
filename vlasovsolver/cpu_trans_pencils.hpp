@@ -66,10 +66,10 @@ struct setOfPencils {
       N++;
       // If necessary, add the zero cells to the beginning and end
       if (idsIn.front() != 0) {
-            idsIn.insert(idsIn.begin(),VLASOV_STENCIL_WIDTH,0);
+            idsIn.insert(idsIn.begin(),VLASOV_STENCIL_WIDTH+1,0);
       }
       if (idsIn.back() != 0) {
-         for (int i = 0; i < VLASOV_STENCIL_WIDTH; i++)
+         for (int i = 0; i < VLASOV_STENCIL_WIDTH+1; i++)
          {
             idsIn.push_back(0);
          }

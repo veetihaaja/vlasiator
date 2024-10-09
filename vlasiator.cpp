@@ -985,11 +985,12 @@ int main(int argn,char* args[]) {
       phiprof::Timer propagateHalfTimer {"propagate-velocity-space-dt/2"};
       if (P::propagateVlasovAcceleration) {
          calculateAcceleration(mpiGrid, 0.5);
-         P::tc_leapfrog_init = false; // not used
       } else {
          //zero step to set up moments _v
          calculateAcceleration(mpiGrid, 0.0);
       }
+      P::tc_leapfrog_init = true;
+
       propagateHalfTimer.stop();
 
       updatePreviousVMoments(mpiGrid, true);
@@ -1563,9 +1564,6 @@ int main(int argn,char* args[]) {
       // calculateAcceleration(mpiGrid,P::dt);
          calculateAcceleration(mpiGrid,1.0);
          addTimedBarrier("barrier-after-ad just-blocks");
-         if(P::tc_leapfrog_init == true){
-            P::tc_leapfrog_init = false;
-         }
       } else {
          //zero step to set up moments _v
          calculateAcceleration(mpiGrid, 0.0);

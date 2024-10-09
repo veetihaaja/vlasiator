@@ -409,6 +409,13 @@ bool trans_map_1d_amr(const dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartes
                         std::cout <<__FILE__<<":"<<__LINE__<< "\tLoaded ghost data in cell " << (int)srcCell->parameters[CellParams::CELLID] << " for tc " << timeclass << " at pencil "<<pencili <<" dimension "<<dimension<<"\n";
                      }
                      cellBlockData[start + b] = srcCell->get_data(blockLID,popID, timeclass);
+                     // if ((int)srcCell->parameters[CellParams::CELLID] == 16){
+                     //    float bmax = 0;
+                     //    for (int i = 0; i < 64; i++){
+                     //       bmax = max(bmax,cellBlockData[start + b][i]);
+                     //    }
+                     //    std::cout <<"block max "<< bmax << "\n";
+                     // }
                   }
                   else {
                      if (blocki == 0) {
@@ -441,16 +448,42 @@ bool trans_map_1d_amr(const dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartes
          // reset blocks in all non-sysboundary neighbor spatial cells for this block id
          for (CellID target_cell_id: DimensionTargetCells[dimension]) {
             SpatialCell* target_cell = mpiGrid[target_cell_id];
-            if (target_cell && target_cell->get_tc() == timeclass) {
-               // Get local velocity block id
-               const vmesh::LocalID blockLID = target_cell->get_velocity_block_local_id(blockGID, popID);
-               // Check for invalid block id
+            if (target_cell){
+               vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>* velmesh;
+               vmesh::VelocityBlockContainer<vmesh::LocalID>* velblocks;
+               velmesh = &target_cell->get_velocity_mesh(popID, timeclass);
+               velblocks = &target_cell->get_velocity_blocks(popID, timeclass);
+               vmesh::LocalID blockLID;
+               if(target_cell->get_timeclass_turn_r()) {
+                  blockLID = target_cell->get_velocity_block_local_id(blockGID, popID);
+               }
+               else{ //TODO - should zero +-1 ghostdata from pencil
+                  // blockLID = target_cell->get_velocity_block_local_id(blockGID, popID, timeclass);
+                  blockLID = vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>::invalidLocalID();
+               }
                if (blockLID != vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>::invalidLocalID()) {
                   // Get a pointer to the block data
-                  Realf* blockData = target_cell->get_data(blockLID, popID);
-                  memset(blockData, 0, WID3*sizeof(Realf));
+                  Realf* blockData;
+                  if (target_cell->get_tc() == timeclass){
+                     blockData = target_cell->get_data(blockLID, popID);
+                  }
+                  else{
+                     // blockData = velblocks->getData(blockLID);
+                  }
+                  if(blockData)
+                     memset(blockData, 0, WID3*sizeof(Realf));
                }
             }
+            // if (target_cell && target_cell->get_tc() == timeclass) {
+            //    // Get local velocity block id
+            //    const vmesh::LocalID blockLID = target_cell->get_velocity_block_local_id(blockGID, popID);
+            //    // Check for invalid block id
+            //    if (blockLID != vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>::invalidLocalID()) {
+            //       // Get a pointer to the block data
+            //       Realf* blockData = target_cell->get_data(blockLID, popID);
+            //       memset(blockData, 0, WID3*sizeof(Realf));
+            //    }
+            // }
          }
          memsetTimer.stop();
 
