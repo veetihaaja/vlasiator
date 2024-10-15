@@ -74,6 +74,12 @@ namespace spatial_cell {
          populations[popID].vmesh.initialize(spec.velocityMesh);
          populations[popID].velocityBlockMinValue = spec.sparseMinValue;
          populations[popID].N_blocks = 0;
+
+         for (int tc = 0; tc <= P::maxTimeclass; tc++){
+            ghostPopulations[{popID,tc}].vmesh.initialize(spec.velocityMesh);
+            ghostPopulations[{popID,tc}].velocityBlockMinValue = spec.sparseMinValue;
+            ghostPopulations[{popID,tc}].N_blocks = 0;
+         }
       }
    }
 

@@ -112,15 +112,31 @@ void cpu_accelerate_cell(SpatialCell* spatial_cell,
          int tc_d = i-spatial_cell->get_tc(); 
          if(tc_d > 0) {
             
-            if (spatial_cell->get_timeclass_turn_v()) {
+            if ((P::tstep == 0 && P::fractionalTimestep == 0)) {
                spatial_cell->set_velocity_mesh_ghost(popID, i);
                spatial_cell->set_velocity_blocks_ghost(popID, i); // this was 0.5x dt, but that was wrong; just copy
                cpu_accelerate_cell(spatial_cell, popID, map_order, dt/pow(2,tc_d), tc_d);
+               if (spatial_cell->parameters[CellParams::CELLID]  == 16){
+                  std::cout << "16c Initial nudge" << "\n";
+               }
             }
-            else {
+            if (spatial_cell->get_timeclass_turn_v()) {
+               spatial_cell->set_velocity_mesh_ghost(popID, i);
+               spatial_cell->set_velocity_blocks_ghost(popID, i); // this was 0.5x dt, but that was wrong; just copy
+               cpu_accelerate_cell(spatial_cell, popID, map_order, dt/pow(2,tc_d)*2/4, tc_d);
+               if (spatial_cell->parameters[CellParams::CELLID]  == 16){
+                  std::cout << "16c tc-0 copy and nudge" << "\n";
+               }
+            }
+            else if (spatial_cell->get_timeclass_turn_v(i)) {
                cpu_accelerate_cell(spatial_cell, popID, map_order, dt/pow(2,tc_d), tc_d);
+               if (spatial_cell->parameters[CellParams::CELLID]  == 16){
+                  std::cout << "16c tc-1 nudge" << "\n";
+               }
             }
-            
+            else{
+               //do nothing
+            }
             
          }
          else if (tc_d < 0){
@@ -137,31 +153,74 @@ void cpu_accelerate_cell(SpatialCell* spatial_cell,
    - x: true state 
    - o: ghost state
    */
-
-            if (spatial_cell->get_timeclass_turn_v(i)) {
+            if (!P::tc_leapfrog_init){
+                              
                // if it is slower-tc's turn, we are synced at after-trans state
                // -> Copy state, but needs to acc by half-tc-0-dt ("always init")
                spatial_cell->set_velocity_mesh_ghost(popID, i);
                spatial_cell->set_velocity_blocks_ghost(popID, i);
-               cpu_accelerate_cell(spatial_cell, popID, map_order, P::timeclassDt[i]/2, tc_d);
-               std::cout << __FILE__<<":"<<__LINE__<< "\tCopying and propagating ghost at tc " << spatial_cell->get_tc() + tc_delta << " by dt = " << dt << " being run at cell " << "\n";
+               // cpu_accelerate_cell(spatial_cell, popID, map_order, P::timeclassDt[i], tc_d);
+               double dtt = dt/pow(2,tc_d);
+               if (spatial_cell->parameters[CellParams::CELLID]  == 17){
+                  std::cout << "17c Copy-and-init-nudge from "<< dt << " div by " << pow(2,tc_d) << "\n";
+                  std::cout << __FILE__<<":"<<__LINE__<< "\t17c Copying and propagating ghost at tc " << spatial_cell->get_tc() + tc_delta << " by dt = " << dtt << " being run at cell " << "\n";
+               }
+               else{
+                  std::cout << __FILE__<<":"<<__LINE__<< "\t Copying and propagating ghost at tc " << spatial_cell->get_tc() + tc_delta << " by dt = " << dtt << " being run at cell " << "\n";
+               }
+               
 
+               cpu_accelerate_cell(spatial_cell, popID, map_order, dtt, tc_d);
+            
+            }
+            else if (spatial_cell->get_timeclass_turn_v(i) || (P::tstep == 0 && P::fractionalTimestep == 0)) {
+               
+               // if it is slower-tc's turn, we are synced at after-trans state
+               // -> Copy state, but needs to acc by half-tc-0-dt ("always init")
+               spatial_cell->set_velocity_mesh_ghost(popID, i);
+               spatial_cell->set_velocity_blocks_ghost(popID, i);
+               // cpu_accelerate_cell(spatial_cell, popID, map_order, P::timeclassDt[i], tc_d);
+               double dtt = 5./4.*dt/pow(2,tc_d);
+               if (spatial_cell->parameters[CellParams::CELLID]  == 17){
+                  std::cout << "17c Copy-and-init-nudge from "<< dt << " div by " << pow(2,tc_d) << "\n";
+                  std::cout << __FILE__<<":"<<__LINE__<< "\t17c Copying and propagating ghost at tc " << spatial_cell->get_tc() + tc_delta << " by dt = " << dtt << " being run at cell " << "\n";
+               }
+               else{
+                  std::cout << __FILE__<<":"<<__LINE__<< "\t Copying and propagating ghost at tc " << spatial_cell->get_tc() + tc_delta << " by dt = " << dtt << " being run at cell " << "\n";
+               }
+               
+
+               cpu_accelerate_cell(spatial_cell, popID, map_order, dtt, tc_d);
             }
             else{
+               if (spatial_cell->parameters[CellParams::CELLID]  == 17){
+                  std::cout << "17c Do-nothing" << "\n";
+               }
                // ghost can just stay put!
                std::cout << __FILE__<<":"<<__LINE__<< "\tLeaving ghost as is at tc " << spatial_cell->get_tc() + tc_delta << " by dt = " << dt << " being run at cell " << "\n";
             }
+
             // cpu_accelerate_cell(spatial_cell, popID, map_order, dt/pow(2,tc_d), tc_d);
+
          }
+      } // for over ghost requests
+      if (!spatial_cell->get_timeclass_turn_v())
+      { // Not our turn and ghosts have been handled -> skidaddle
+         return;
       }
+
       vmeshPtr = &spatial_cell->get_velocity_mesh(popID);
       blockContainerPtr = &spatial_cell->get_velocity_blocks(popID);
+
+
+      std::cout << __FILE__<<":"<<__LINE__ << "\t"<<spatial_cell->parameters[CellParams::CELLID] << "c Accelerate tc " << spatial_cell->get_tc() << " with tcdelta " 
+      << tc_delta << " at dt = " << dt << "\n";//"; vmesh " << &vmesh << " blockContainer " << &blockContainer << "\n";
+
    }
    // Ghost branch: select the ghost vmesh defined by tc_delta instead for acc
    // dt we already have adjusted as needed
    else{
-      std::cout << __FILE__<<":"<<__LINE__<< "\tRequest at tc " << spatial_cell->get_tc() + tc_delta << " at dt = " << dt << " being run at cell " << 
-      spatial_cell->parameters[CellParams::CELLID] << "\n";
+      std::cout << __FILE__<<":"<<__LINE__<<"\t"<< spatial_cell->parameters[CellParams::CELLID] << "c\tRequest-accelerate at tc " << spatial_cell->get_tc() + tc_delta << " at dt = " << dt << "\n";
       vmeshPtr = &spatial_cell->get_velocity_mesh_ghost(popID,spatial_cell->get_tc() + tc_delta);
       blockContainerPtr = &spatial_cell->get_velocity_blocks_ghost(popID,spatial_cell->get_tc() + tc_delta);
     }
@@ -169,8 +228,6 @@ void cpu_accelerate_cell(SpatialCell* spatial_cell,
    vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& vmesh = *vmeshPtr;
    vmesh::VelocityBlockContainer<vmesh::LocalID>& blockContainer = *blockContainerPtr;
 
-   std::cout << __FILE__<<":"<<__LINE__ << "\t"<<spatial_cell->parameters[CellParams::CELLID] << "c Accelerate tc " << spatial_cell->get_tc() << " with tcdelta " 
-   << tc_delta << " at dt = " << dt << "\n";//"; vmesh " << &vmesh << " blockContainer " << &blockContainer << "\n";
 
    // vmesh::VelocityBlockContainer<vmesh::LocalID>& blockContainer = spatial_cell->get_velocity_blocks(popID);
 
