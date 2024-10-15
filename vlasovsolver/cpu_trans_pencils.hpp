@@ -47,6 +47,8 @@ struct setOfPencils {
    }
 
    void removeAllPencils() {
+      std::cerr << __FILE__ <<":"<<__LINE__<<" removeAllPencils called \n";
+
       N = 0;
       sumOfLengths = 0;
       sumOfLengths = 0;
@@ -64,12 +66,14 @@ struct setOfPencils {
 
    void addPencil(std::vector<CellID> idsIn, Real xIn, Real yIn, bool periodicIn, std::vector<uint> pathIn, int timeclass) {
       N++;
+      std::cerr << __FILE__ <<":"<<__LINE__<<" addPencil called \n";
+
       // If necessary, add the zero cells to the beginning and end
       if (idsIn.front() != 0) {
-            idsIn.insert(idsIn.begin(),VLASOV_STENCIL_WIDTH+1,0);
+            idsIn.insert(idsIn.begin(),VLASOV_STENCIL_WIDTH,0);
       }
       if (idsIn.back() != 0) {
-         for (int i = 0; i < VLASOV_STENCIL_WIDTH+1; i++)
+         for (int i = 0; i < VLASOV_STENCIL_WIDTH; i++)
          {
             idsIn.push_back(0);
          }
@@ -85,6 +89,11 @@ struct setOfPencils {
       periodic.push_back(periodicIn);
       path.push_back(pathIn);
       timeclasses.push_back(timeclass);
+      std::cerr << __FILE__ <<":"<<__LINE__<<" Added " << xIn << " to x = {";
+      for (auto i = x.begin(); i != x.end(); i++){
+         std::cerr << *i << ", ";
+      }
+      std::cerr << "}\n";
    }
 
    void removePencil(const uint pencilId) {

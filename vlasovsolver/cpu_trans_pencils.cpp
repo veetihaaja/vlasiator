@@ -1688,7 +1688,9 @@ void prepareSeedIdsAndPencils(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Ge
       }
    }
    std::cerr << __FILE__ <<":"<<__LINE__<<" calling printPencilsFunc for dim "<<dimension <<"\n";
+   
    printPencilsFunc(DimensionPencils[dimension],dimension,myRank,mpiGrid);
+   std::cerr << __FILE__ <<":"<<__LINE__<<" returned from printPencilsFunc for dim "<<dimension <<"\n";
 
    phiprof::Timer checkGhostCellsTimer {"check_ghost_cells"};
    // Check refinement of two ghost cells on each end of each pencil
