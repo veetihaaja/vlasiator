@@ -398,7 +398,7 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
          // second block: three parts: timeclassmax-2, timeclassmax-1, timeclassmax
          if (P::maxTimeclass == 1) {
             cell->parameters[CellParams::TIMECLASS] = min(int(cell->parameters[CellParams::XCRD] > -100/*epsilon*/)*P::maxTimeclass, P::maxTimeclass);
-         } else {
+         } else if (P::maxTimeclass == 2) {
             if (cell->parameters[CellParams::XCRD] < -15*(cell->parameters[CellParams::DX])) {
                cell->parameters[CellParams::TIMECLASS] = 0;
             } else if (cell->parameters[CellParams::XCRD] > 15*(cell->parameters[CellParams::DX])) {
@@ -406,6 +406,8 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
             } else {
                cell->parameters[CellParams::TIMECLASS] = 1;
             }
+         } else if (P::maxTimeclass == 3) {
+            cell->parameters[CellParams::TIMECLASS] = min(int(cell->parameters[CellParams::XCRD] > -100/*epsilon*/)*P::maxTimeclass, P::maxTimeclass);
          }
          cell->parameters[CellParams::TIMECLASSDT] = cell->get_tc_dt();
       }
@@ -1361,7 +1363,7 @@ int main(int argn,char* args[]) {
       //      ... but updated V moments needed?
       //   -> do the acc shuffle for all cells to begin with
       std::vector<Real> newTimeclassDts = std::vector<Real>(P::maxTimeclass+1);
-      if(P::dynamicTimestep  && P::tstep > P::tstep_min) {
+      if(P::dynamicTimestep  && P::tstep > P::tstep_min && P::fractionalTimestep == 0) {
          std::cout << "Computing new dts\n";
          computeNewTimeStep(mpiGrid, technicalGrid, newDt, dtIsChanged, newTimeclassDts);
          if(myRank == MASTER_RANK){
@@ -1438,20 +1440,6 @@ int main(int argn,char* args[]) {
       
       phiprof::Timer momentsTimer {"Compute interp moments"};
       //std::cout << "for dt2 in main loop at t="<<P::t<<"\n";
-      
-      // this is commented out as interpolateMomentsForTimeclasses replaces this function
-
-      // calculateInterpolatedVelocityMoments(
-      //    mpiGrid,
-      //    CellParams::RHOM_DT2,
-      //    CellParams::VX_DT2,
-      //    CellParams::VY_DT2,
-      //    CellParams::VZ_DT2,
-      //    CellParams::RHOQ_DT2,
-      //    CellParams::P_11_DT2,
-      //    CellParams::P_22_DT2,
-      //    CellParams::P_33_DT2
-      // );
 
       interpolateMomentsForTimeclasses(
          mpiGrid,
@@ -1481,6 +1469,8 @@ int main(int argn,char* args[]) {
          P::currentMaxTimeclass,
          true
       );
+
+      updateParticlePopulations(mpiGrid);
 
       momentsTimer.stop();
              
@@ -1589,25 +1579,8 @@ int main(int argn,char* args[]) {
          timer.stop();
          addTimedBarrier("barrier-boundary-conditions");
       }
-
-      // this is commented out as interpolateMomentsForTimeclasses replaces the functionality of this function. check if this breaks something.
       
-      // momentsTimer.start();
-      // *here we compute rho and rho_v for timestep t + dt, so next
-      // timestep * //
-      // Does extra work by computing these for all cells at all timeclasses.
-      // calculateInterpolatedVelocityMoments(
-      //    mpiGrid,
-      //    CellParams::RHOM,
-      //    CellParams::VX,
-      //    CellParams::VY,
-      //    CellParams::VZ,
-      //    CellParams::RHOQ,
-      //    CellParams::P_11,
-      //    CellParams::P_22,
-      //    CellParams::P_33
-      // );
-      // momentsTimer.stop();
+      updateParticlePopulations(mpiGrid);
 
       propagateTimer.stop(computedCells,"Cells");
       

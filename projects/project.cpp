@@ -30,6 +30,7 @@
 #include "../object_wrapper.h"
 
 #include "Alfven/Alfven.h"
+#include "CircularAlfven/CircularAlfven.h"
 #include "Diffusion/Diffusion.h"
 #include "Dispersion/Dispersion.h"
 #include "Distributions/Distributions.h"
@@ -105,6 +106,7 @@ namespace projects {
       typedef Readparameters RP;
       // TODO add all projects' static addParameters() functions here.
       projects::Alfven::addParameters();
+      projects::CircularAlfven::addParameters();
       projects::Diffusion::addParameters();
       projects::Dispersion::addParameters();
       projects::Distributions::addParameters();
@@ -322,6 +324,7 @@ namespace projects {
    
    void Project::setVelocitySpace(const uint popID,SpatialCell* cell) const {
       vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& vmesh = cell->get_velocity_mesh(popID);
+      vmesh::VelocityBlockContainer<vmesh::LocalID>& blockContainer = cell->get_velocity_blocks(popID);
 
       vector<vmesh::GlobalID> blocksToInitialize = this->findBlocksToInitialize(cell,popID);
       vector<vmesh::GlobalID> removeList;
@@ -348,7 +351,7 @@ namespace projects {
       refCriterion->initialize("");
 
       // Remove blocks with f below sparse min value
-      for (size_t b=0; b<removeList.size(); ++b) cell->remove_velocity_block(removeList[b],popID);
+      for (size_t b=0; b<removeList.size(); ++b) cell->remove_velocity_block(removeList[b],popID, vmesh, blockContainer);
 
       // Loop over blocks in the spatial cell until we reach the maximum
       // refinement level, or until there are no more blocks left to refine
@@ -396,7 +399,7 @@ namespace projects {
          }
 
          // Remove blocks with f below sparse min value
-         for (size_t b=0; b<removeList.size(); ++b) cell->remove_velocity_block(removeList[b],popID);
+         for (size_t b=0; b<removeList.size(); ++b) cell->remove_velocity_block(removeList[b],popID, vmesh, blockContainer);
 
          if (refineList.size() == 0) refine = false;
          ++currentLevel;
@@ -702,6 +705,9 @@ Project* createProject() {
    }
    if(Parameters::projectName == "Alfven") {
       rvalue = new projects::Alfven;
+   }
+   if(Parameters::projectName == "CircularAlfven") {
+      rvalue = new projects::CircularAlfven;
    }
    if(Parameters::projectName == "Diffusion") {
       rvalue = new projects::Diffusion;

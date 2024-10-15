@@ -186,7 +186,7 @@ namespace spatial_cell {
                this->populations[popID].RHOLOSSADJUST += DV3*sum;
 	       
                // and finally remove block
-               this->remove_velocity_block(blockGID,popID);
+               this->remove_velocity_block(blockGID,popID, populations[popID].vmesh, populations[popID].blockContainer);
             }
          }
       }
@@ -280,7 +280,7 @@ namespace spatial_cell {
                this->populations[popID].RHOLOSSADJUST += DV3*sum;
 	       
                // and finally remove block
-               this->remove_velocity_block(blockGID,popID);
+               this->remove_velocity_block(blockGID,popID, populations[popID].vmesh, populations[popID].blockContainer);
             }
          }
       }
@@ -418,7 +418,7 @@ namespace spatial_cell {
 
       // Remove the children
       for (size_t c=0; c<children.size(); ++c) {
-         remove_velocity_block(children[c],popID);
+         remove_velocity_block(children[c],popID, populations[popID].vmesh, populations[popID].blockContainer);
       }
    }
 
@@ -579,9 +579,20 @@ namespace spatial_cell {
       return P::timeclassDt[this->parameters[CellParams::TIMECLASS]];
    }
 
+   const int SpatialCell::get_tc() const {      
+      return (int)this->parameters[CellParams::TIMECLASS];
+   }
+
    const bool SpatialCell::get_timeclass_turn_v() const {
       // If on max timeclass, we propagate on each loop.
       int mod = 1 << (P::currentMaxTimeclass - (int)this->parameters[CellParams::TIMECLASS]);
+      bool ret = ((P::fractionalTimestep % mod) == 0);
+      return ret;
+   }
+
+   const bool SpatialCell::get_timeclass_turn_v(int tc) const {
+      // If on max timeclass, we propagate on each loop.
+      int mod = 1 << (P::currentMaxTimeclass - (int)tc);
       bool ret = ((P::fractionalTimestep % mod) == 0);
       return ret;
    }

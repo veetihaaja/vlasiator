@@ -70,6 +70,7 @@ Real P::dt0 = NAN;
 int P::maxTimeclass = 0;
 int P::currentMaxTimeclass = 0;
 bool P::tcRankwise = false;
+bool P::forcedConvection = false;
 
 vector<Real> P::timeclassDt;
 vector<Real> P::timeclassTime;
@@ -97,6 +98,8 @@ bool P::tc_leapfrog_init = false;
 bool P::tcDebugBox = false;
 int P::tcOverrideTimeclass = -1;
 int P::tc_test_type = 0;
+int P::tcMomentInterpolationType = 1;
+bool P::tcVMomentPropagation = true;
 
 Realf P::tcBoxHalfWidthX = 2e7;
 Realf P::tcBoxHalfWidthY = 2e7;
@@ -335,8 +338,14 @@ bool P::addParameters() {
    RP::add("gridbuilder.dt", "Initial timestep in seconds.", 0.0);
    RP::add("gridbuilder.timeclass_max", "Maximum number of timeclasses.", 0);
    RP::add("gridbuilder.tcRankwise", "Use timeclasses at MPI rank level insted of cell-wise timeclasses.", false);
+   RP::add("gridbuilder.forcedConvection", "Force a convection velocity of 200 km/s along +x [false]", false);
 
    RP::add("gridbuilder.tc_test_type", "Enumerated tc test", 0);
+   RP::add(
+      "gridbuilder.tcMomentInterpolationType",
+      "What interpolation method is used in moment Interpolation. -1 is cubic C^1 Hermite spline, 1 is linear, 2 is lagrange 2nd order, 3 is lagrange 3rd order.", 
+      1);
+   RP::add("gridbuilder.tcVMomentPropagation", "If Vx, Vy, Vz moments are propagated, instead of being interpolated", true);
    RP::add("gridbuilder.tcDebugBox", "Use a forced timeclass box.", false);
    RP::add("gridbuilder.tcOverrideTimeclass", "Use a forced timeclass everywhere.", -1);
    RP::add("gridbuilder.tcBoxHalfWidthX", "Forced timeclass box half-width, X, meters", 2e7);
@@ -923,9 +932,15 @@ void Parameters::getParameters() {
 
    RP::get("gridbuilder.timeclass_max", P::maxTimeclass);
    RP::get("gridbuilder.tcRankwise", P::tcRankwise);
+   RP::get("gridbuilder.forcedConvection", P::forcedConvection);
 
    RP::get("gridbuilder.tcDebugBox", P::tcDebugBox);
    RP::get("gridbuilder.tcOverrideTimeclass", P::tcOverrideTimeclass);
+   if (P::tcOverrideTimeclass > -1 && P::maxTimeclass < P::tcOverrideTimeclass) {
+      std::cout << "Adjusting P::maxTimeclass ("<< P::maxTimeclass << ") to include tcOverrideTimeclass (" << P::tcOverrideTimeclass << ")" << std::endl;
+      P::maxTimeclass = P::tcOverrideTimeclass;
+   }
+
    RP::get("gridbuilder.tcBoxHalfWidthX", P::tcBoxHalfWidthX);
    RP::get("gridbuilder.tcBoxHalfWidthY", P::tcBoxHalfWidthY);
    RP::get("gridbuilder.tcBoxHalfWidthZ", P::tcBoxHalfWidthZ);
@@ -933,6 +948,8 @@ void Parameters::getParameters() {
    RP::get("gridbuilder.tcBoxCenterY", P::tcBoxCenterY);
    RP::get("gridbuilder.tcBoxCenterZ", P::tcBoxCenterZ);
    RP::get("gridbuilder.tc_test_type", P::tc_test_type);
+   RP::get("gridbuilder.tcMomentInterpolationType", P::tcMomentInterpolationType);
+   RP::get("gridbuilder.tcVMomentPropagation", P::tcVMomentPropagation);
 
 
    P::timeclassDt = std::vector<Real>(P::maxTimeclass+1);

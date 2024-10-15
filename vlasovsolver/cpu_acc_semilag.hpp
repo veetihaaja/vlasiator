@@ -36,7 +36,7 @@ void cpu_accelerate_cell(
         const uint popID,
         uint map_order,
         const Real& dt,
-        bool doGhost = false
+        int tc
         );
 
 #endif

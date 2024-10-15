@@ -73,6 +73,11 @@ void calculateInterpolatedVelocityMoments(
 */
 double linearInterpolation(double x0, double y0, double x1, double y1, double x);
 
+double lagrangeInterpolation3(double x0, double y0, double x1, double y1, double x2, double y2, double x);
+
+double lagrangeInterpolation4(double x0, double y0, double x1, double y1, double x2, double y2, double x3, double y3, double x);
+
+double cubicHermiteSplineInterpolation(double x0, double y0, double x1, double y1, double x2, double y2, double x3, double y3, double x);
 
 /*!
   \brief Function for interpolating moments for field solver with moments from vlasov solver, combatible with timeclasses.
@@ -91,6 +96,8 @@ void interpolateMomentsForTimeclasses(
    const int maxTC,
    const bool dt2
 );
+
+void updateParticlePopulations(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid);
 
 /*!
   \brief Compute 0th, 1st and 2nd velocity moments (RHO,VX,VY,VZ,P_11,P_22,P_33 and *_DT2) for all cells in the grid directly from distribution function. The simulation should be at a true time-step! This is at the moment only called at initialisation.

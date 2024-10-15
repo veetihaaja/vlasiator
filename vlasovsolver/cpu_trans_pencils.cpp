@@ -1039,7 +1039,7 @@ void buildPencilsWithNeighbors( const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_
       for (int tmpPath = 0; tmpPath < 4; ++tmpPath) {
          nextNeighbor = selectNeighbor(grid,id,dimension,tmpPath);
          if(nextNeighbor != INVALID_CELLID) {
-            if(P::tc_test_type == 3){ // Should allow for pencil splitting down the line, but not for now.
+            if(P::tc_test_type == 3 || true){ // Should allow for pencil splitting down the line, but not for now.
                if(grid[nextNeighbor]->parameters[CellParams::TIMECLASS] != timeclass){
                   neighborExists = false;
                   break;
@@ -1687,7 +1687,7 @@ void prepareSeedIdsAndPencils(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Ge
          }
       }
    }
-   std::cerr << __FILE__ <<":"<<__LINE__<<" calling printPencilsFunc\n";
+   std::cerr << __FILE__ <<":"<<__LINE__<<" calling printPencilsFunc for dim "<<dimension <<"\n";
    printPencilsFunc(DimensionPencils[dimension],dimension,myRank,mpiGrid);
 
    phiprof::Timer checkGhostCellsTimer {"check_ghost_cells"};

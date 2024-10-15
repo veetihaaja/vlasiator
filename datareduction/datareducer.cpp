@@ -355,6 +355,15 @@ void initializeDataReducers(DataReducer * outputReducer, DataReducer * diagnosti
          }
       }
 
+
+      if(P::systemWriteAllDROs || lowercase == "ptensor" || lowercase == "vg_ptensor") { // Overall effective bulk density defining the center-of-mass frame from all populations
+         outputReducer->addOperator(new DRO::DataReductionOperatorCellParams("vg_ptensor",CellParams::P_11,3));
+         outputReducer->addMetadata(outputReducer->size()-1,"Pa","$\\mathrm{N}\\,\\mathrm{m}^{-2}$","$P$","1.0");
+         if(!P::systemWriteAllDROs) {
+            continue;
+         }
+      }
+
       if(P::systemWriteAllDROs || lowercase == "v" || lowercase == "vg_v") { // Overall effective bulk density defining the center-of-mass frame from all populations
          outputReducer->addOperator(new DRO::DataReductionOperatorCellParams("vg_v",CellParams::VX,3));
          outputReducer->addMetadata(outputReducer->size()-1,"m/s","$\\mathrm{m}\\,\\mathrm{s}^{-1}$","$V$","1.0");
