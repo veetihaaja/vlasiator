@@ -630,8 +630,8 @@ void computeSpatialSourceCellsForPencil(const dccrg::Dccrg<SpatialCell,dccrg::Ca
    }
 
    // Insert pointers for neighbors of ids.front() and ids.back()
-   const auto* frontNbrPairs = mpiGrid.get_neighbors_of(ids[VLASOV_STENCIL_WIDTH], neighborhood);
-   const auto* backNbrPairs  = mpiGrid.get_neighbors_of(ids[L-VLASOV_STENCIL_WIDTH-1],  neighborhood);
+   const auto* frontNbrPairs = mpiGrid.get_neighbors_of(ids[VLASOV_STENCIL_WIDTH+1], neighborhood);
+   const auto* backNbrPairs  = mpiGrid.get_neighbors_of(ids[L-VLASOV_STENCIL_WIDTH-2],  neighborhood);
    // Create list of unique distances in the negative direction from the first cell in pencil
    std::set< int > distances;
    for (const auto& nbrPair : *frontNbrPairs) {
@@ -641,7 +641,7 @@ void computeSpatialSourceCellsForPencil(const dccrg::Dccrg<SpatialCell,dccrg::Ca
       }
    }
 
-   int iSrc = VLASOV_STENCIL_WIDTH - 1;
+   int iSrc = VLASOV_STENCIL_WIDTH+1 - 1;
    // Iterate through distances for VLASOV_STENCIL_WIDTH elements starting from the smallest distance.
    for (auto it = distances.begin(); it != distances.end(); ++it) {
       if (iSrc < 0) break; // found enough elements
@@ -682,7 +682,7 @@ void computeSpatialSourceCellsForPencil(const dccrg::Dccrg<SpatialCell,dccrg::Ca
 
    // Iterate through distances for VLASOV_STENCIL_WIDTH elements starting from the smallest distance.
    // Distances are positive here so smallest distance has smallest value.
-   iSrc = L - VLASOV_STENCIL_WIDTH;
+   iSrc = L - VLASOV_STENCIL_WIDTH-1;
    for (auto it = distances.begin(); it != distances.end(); ++it) {
       if (iSrc >= (int)L) break; // Found enough cells
 
@@ -714,8 +714,8 @@ void computeSpatialSourceCellsForPencil(const dccrg::Dccrg<SpatialCell,dccrg::Ca
    /*loop to negative side and replace all invalid cells with the closest good cell
    * Also tag requested timeclass ghosts on the same go if needed.
    */
-   CellID lastGoodCell = ids[VLASOV_STENCIL_WIDTH];
-   for(int i = VLASOV_STENCIL_WIDTH - 1; i >= 0 ;--i){
+   CellID lastGoodCell = ids[VLASOV_STENCIL_WIDTH+1];
+   for(int i = VLASOV_STENCIL_WIDTH - 0; i >= 0 ;--i){
       bool isGood = false;
       if (ids[i]!=0) {
          if (mpiGrid[ids[i]] != NULL) {
@@ -737,8 +737,8 @@ void computeSpatialSourceCellsForPencil(const dccrg::Dccrg<SpatialCell,dccrg::Ca
    /*loop to positive side and replace all invalid cells with the closest good cell
    * Also tag requested timeclass ghosts on the same go if needed.
    */
-   lastGoodCell = ids[L - VLASOV_STENCIL_WIDTH - 1];
-   for(int i = (int)L - VLASOV_STENCIL_WIDTH; i < (int)L; ++i){
+   lastGoodCell = ids[L - VLASOV_STENCIL_WIDTH - 2];
+   for(int i = (int)L - VLASOV_STENCIL_WIDTH - 1; i < (int)L; ++i){
       bool isGood = false;
       if (ids[i]!=0) {
          if (mpiGrid[ids[i]] != NULL) {
@@ -1359,8 +1359,14 @@ void check_ghost_cells(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>
       int maxPencilRefLvl = pencils.path[pencili].size();
       int maxNbrRefLvl = 0;
 
+      std::cerr << "ids.front() " << ids.front() << "\n"; 
+      std::cerr << "ids.back() " << ids.back() << "\n";
+
       const auto* frontNeighbors = mpiGrid.get_neighbors_of(ids.front(),neighborhood);
+      std::cerr << "frontNeighbors: " << frontNeighbors << "\n";
       const auto* backNeighbors  = mpiGrid.get_neighbors_of(ids.back(),neighborhood);
+      std::cerr << "frontNeighbors: " << backNeighbors << "\n";
+
 
       // Create list of unique distances in the negative direction from the first cell in pencil
       std::set< int > distances; // is sorted
@@ -1696,7 +1702,7 @@ void prepareSeedIdsAndPencils(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Ge
    // Check refinement of two ghost cells on each end of each pencil
    // in case pencil needs to be split.
    // This function contains threading.
-   check_ghost_cells(mpiGrid,DimensionPencils[dimension],dimension);
+   // check_ghost_cells(mpiGrid,DimensionPencils[dimension],dimension);
    checkGhostCellsTimer.stop();
 
    phiprof::Timer findSourceRatiosTimer {"Find_source_cells_ratios_dz"};
