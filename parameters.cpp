@@ -79,13 +79,12 @@ int P::fractionalTimestep = 0;
 
 Real P::vlasovSolverMaxCFL = NAN;
 Real P::vlasovSolverMinCFL = NAN;
-bool P::vlasovSolverLocalTranslate = false;
+bool P::vlasovSolverGhostTranslate = false;
+uint P::vlasovSolverGhostTranslateExtent = 0;
 Real P::fieldSolverMaxCFL = NAN;
 Real P::fieldSolverMinCFL = NAN;
 uint P::fieldSolverSubcycles = 1;
 
-bool P::amrTransShortPencils = false;
-bool P::amrTransSplitPencilsOnlyForFace = false;
 
 uint P::tstep = 0;
 uint P::tstep_min = 0;
@@ -206,6 +205,12 @@ Real P::alphaDBWeight = 1.0;
 uint P::refineCadence = 5;
 Real P::refineAfter = 0.0;
 Real P::refineRadius = LARGE_REAL;
+Real P::refinementMinX = -LARGE_REAL;
+Real P::refinementMinY = -LARGE_REAL;
+Real P::refinementMinZ = -LARGE_REAL;
+Real P::refinementMaxX = LARGE_REAL;
+Real P::refinementMaxY = LARGE_REAL;
+Real P::refinementMaxZ = LARGE_REAL;
 int P::maxFilteringPasses = 0;
 int P::amrBoxNumber = 0;
 std::vector<uint> P::amrBoxHalfWidthX;
@@ -308,7 +313,7 @@ bool P::addParameters() {
    RP::add("project",
            "Specify the name of the project to use. Supported to date (20150610): Alfven Diffusion Dispersion "
            "Distributions Firehose Flowthrough Fluctuations Harris KHB Larmor Magnetosphere Multipeak Riemann1 Shock "
-           "Shocktest Template test_fp testHall test_trans VelocityBox verificationLarmor",
+           "Shocktest Template test_fp testHall test_trans verificationLarmor",
            string(""));
 
    RP::add("restart.write_as_float", "If true, write restart fields in floats instead of doubles", false);
@@ -415,7 +420,8 @@ bool P::addParameters() {
    RP::add("vlasovsolver.accelerateMaxwellianBoundaries",
            "Propagate maxwellian boundary cell contents in velocity space. Default false.",
            false);
-   RP::add("vlasovsolver.LocalTranslate","Boolean for activating all-local translation",false);
+   RP::add("vlasovsolver.GhostTranslate","Boolean for activating all-local ghost translation",false);
+   RP::add("vlasovsolver.GhostTranslateExtent","Stencil size in all-local ghost translation (default: VLASOV_STENCIL_WIDTH+1",0);
 
    // Load balancing parameters
    RP::add("loadBalance.algorithm", "Load balancing algorithm to be used", string("RCB"));
@@ -441,7 +447,7 @@ bool P::addParameters() {
                         "populations_vg_heatflux " +
                         "populations_vg_nonmaxwellianity " +
                         "vg_maxdt_acceleration vg_maxdt_translation populations_vg_maxdt_acceleration " +
-                        "populations_vg_maxdt_translation vg_amr_translate_comm " +
+                        "populations_vg_maxdt_translation " +
                         "fg_maxdt_fieldsolver " + "vg_rank fg_rank fg_amr_level vg_loadbalance_weight " +
                         "vg_boundarytype fg_boundarytype vg_boundarylayer fg_boundarylayer " +
                         "populations_vg_blocks vg_f_saved " + "populations_vg_acceleration_subcycles " +
@@ -453,7 +459,7 @@ bool P::addParameters() {
                         "ig_precipitation ig_deltaphi "+
                         "ig_inplanecurrent ig_b ig_e vg_drift vg_ionospherecoupling vg_connection vg_fluxrope fg_curvature "+
                         "vg_amr_drho vg_amr_du vg_amr_dpsq vg_amr_dbsq vg_amr_db vg_amr_alpha1 vg_amr_reflevel vg_amr_alpha2 "+
-                        "vg_amr_translate_comm vg_gridcoordinates fg_gridcoordinates ");
+                        "vg_gridcoordinates fg_gridcoordinates ");
 
    RP::addComposing(
        "variables_deprecated.output",
@@ -530,7 +536,13 @@ bool P::addParameters() {
    RP::add("AMR.alpha2_coarsen_threshold","Determines the maximum value of alpha_2 to unrefine cells, default half of the refine threshold", -1.0);
    RP::add("AMR.refine_cadence","Refine every nth load balance", 5);
    RP::add("AMR.refine_after","Start refinement after this many simulation seconds", 0.0);
-   RP::add("AMR.refine_radius","Maximum distance from Earth to refine", LARGE_REAL);
+   RP::add("AMR.refine_radius","Maximum distance from origin to allow refinement within. Only induced refinement allowed outside this radius.", LARGE_REAL);
+   RP::add("AMR.refinement_min_x", "Refinement minimum X coordinate, no refinement at x < this value (m) except induced refinement.", -LARGE_REAL);
+   RP::add("AMR.refinement_min_y", "Refinement minimum Y coordinate, no refinement at y < this value (m) except induced refinement.", -LARGE_REAL);
+   RP::add("AMR.refinement_min_z", "Refinement minimum Z coordinate, no refinement at z < this value (m) except induced refinement.", -LARGE_REAL);
+   RP::add("AMR.refinement_max_x", "Refinement maximum X coordinate, no refinement at x > this value (m) except induced refinement.", LARGE_REAL);
+   RP::add("AMR.refinement_max_y", "Refinement maximum Y coordinate, no refinement at y > this value (m) except induced refinement.", LARGE_REAL);
+   RP::add("AMR.refinement_max_z", "Refinement maximum Z coordinate, no refinement at z > this value (m) except induced refinement.", LARGE_REAL);
    RP::add("AMR.alpha1_drho_weight","Multiplier for delta rho in alpha calculation", 1.0);
    RP::add("AMR.alpha1_du_weight","Multiplier for delta U in alpha calculation", 1.0);
    RP::add("AMR.alpha1_dpsq_weight","Multiplier for delta p squared in alpha calculation", 1.0);
@@ -545,7 +557,6 @@ bool P::addParameters() {
    RP::addComposing("AMR.box_center_z", "z coordinate of the center of the box that is refined");
    RP::addComposing("AMR.box_max_level", "max refinement level of the box that is refined");
    RP::add("AMR.transShortPencils", "if true, use one-cell pencils", false);
-   RP::add("AMR.transSplitPencilsOnlyForFace", "if true, only split AMR pencils for face neighour cell requirements", false);
    RP::addComposing("AMR.filterpasses", string("AMR filter passes for each individual refinement level"));
 
    RP::add("fieldtracing.fieldLineTracer", "Field line tracing method to use for coupling ionosphere and magnetosphere (options are: Euler, BS)", std::string("Euler"));
@@ -684,6 +695,22 @@ void Parameters::getParameters() {
       }
    }
 
+   bool includefSaved = false;
+   for(uint i=0; i<maxSize; i++) {
+      if(P::systemWriteDistributionWriteStride[i] != 0 ||
+         P::systemWriteDistributionWriteXlineStride[i] > 0 ||
+         P::systemWriteDistributionWriteYlineStride[i] > 0 ||
+         P::systemWriteDistributionWriteZlineStride[i] > 0) {
+         includefSaved = true;
+      }
+   }
+   for(uint i=0; i<P::systemWriteDistributionWriteShellRadius.size(); i++) {
+      if(P::systemWriteDistributionWriteShellRadius[i] > 0) {
+         includefSaved = true;
+      }
+   }
+
+
    vector<string> mpiioKeys, mpiioValues;
    RP::get("io.system_write_mpiio_hint_key", mpiioKeys);
    RP::get("io.system_write_mpiio_hint_value", mpiioValues);
@@ -751,7 +778,7 @@ void Parameters::getParameters() {
         !(RP::isSet("restart.overrideReadFsGridDecompositionX")&&RP::isSet("restart.overrideReadFsGridDecompositionY")&&RP::isSet("restart.overrideReadFsGridDecompositionZ")) ) {
       cerr << "ERROR all of restart.overrideReadFsGridDecompositionX,Y,Z should be defined." << endl;
       MPI_Abort(MPI_COMM_WORLD, 1);
-   }   
+   }
    FsGridTools::Task_t temp_task_t;
    RP::get("restart.overrideReadFsGridDecompositionX", temp_task_t);
    P::overrideReadFsGridDecomposition[0] = temp_task_t;
@@ -827,6 +854,12 @@ void Parameters::getParameters() {
    RP::get("AMR.refine_cadence",P::refineCadence);
    RP::get("AMR.refine_after",P::refineAfter);
    RP::get("AMR.refine_radius",P::refineRadius);
+   RP::get("AMR.refinement_min_x", P::refinementMinX);
+   RP::get("AMR.refinement_min_y", P::refinementMinY);
+   RP::get("AMR.refinement_min_z", P::refinementMinZ);
+   RP::get("AMR.refinement_max_x", P::refinementMaxX);
+   RP::get("AMR.refinement_max_y", P::refinementMaxY);
+   RP::get("AMR.refinement_max_z", P::refinementMaxZ);
    RP::get("AMR.alpha1_drho_weight", P::alphaDRhoWeight);
    RP::get("AMR.alpha1_du_weight", P::alphaDUWeight);
    RP::get("AMR.alpha1_dpsq_weight", P::alphaDPSqWeight);
@@ -841,9 +874,6 @@ void Parameters::getParameters() {
    RP::get("AMR.box_center_y", P::amrBoxCenterY);
    RP::get("AMR.box_center_z", P::amrBoxCenterZ);
    RP::get("AMR.transShortPencils", P::amrTransShortPencils);
-   RP::get("AMR.transSplitPencilsOnlyForFace", P::amrTransSplitPencilsOnlyForFace);
-
-   /*Read Blur Passes per Refinement Level*/
    RP::get("AMR.filterpasses", P::blurPassString);
 
    // We need the correct number of parameters for the AMR boxes
@@ -987,7 +1017,7 @@ void Parameters::getParameters() {
         !(RP::isSet("fieldsolver.manualFsGridDecompositionX")&&RP::isSet("fieldsolver.manualFsGridDecompositionY")&&RP::isSet("fieldsolver.manualFsGridDecompositionZ")) ) {
       cerr << "ERROR all of fieldsolver.manualFsGridDecompositionX,Y,Z should be defined." << endl;
       MPI_Abort(MPI_COMM_WORLD, 1);
-   }   
+   }
    RP::get("fieldsolver.manualFsGridDecompositionX", temp_task_t);
    P::manualFsGridDecomposition[0] = temp_task_t;
    RP::get("fieldsolver.manualFsGridDecompositionY", temp_task_t);
@@ -995,19 +1025,39 @@ void Parameters::getParameters() {
    RP::get("fieldsolver.manualFsGridDecompositionZ", temp_task_t);
    P::manualFsGridDecomposition[2] = temp_task_t;
 
-   
+
 
    // Get Vlasov solver parameters
    RP::get("vlasovsolver.maxSlAccelerationRotation", P::maxSlAccelerationRotation);
    RP::get("vlasovsolver.maxSlAccelerationSubcycles", P::maxSlAccelerationSubcycles);
    RP::get("vlasovsolver.maxCFL", P::vlasovSolverMaxCFL);
    RP::get("vlasovsolver.minCFL", P::vlasovSolverMinCFL);
-   RP::get("vlasovsolver.LocalTranslate",P::vlasovSolverLocalTranslate);
+   RP::get("vlasovsolver.GhostTranslate",P::vlasovSolverGhostTranslate);
+   RP::get("vlasovsolver.GhostTranslateExtent",P::vlasovSolverGhostTranslateExtent);
    RP::get("vlasovsolver.accelerateMaxwellianBoundaries",  P::vlasovAccelerateMaxwellianBoundaries);
-   if ((myRank == MASTER_RANK)&&(P::vlasovSolverLocalTranslate==true)) {
-      logFile<<"Performing all spatial translation locally using ghost cell information"<<endl;
+   if (P::vlasovSolverGhostTranslate==true) {
+      if (myRank == MASTER_RANK) {
+         logFile<<"Performing spatial translation using ghost cell information with coalesced MPI updates."<<endl;
+      }
+      if (P::vlasovSolverGhostTranslateExtent == 0) {
+         P::vlasovSolverGhostTranslateExtent = VLASOV_STENCIL_WIDTH+1;
+      } else {
+         if (P::vlasovSolverGhostTranslateExtent == VLASOV_STENCIL_WIDTH+1) {
+            if (myRank == MASTER_RANK) {
+               logFile<<"Ghost translating full stencil of size "<<P::vlasovSolverGhostTranslateExtent<<" around local domain."<<endl;
+            }
+         } else if (P::vlasovSolverGhostTranslateExtent > VLASOV_STENCIL_WIDTH+1) {
+            P::vlasovSolverGhostTranslateExtent = VLASOV_STENCIL_WIDTH+1;
+            if (myRank == MASTER_RANK) {
+               logFile<<"Capping ghost translation stencil size to VLASOV_STENCIL_WIDTH+1 around local domain."<<endl;
+            }
+         } else {
+            if (myRank == MASTER_RANK) {
+               logFile<<"Ghost translating reduced stencil of size "<<P::vlasovSolverGhostTranslateExtent<<" around local domain."<<endl;
+            }
+         }
+      }
    }
-
    // Get load balance parameters
    RP::get("loadBalance.algorithm", P::loadBalanceAlgorithm);
    loadBalanceOptions["IMBALANCE_TOL"] = "";
@@ -1032,6 +1082,11 @@ void Parameters::getParameters() {
    // Get output variable parameters
    RP::get("variables.output", P::outputVariableList);
    RP::get("variables.diagnostic", P::diagnosticVariableList);
+
+   // Insert vg_f_saved to the list if necessary
+   if(includefSaved) {
+      P::outputVariableList.push_back("vg_f_saved");
+   }
 
    // Filter duplicate variable names
    set<string> dummy(P::outputVariableList.begin(), P::outputVariableList.end());
@@ -1060,7 +1115,7 @@ void Parameters::getParameters() {
    RP::get("fieldtracing.fieldLineTracer", tracerString);
    RP::get("fieldtracing.tracer_max_allowed_error", FieldTracing::fieldTracingParameters.max_allowed_error);
    RP::get("fieldtracing.tracer_max_attempts", FieldTracing::fieldTracingParameters.max_field_tracer_attempts);
-   RP::get("fieldtracing.tracer_min_dx", FieldTracing::fieldTracingParameters.min_tracer_dx);
+   RP::get("fieldtracing.tracer_min_dx", FieldTracing::fieldTracingParameters.min_tracer_dx_full_box);
    RP::get("fieldtracing.fullbox_max_incomplete_cells", FieldTracing::fieldTracingParameters.fullbox_max_incomplete_cells);
    RP::get("fieldtracing.fluxrope_max_incomplete_cells", FieldTracing::fieldTracingParameters.fluxrope_max_incomplete_cells);
    RP::get("fieldtracing.fullbox_and_fluxrope_max_absolute_distance_to_trace", FieldTracing::fieldTracingParameters.fullbox_and_fluxrope_max_distance);

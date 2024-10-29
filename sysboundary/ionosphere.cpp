@@ -3169,8 +3169,6 @@ namespace SBC {
       const uint popID,
       const bool calculate_V_moments
    ) {
-      phiprof::Timer timer {"vlasovBoundaryCondition (Ionosphere)"};
-
       // TODO Make this a more elegant solution
       // Now it's hacky as the counter is incremented in vlasiator.cpp
       if(globalflags::ionosphereJustSolved) { // else we don't update this boundary

@@ -232,12 +232,9 @@ void cpu_accelerate_cell(SpatialCell* spatial_cell,
    // vmesh::VelocityBlockContainer<vmesh::LocalID>& blockContainer = spatial_cell->get_velocity_blocks(popID);
 
    // compute transform, forward in time and backward in time
-   phiprof::Timer transformTimer {"compute-transform"};
-
    //compute the transform performed in this acceleration
    Transform<Real,3,Affine> fwd_transform= compute_acceleration_transformation(spatial_cell,popID,dt);
    Transform<Real,3,Affine> bwd_transform= fwd_transform.inverse();
-   transformTimer.stop();
 
    // if (spatial_cell->parameters[CellParams::CELLID] == 16)
    // #pragma omp critical(output)

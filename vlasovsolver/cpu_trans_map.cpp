@@ -87,19 +87,11 @@ CellID get_spatial_neighbor(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geom
    //get nbrID
    CellID nbrID = *nbrIDs.begin();
    if (nbrID == dccrg::error_cell ) {
-      //std::cerr << __FILE__ << ":" << __LINE__
-      //          << " No neighbor for cell " << cellID << " (indices [" << indices[0] << ", " << indices[1] << ", " << indices[2] << "]"
-      //          << " at offsets [" << spatial_di << ", " << spatial_dj << ", " << spatial_dk
-      //          << "]"
-      //          << std::endl;
-      //abort();
       return INVALID_CELLID;
    }
    
    // not existing cell or do not compute
    if( mpiGrid[nbrID]->sysBoundaryFlag == sysboundarytype::DO_NOT_COMPUTE) {
-      //std::cerr << "Cell " << cellID << " has no neighbour in offset [" << spatial_di << ", " << spatial_dj << ", " << spatial_dk << "] "
-      //   "because the cell would be DO_NOT_COMPUTE" << std::endl;
       return INVALID_CELLID;
    }
 
@@ -701,6 +693,17 @@ void update_remote_mapping_contribution(
             //2) is remote cell, 3) if the source cell in center was
             //translated
             ccell->neighbor_block_data[0] = pcell->get_data(popID);
+
+            #ifdef DDEBUG
+            for(unsigned int cell = 0; cell<VELOCITY_BLOCK_LENGTH * pcell->get_number_of_velocity_blocks(popID); ++cell) {
+               if(isnan( pcell->get_data(popID)[cell] ) || isinf(  pcell->get_data(popID)[cell])) {
+                  fprintf(stderr,"NaN sent at cell %li, vel cell %i",receive_cells[c], cell);
+                  abort();
+               }
+            }
+            #endif
+
+
             ccell->neighbor_number_of_blocks[0] = pcell->get_number_of_velocity_blocks(popID);
             send_cells.push_back(p_ngbr);
          }
@@ -736,15 +739,14 @@ void update_remote_mapping_contribution(
       if(direction < 0) mpiGrid.update_copies_of_remote_neighbors(SHIFT_M_Z_NEIGHBORHOOD_ID);
       break;
    }
-   
-#pragma omp parallel
+
+   #pragma omp parallel
    {
       //reduce data: sum received data in the data array to 
       // the target grid in the temporary block container
       for (size_t c=0; c < receive_cells.size(); ++c) {
          SpatialCell* spatial_cell = mpiGrid[receive_cells[c]];
          Realf *blockData = spatial_cell->get_data(popID);
-          
 #pragma omp for 
          for(unsigned int cell = 0; cell<VELOCITY_BLOCK_LENGTH * spatial_cell->get_number_of_velocity_blocks(popID); ++cell) {
             blockData[cell] += receiveBuffers[c][cell];

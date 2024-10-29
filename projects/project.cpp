@@ -42,7 +42,6 @@
 #include "Larmor/Larmor.h"
 #include "Magnetosphere/Magnetosphere.h"
 #include "MultiPeak/MultiPeak.h"
-#include "VelocityBox/VelocityBox.h"
 #include "Riemann1/Riemann1.h"
 #include "Shock/Shock.h"
 #include "IPShock/IPShock.h"
@@ -118,7 +117,6 @@ namespace projects {
       projects::Larmor::addParameters();
       projects::Magnetosphere::addParameters();
       projects::MultiPeak::addParameters();
-      projects::VelocityBox::addParameters();
       projects::Riemann1::addParameters();
       projects::Shock::addParameters();
       projects::IPShock::addParameters();
@@ -504,6 +502,7 @@ namespace projects {
      Base class function uses AMR box half width parameters
     */
    bool Project::refineSpatialCells( dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid ) const {
+      phiprof::Timer refineSCTimer {"Project: refine spatial cells"};
       int myRank;
       MPI_Comm_rank(MPI_COMM_WORLD,&myRank);
       
@@ -517,22 +516,27 @@ namespace projects {
          int refineCount = 0;
          for (int n = 0; n < P::amrBoxNumber; n++) {
             if (level < P::amrBoxMaxLevel[n]) {
-               for (int i = 0; i < pow(2, level+1) * P::amrBoxHalfWidthX[n]; ++i) {
-                  for (int j = 0; j < pow(2, level+1) * P::amrBoxHalfWidthY[n]; ++j) {
-                     for (int k = 0; k < pow(2, level+1) * P::amrBoxHalfWidthZ[n]; ++k) {
+               const int maxloop = pow(2, level+1);
+               #pragma omp parallel for schedule(guided) collapse(3)
+               for (int i = 0; i < maxloop * (int)P::amrBoxHalfWidthX[n]; ++i) {
+                  for (int j = 0; j < maxloop * (int)P::amrBoxHalfWidthY[n]; ++j) {
+                     for (int k = 0; k < maxloop * (int)P::amrBoxHalfWidthZ[n]; ++k) {
                      
                         std::array<double,3> xyz;
                         xyz[0] = P::amrBoxCenterX[n] + (0.5 + i - pow(2, level)*P::amrBoxHalfWidthX[n]) * P::dx_ini / pow(2, level);
                         xyz[1] = P::amrBoxCenterY[n] + (0.5 + j - pow(2, level)*P::amrBoxHalfWidthY[n]) * P::dy_ini / pow(2, level);
                         xyz[2] = P::amrBoxCenterZ[n] + (0.5 + k - pow(2, level)*P::amrBoxHalfWidthZ[n]) * P::dz_ini / pow(2, level);
 
-                        if (mpiGrid.refine_completely_at(xyz)) {
-                           refineCount++;
-                           #ifndef NDEBUG
-                           CellID myCell = mpiGrid.get_existing_cell(xyz);
-                           std::cout << "Rank " << myRank << " is refining cell " << myCell << std::endl;
-                           #endif
-                        } // if
+                        #pragma omp critical
+                        {
+                           if (mpiGrid.refine_completely_at(xyz)) {
+                              refineCount++;
+                              #ifndef NDEBUG
+                              CellID myCell = mpiGrid.get_existing_cell(xyz);
+                              std::cout << "Rank " << myRank << " is refining cell " << myCell << std::endl;
+                              #endif
+                           } // if
+                        }
                      } // box z
                   } // box y
                } // box x
@@ -541,7 +545,7 @@ namespace projects {
          int totalRefineCount;
          MPI_Allreduce(&refineCount, &totalRefineCount, 1, MPI_INT, MPI_SUM, MPI_COMM_WORLD);
          if(totalRefineCount > 0) {
-            std::vector<CellID> refinedCells = mpiGrid.stop_refining(true);
+            std::vector<CellID> refinedCells = mpiGrid.stop_refining();
             
             #ifndef NDEBUG
             if(refinedCells.size() > 0) {
@@ -553,7 +557,8 @@ namespace projects {
             }
             #endif
             
-            mpiGrid.balance_load();
+            // Don't do LB, as this function is called only before v-spaces have been created
+            // mpiGrid.balance_load();
          }
          if(myRank == MASTER_RANK) {
             std::cout << "Finished level of refinement " << level+1 << endl;
@@ -581,11 +586,12 @@ namespace projects {
          return refines;
       }
 
-      std::vector<CellID> cells {getLocalCells()};
+      const std::vector<CellID> cells {getLocalCells()};
       Real r_max2 {pow(P::refineRadius, 2)};
 
-      //#pragma omp parallel for
-      for (CellID id : cells) {
+      #pragma omp parallel for
+      for (uint cid = 0; cid < cells.size(); ++cid) {
+         CellID id = cells[cid];
          std::array<double,3> xyz {mpiGrid.get_center(id)};
          SpatialCell* cell {mpiGrid[id]};
          int refLevel {mpiGrid.get_refinement_level(id)};
@@ -593,22 +599,66 @@ namespace projects {
 
          if (!canRefine(mpiGrid[id])) {
             // Skip refining, touching boundaries during runtime breaks everything
-            mpiGrid.dont_refine(id);
-            mpiGrid.dont_unrefine(id);
+            #pragma omp critical
+            {
+               mpiGrid.dont_refine(id);
+               mpiGrid.dont_unrefine(id);
+            }
          } else {
-            // Cells too far from the ionosphere should be unrefined
+            // Evaluate possible refinement or unrefinement for this cell
+
+            // Cells too far from the ionosphere should be unrefined but
+            // induced refinement still possible just beyond this r_max2 limit.
             bool shouldRefine {(r2 < r_max2) && ((P::useAlpha1 ? cell->parameters[CellParams::AMR_ALPHA1] > P::alpha1RefineThreshold : false) || (P::useAlpha2 ? cell->parameters[CellParams::AMR_ALPHA2] > P::alpha2RefineThreshold : false))};
             bool shouldUnrefine {(r2 > r_max2) || ((P::useAlpha1 ? cell->parameters[CellParams::AMR_ALPHA1] < P::alpha1CoarsenThreshold : true) && (P::useAlpha2 ? cell->parameters[CellParams::AMR_ALPHA2] < P::alpha2CoarsenThreshold : true))};
+
+            if(shouldRefine
+               // If this cell is planned to be refined, but is outside the allowed refinement region, cancel that refinement.
+               // Induced refinement still possible just beyond that limit.
+              && ((xyz[0] < P::refinementMinX) || (xyz[0] > P::refinementMaxX)
+               || (xyz[1] < P::refinementMinY) || (xyz[1] > P::refinementMaxY)
+               || (xyz[2] < P::refinementMinZ) || (xyz[2] > P::refinementMaxZ))) {
+               shouldRefine = false;
+            }
+            if(!shouldUnrefine
+               // If this cell is planned to remain at the current refinement level, but is outside the allowed refinement region,
+               // attempt to unrefine it instead. (If it is already at the lowest refinement level, DCCRG should not go belly-up.)
+               // Induced refinement still possible just beyond that limit.
+              && ((xyz[0] < P::refinementMinX) || (xyz[0] > P::refinementMaxX)
+               || (xyz[1] < P::refinementMinY) || (xyz[1] > P::refinementMaxY)
+               || (xyz[2] < P::refinementMinZ) || (xyz[2] > P::refinementMaxZ))) {
+               shouldUnrefine = true;
+            }
 
             // Finally, check neighbors
             int refined_neighbors {0};
             int coarser_neighbors {0};
             for (const auto& [neighbor, dir] : mpiGrid.get_face_neighbors_of(id)) {
+               // Evaluate all face neighbors of the current cell
                std::array<double,3> neighborXyz {mpiGrid.get_center(neighbor)};
                Real neighborR2 {pow(neighborXyz[0], 2) + pow(neighborXyz[1], 2) + pow(neighborXyz[2], 2)};
                const int neighborRef = mpiGrid.get_refinement_level(neighbor);
+               // Induced refinement still possible just beyond the r_max2 limit.
                bool shouldRefineNeighbor {(neighborR2 < r_max2) && ((P::useAlpha1 ? mpiGrid[neighbor]->parameters[CellParams::AMR_ALPHA1] > P::alpha1RefineThreshold : false) || (P::useAlpha2 ? mpiGrid[neighbor]->parameters[CellParams::AMR_ALPHA2] > P::alpha2RefineThreshold : false))};
+               if(shouldRefineNeighbor &&
+                  // If the neighbor is planned to be refined, but is outside the allowed refinement region, cancel that refinement.
+                  // Induced refinement still possible just beyond that limit.
+                    ((neighborXyz[0] < P::refinementMinX) || (neighborXyz[0] > P::refinementMaxX)
+                  || (neighborXyz[1] < P::refinementMinY) || (neighborXyz[1] > P::refinementMaxY)
+                  || (neighborXyz[2] < P::refinementMinZ) || (neighborXyz[2] > P::refinementMaxZ))) {
+                  shouldRefineNeighbor = false;
+               }
+               // Induced refinement still possible just beyond the r_max2 limit.
                bool shouldUnrefineNeighbor {(neighborR2 > r_max2) || ((P::useAlpha1 ? mpiGrid[neighbor]->parameters[CellParams::AMR_ALPHA1] < P::alpha1CoarsenThreshold : true) && (P::useAlpha2 ? mpiGrid[neighbor]->parameters[CellParams::AMR_ALPHA2] < P::alpha2CoarsenThreshold : true))};
+               if(!shouldUnrefineNeighbor &&
+                  // If the neighbor is planned to remain at the current refinement level, but is outside the allowed refinement region, 
+                  // consider it as unrefining instead for purposes of evaluating the neighbors of this cell.
+                  // Induced refinement still possible just beyond that limit.
+                    ((neighborXyz[0] < P::refinementMinX) || (neighborXyz[0] > P::refinementMaxX)
+                  || (neighborXyz[1] < P::refinementMinY) || (neighborXyz[1] > P::refinementMaxY)
+                  || (neighborXyz[2] < P::refinementMinZ) || (neighborXyz[2] > P::refinementMaxZ))) {
+                  shouldUnrefineNeighbor = true;
+               }
                if (neighborRef > refLevel && !shouldUnrefineNeighbor) {
                   ++refined_neighbors;
                } else if (neighborRef < refLevel && !shouldRefineNeighbor) {
@@ -621,17 +671,20 @@ namespace projects {
                }
             }
 
-            if ((shouldRefine || refined_neighbors > 12) && refLevel < P::amrMaxAllowedSpatialRefLevel) {
-               // Refine a cell if a majority of its neighbors are refined or about to be
-               // Increment count of refined cells only if we're actually refining
-               refines += mpiGrid.refine_completely(id) && refLevel < P::amrMaxSpatialRefLevel;
-            } else if (refLevel > 0 && shouldUnrefine && coarser_neighbors > 0) {
-               // Unrefine a cell only if any of its neighbors is unrefined or about to be
-               // refLevel check prevents dont_refine() being set
-               mpiGrid.unrefine_completely(id);
-            } else {
-               // Ensure no cells above both unrefine thresholds are unrefined
-               mpiGrid.dont_unrefine(id);
+            #pragma omp critical
+            {
+               if ((shouldRefine || refined_neighbors > 12) && refLevel < P::amrMaxAllowedSpatialRefLevel) {
+                  // Refine a cell if a majority of its neighbors are refined or about to be
+                  // Increment count of refined cells only if we're actually refining
+                  refines += mpiGrid.refine_completely(id) && refLevel < P::amrMaxSpatialRefLevel;
+               } else if (refLevel > 0 && shouldUnrefine && coarser_neighbors > 0) {
+                  // Unrefine a cell only if any of its neighbors is unrefined or about to be
+                  // refLevel check prevents dont_refine() being set
+                  mpiGrid.unrefine_completely(id);
+               } else {
+                  // Ensure no cells above both unrefine thresholds are unrefined
+                  mpiGrid.dont_unrefine(id);
+               }
             }
          }
       }
@@ -653,7 +706,7 @@ namespace projects {
       int myRank;       
       MPI_Comm_rank(MPI_COMM_WORLD,&myRank);
 
-      auto cells = getLocalCells();
+      const vector<CellID>& cells = getLocalCells();
       std::map<CellID, SpatialCell> cellsMap;
       for (CellID id : cells) {
          if (mpiGrid[id]->parameters[CellParams::RECENTLY_REFINED]) {
@@ -665,21 +718,21 @@ namespace projects {
          CellID id = cellPair.first;
          // To preserve the mean, we must only consider refined cells
          int refLevel = mpiGrid.get_refinement_level(id);
-         std::vector<CellID> refinedNeighbours;
-         for (auto& neighbour : *mpiGrid.get_neighbors_of(id, NEAREST_NEIGHBORHOOD_ID)) {
-            if (mpiGrid[neighbour.first]->parameters[CellParams::RECENTLY_REFINED] && mpiGrid.get_refinement_level(neighbour.first) == refLevel) {
-               refinedNeighbours.push_back(neighbour.first);
+         std::vector<CellID> refinedNeighbors;
+         for (auto& neighbor : *mpiGrid.get_neighbors_of(id, NEAREST_NEIGHBORHOOD_ID)) {
+            if (mpiGrid[neighbor.first]->parameters[CellParams::RECENTLY_REFINED] && mpiGrid.get_refinement_level(neighbor.first) == refLevel) {
+               refinedNeighbors.push_back(neighbor.first);
             }
          }
 
-         if (refinedNeighbours.size() == 7) {
-            continue;   // Simple heuristic, in these cases all neighbours are from the same parent cell, ergo are identical
+         if (refinedNeighbors.size() == 7) {
+            continue;   // Simple heuristic, in these cases all neighbors are from the same parent cell, ergo are identical
          }
 
-         // In boxcar filter, we take the average of each of the neighbours and the cell itself. For each missing neighbour, add the cell one more time
-         Real fluffiness = (Real) refinedNeighbours.size() / 27.0;
+         // In boxcar filter, we take the average of each of the neighbors and the cell itself. For each missing neighbour, add the cell one more time
+         Real fluffiness = (Real) refinedNeighbors.size() / 27.0;
          for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
-            SBC::averageCellData(mpiGrid, refinedNeighbours, &cellPair.second, popID, fluffiness);
+            SBC::averageCellData(mpiGrid, refinedNeighbors, &cellPair.second, popID, fluffiness);
          }
 
          calculateCellMoments(&cellPair.second, true, false);
@@ -741,10 +794,7 @@ Project* createProject() {
    }
    if(Parameters::projectName == "MultiPeak") {
       rvalue = new projects::MultiPeak;
-   } 
-   if(Parameters::projectName == "VelocityBox") {
-      rvalue = new projects::VelocityBox;
-   } 
+   }
    if(Parameters::projectName == "Riemann1") {
       rvalue = new projects::Riemann1;
    }

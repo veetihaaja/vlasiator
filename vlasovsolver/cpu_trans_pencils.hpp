@@ -25,7 +25,7 @@
 #include <vector>
 #include "vec.h"
 #include "../common.h"
-#include "../spatial_cell.hpp"
+#include "../spatial_cell_wrapper.hpp"
 
 struct setOfPencils {
 
@@ -218,8 +218,17 @@ void prepareSeedIdsAndPencils(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Ge
 extern std::array<setOfPencils,3> DimensionPencils;
 extern std::array<std::unordered_set<CellID>,3> DimensionTargetCells;
 
-void flagSpatialCellsForAmrCommunication(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
-                                         const std::vector<CellID>& localPropagatedCells);
+// Ghost translation cell lists (no interim comms)
+void prepareGhostTranslationCellLists(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
+                                      const std::vector<CellID>& localPropagatedCells);
+
+// defined in cpu_trans_map_amr.cpp
+extern std::unordered_set<CellID> ghostTranslate_sources_x;
+extern std::unordered_set<CellID> ghostTranslate_sources_y;
+extern std::unordered_set<CellID> ghostTranslate_sources_z;
+extern std::unordered_set<CellID> ghostTranslate_active_x;
+extern std::unordered_set<CellID> ghostTranslate_active_y;
+extern std::unordered_set<CellID> ghostTranslate_active_z;
 
 
 void prepareLocalTranslationCellLists(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
