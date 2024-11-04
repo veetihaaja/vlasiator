@@ -454,7 +454,7 @@ void calculateSpatialTranslation(
          if((P::fractionalTimestep % mod) == 0){
             
             std::cout << "rank " << myRank << ": " << tc_propagated_cells[tc].size() << " cells: calculateSpatialTranslation tc " << tc << " by dt " << P::timeclassDt[tc] <<"\n";
-              if (P::vlasovSolverLocalTranslate ) { //&& (P::amrMaxSpatialRefLevel > 0) ) {
+              if (P::vlasovSolverGhostTranslate ) { //&& (P::amrMaxSpatialRefLevel > 0) ) {
                // Local translation without interim communication
                // Not yet implemented for non-AMR solver
                calculateSpatialGhostTranslation(
