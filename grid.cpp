@@ -833,7 +833,7 @@ bool adjustVelocityBlocks(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& m
  */
 void shrink_to_fit_grid_data(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid) {
    const std::vector<CellID>& cells = getLocalCells();
-   if (P::vlasovSolverLocalTranslate) {
+   if (P::vlasovSolverGhostTranslate) {
       const std::vector<CellID> remote_cells = mpiGrid.get_remote_cells_on_process_boundary(VLASOV_SOLVER_GHOST_NEIGHBORHOOD_ID);
       #pragma omp parallel for
       for(size_t i=0; i<cells.size() + remote_cells.size(); ++i) {
@@ -1199,8 +1199,8 @@ void initializeStencils(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
          neighborhood.push_back({{d, 0, 0}});
       }
    }
-   if (!mpiGrid.add_neighborhood(VLASOV_SOLVER_EXTENDED_X_NEIGHBORHOOD_ID, neighborhood)) {
-      std::cerr << "Failed to add neighborhood VLASOV_SOLVER_EXTENDED_X_NEIGHBORHOOD_ID \n";
+   if (!mpiGrid.add_neighborhood(VLASOV_SOLVER_X_GHOST_NEIGHBORHOOD_ID, neighborhood)) {
+      std::cerr << "Failed to add neighborhood VLASOV_SOLVER_X_GHOST_NEIGHBORHOOD_ID \n";
       abort();
    }
 
@@ -1210,8 +1210,8 @@ void initializeStencils(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
          neighborhood.push_back({{0, d, 0}});
       }
    }
-   if (!mpiGrid.add_neighborhood(VLASOV_SOLVER_EXTENDED_Y_NEIGHBORHOOD_ID, neighborhood)) { 
-      std::cerr << "Failed to add neighborhood VLASOV_SOLVER_EXTENDED_Y_NEIGHBORHOOD_ID \n";
+   if (!mpiGrid.add_neighborhood(VLASOV_SOLVER_Y_GHOST_NEIGHBORHOOD_ID, neighborhood)) { 
+      std::cerr << "Failed to add neighborhood VLASOV_SOLVER_Y_GHOST_NEIGHBORHOOD_ID \n";
       abort();
    }
 
@@ -1221,8 +1221,8 @@ void initializeStencils(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
          neighborhood.push_back({{0, 0, d}});
       }
    }
-   if (!mpiGrid.add_neighborhood(VLASOV_SOLVER_EXTENDED_Z_NEIGHBORHOOD_ID, neighborhood)) {
-      std::cerr << "Failed to add neighborhood VLASOV_SOLVER_EXTENDED_Z_NEIGHBORHOOD_ID \n";
+   if (!mpiGrid.add_neighborhood(VLASOV_SOLVER_Z_GHOST_NEIGHBORHOOD_ID, neighborhood)) {
+      std::cerr << "Failed to add neighborhood VLASOV_SOLVER_Z_GHOST_NEIGHBORHOOD_ID \n";
       abort();
    }
 
