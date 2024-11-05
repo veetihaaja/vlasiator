@@ -311,10 +311,10 @@ bool trans_map_1d_amr(const dccrg::Dccrg<spatial_cell::SpatialCell,dccrg::Cartes
          }
          
          // for (auto tc : (*cell)->requested_timeclass_ghosts){
-         if ((*cell)->requested_timeclass_ghosts.count(timeclass) > 0){// && (*cell)->get_tc() > timeclass){
-            std::cout << "\tChecked ghost data in cell " << (*cell)->parameters[CellParams::CELLID] << "\n";
+         if ((mpiGrid[cellid])->requested_timeclass_ghosts.count(timeclass) > 0){// && (*cell)->get_tc() > timeclass){
+            std::cout << "\tChecked ghost data in cell " << (mpiGrid[cellid])->parameters[CellParams::CELLID] << "\n";
 
-            const vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& cvmeshg = (*cell)->get_velocity_mesh_ghost(popID, timeclass);
+            const vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>& cvmeshg = (mpiGrid[cellid])->get_velocity_mesh_ghost(popID, timeclass);
             for (vmesh::LocalID block_i=0; block_i< cvmeshg.size(); ++block_i) {
                thread_unionOfBlocksSet.insert(cvmeshg.getGlobalID(block_i));
             }

@@ -162,6 +162,35 @@ int getNeighborhood(const uint dimension, const uint stencil) {
 /**
     Helper function for locating unique, valid, and translated cells in a given direction
 */
+// void findNeighborhoodCells(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
+//                            const CellID startingCellID,
+//                            uint dimension,
+//                            uint searchLength,
+//                            std::vector<CellID>& foundCells) {
+
+//    int neighborhood = getNeighborhood(dimension,searchLength);
+//    foundCells.clear();
+
+//    SpatialCell *ccell = mpiGrid[startingCellID];
+//    if (!ccell) {
+//       return;
+//    }
+
+//    const auto* NbrPairs = mpiGrid.get_neighbors_of(startingCellID, neighborhood);
+//    // Verified 9th July 2024: current get_neighbors_of() returns unique cells, only once per cell, in correct order.
+//    for (const auto& nbrPair : *NbrPairs) {
+//       SpatialCell *ncell = mpiGrid[nbrPair.first];
+//       if (!ncell) {
+//          continue;
+//       }
+//       // Is the cell translated?
+//       if (!do_translate_cell(ncell)) {
+//          continue;
+//       }
+//       foundCells.push_back(nbrPair.first);
+//    }
+// }
+
 void findNeighborhoodCells(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
                            const CellID startingCellID,
                            uint dimension,
@@ -172,23 +201,90 @@ void findNeighborhoodCells(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geome
    foundCells.clear();
 
    SpatialCell *ccell = mpiGrid[startingCellID];
-   if (!ccell) {
-      return;
-   }
+   if (!ccell) return;
+
+   std::set< int > distancesplus;
+   std::set< int > distancesminus;
+   std::unordered_set<CellID> foundNeighbors;
+   std::unordered_set<CellID> foundSet;
+   bool foundAtDistance = false;
 
    const auto* NbrPairs = mpiGrid.get_neighbors_of(startingCellID, neighborhood);
-   // Verified 9th July 2024: current get_neighbors_of() returns unique cells, only once per cell, in correct order.
+
+   // Create list of unique distances
+   // Check for already found cells is required as one cell can be listed at several different distances
    for (const auto& nbrPair : *NbrPairs) {
-      SpatialCell *ncell = mpiGrid[nbrPair.first];
-      if (!ncell) {
-         continue;
+      if (nbrPair.first == NULL)
+      {
+         std::cerr << __FILE__ << ":" << __LINE__ << "Null nbrPair.first\n";
       }
-      // Is the cell translated?
-      if (!do_translate_cell(ncell)) {
-         continue;
+      bool null_seconds = false;
+      // std::cerr  << "nbrpair.second " << nbrPair.second[0] << "\n";
+      if(&nbrPair.second == NULL)
+      {
+         // if (asecond == NULL){
+            null_seconds = true;
+            std::stringstream ss; ss << __FILE__ << ":" << __LINE__ << " Null ptr in nbrPair.second for StartingCellID " << startingCellID << " \n";
+            std::cerr << ss.str();
+            // break;
+         // }
       }
-      foundCells.push_back(nbrPair.first);
+      // if(null_seconds) continue;
+
+      if(nbrPair.second[dimension] > 0) {
+         if (foundNeighbors.find(nbrPair.first) == foundNeighbors.end()) {
+            distancesplus.insert(nbrPair.second[dimension]);
+            foundNeighbors.insert(nbrPair.first);
+         }
+      }
+      if(nbrPair.second[dimension] < 0) {
+         if (foundNeighbors.find(nbrPair.first) == foundNeighbors.end()) {
+            distancesminus.insert(-nbrPair.second[dimension]);
+            foundNeighbors.insert(nbrPair.first);
+         }
+      }
    }
+
+   int iSrc = searchLength-1;
+   // Iterate through positive distances starting from the smallest distance.
+   for (auto it = distancesplus.begin(); it != distancesplus.end(); ++it) {
+      if (iSrc < 0) break; // found enough elements
+      foundAtDistance = false; // reset
+      // Check all neighbors at distance *it
+      for (const auto& nbrPair : *NbrPairs) {
+         SpatialCell *ncell = mpiGrid[nbrPair.first];
+         if (!ncell) continue;
+         int distanceInRefinedCells = nbrPair.second[dimension];
+         if (distanceInRefinedCells == *it) {
+            foundSet.insert(nbrPair.first);
+            foundAtDistance = true;
+         }
+      } // end loop over neighbors
+      if (foundAtDistance) {
+         iSrc--; // Succesfully found neighbours
+      }
+   } // end loop over positive distances
+
+   iSrc = searchLength-1;
+   // Iterate through negtive distances starting from the smallest distance.
+   for (auto it = distancesminus.begin(); it != distancesminus.end(); ++it) {
+      if (iSrc < 0) break; // found enough elements
+      foundAtDistance = false; // reset
+      // Check all neighbors at distance *it
+      for (const auto& nbrPair : *NbrPairs) {
+         SpatialCell *ncell = mpiGrid[nbrPair.first];
+         if (!ncell) continue;
+         int distanceInRefinedCells = -nbrPair.second[dimension];
+         if (distanceInRefinedCells == *it) {
+            foundSet.insert(nbrPair.first);
+            foundAtDistance = true;
+         }
+      } // end loop over neighbors
+      if (foundAtDistance) {
+         iSrc--;
+      }
+   } // end loop over negative distances
+   foundCells.assign(foundSet.begin(), foundSet.end());
 }
 
 void prepareGhostTranslationCellLists(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
@@ -432,104 +528,104 @@ void prepareGhostTranslationCellLists(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_
 }
 
 
-/** 
-    Helper function for locating unique cells in a given direction
-*/
-void findNeighborhoodCells(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
-                           const CellID startingCellID,
-                           uint dimension,
-                           uint searchLength,
-                           std::vector<CellID>& foundCells) {
+// /** 
+//     Helper function for locating unique cells in a given direction
+// */
+// void findNeighborhoodCells(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
+//                            const CellID startingCellID,
+//                            uint dimension,
+//                            uint searchLength,
+//                            std::vector<CellID>& foundCells) {
 
-   int neighborhood = getNeighborhood(dimension,searchLength);
-   foundCells.clear();
+//    int neighborhood = getNeighborhood(dimension,searchLength);
+//    foundCells.clear();
 
-   SpatialCell *ccell = mpiGrid[startingCellID];
-   if (!ccell) return;
+//    SpatialCell *ccell = mpiGrid[startingCellID];
+//    if (!ccell) return;
 
-   std::set< int > distancesplus;
-   std::set< int > distancesminus;
-   std::unordered_set<CellID> foundNeighbors;
-   std::unordered_set<CellID> foundSet;
-   bool foundAtDistance = false;
+//    std::set< int > distancesplus;
+//    std::set< int > distancesminus;
+//    std::unordered_set<CellID> foundNeighbors;
+//    std::unordered_set<CellID> foundSet;
+//    bool foundAtDistance = false;
 
-   const auto* NbrPairs = mpiGrid.get_neighbors_of(startingCellID, neighborhood);
+//    const auto* NbrPairs = mpiGrid.get_neighbors_of(startingCellID, neighborhood);
 
-   // Create list of unique distances
-   // Check for already found cells is required as one cell can be listed at several different distances
-   for (const auto& nbrPair : *NbrPairs) {
-      if (nbrPair.first == NULL)
-      {
-         std::cerr << __FILE__ << ":" << __LINE__ << "Null nbrPair.first\n";
-      }
-      bool null_seconds = false;
-      // std::cerr  << "nbrpair.second " << nbrPair.second[0] << "\n";
-      if(&nbrPair.second == NULL)
-      {
-         // if (asecond == NULL){
-            null_seconds = true;
-            std::stringstream ss; ss << __FILE__ << ":" << __LINE__ << " Null ptr in nbrPair.second for StartingCellID " << startingCellID << " \n";
-            std::cerr << ss.str();
-            // break;
-         // }
-      }
-      // if(null_seconds) continue;
+//    // Create list of unique distances
+//    // Check for already found cells is required as one cell can be listed at several different distances
+//    for (const auto& nbrPair : *NbrPairs) {
+//       if (nbrPair.first == NULL)
+//       {
+//          std::cerr << __FILE__ << ":" << __LINE__ << "Null nbrPair.first\n";
+//       }
+//       bool null_seconds = false;
+//       // std::cerr  << "nbrpair.second " << nbrPair.second[0] << "\n";
+//       if(&nbrPair.second == NULL)
+//       {
+//          // if (asecond == NULL){
+//             null_seconds = true;
+//             std::stringstream ss; ss << __FILE__ << ":" << __LINE__ << " Null ptr in nbrPair.second for StartingCellID " << startingCellID << " \n";
+//             std::cerr << ss.str();
+//             // break;
+//          // }
+//       }
+//       // if(null_seconds) continue;
 
-      if(nbrPair.second[dimension] > 0) {
-         if (foundNeighbors.find(nbrPair.first) == foundNeighbors.end()) {
-            distancesplus.insert(nbrPair.second[dimension]);
-            foundNeighbors.insert(nbrPair.first);
-         }
-      }
-      if(nbrPair.second[dimension] < 0) {
-         if (foundNeighbors.find(nbrPair.first) == foundNeighbors.end()) {
-            distancesminus.insert(-nbrPair.second[dimension]);
-            foundNeighbors.insert(nbrPair.first);
-         }
-      }
-   }
+//       if(nbrPair.second[dimension] > 0) {
+//          if (foundNeighbors.find(nbrPair.first) == foundNeighbors.end()) {
+//             distancesplus.insert(nbrPair.second[dimension]);
+//             foundNeighbors.insert(nbrPair.first);
+//          }
+//       }
+//       if(nbrPair.second[dimension] < 0) {
+//          if (foundNeighbors.find(nbrPair.first) == foundNeighbors.end()) {
+//             distancesminus.insert(-nbrPair.second[dimension]);
+//             foundNeighbors.insert(nbrPair.first);
+//          }
+//       }
+//    }
 
-   int iSrc = searchLength-1;
-   // Iterate through positive distances starting from the smallest distance.
-   for (auto it = distancesplus.begin(); it != distancesplus.end(); ++it) {
-      if (iSrc < 0) break; // found enough elements
-      foundAtDistance = false; // reset
-      // Check all neighbors at distance *it
-      for (const auto& nbrPair : *NbrPairs) {
-         SpatialCell *ncell = mpiGrid[nbrPair.first];
-         if (!ncell) continue;
-         int distanceInRefinedCells = nbrPair.second[dimension];
-         if (distanceInRefinedCells == *it) {
-            foundSet.insert(nbrPair.first);
-            foundAtDistance = true;
-         }
-      } // end loop over neighbors
-      if (foundAtDistance) {
-         iSrc--; // Succesfully found neighbours
-      }
-   } // end loop over positive distances
+//    int iSrc = searchLength-1;
+//    // Iterate through positive distances starting from the smallest distance.
+//    for (auto it = distancesplus.begin(); it != distancesplus.end(); ++it) {
+//       if (iSrc < 0) break; // found enough elements
+//       foundAtDistance = false; // reset
+//       // Check all neighbors at distance *it
+//       for (const auto& nbrPair : *NbrPairs) {
+//          SpatialCell *ncell = mpiGrid[nbrPair.first];
+//          if (!ncell) continue;
+//          int distanceInRefinedCells = nbrPair.second[dimension];
+//          if (distanceInRefinedCells == *it) {
+//             foundSet.insert(nbrPair.first);
+//             foundAtDistance = true;
+//          }
+//       } // end loop over neighbors
+//       if (foundAtDistance) {
+//          iSrc--; // Succesfully found neighbours
+//       }
+//    } // end loop over positive distances
 
-   iSrc = searchLength-1;
-   // Iterate through negtive distances starting from the smallest distance.
-   for (auto it = distancesminus.begin(); it != distancesminus.end(); ++it) {
-      if (iSrc < 0) break; // found enough elements
-      foundAtDistance = false; // reset
-      // Check all neighbors at distance *it
-      for (const auto& nbrPair : *NbrPairs) {
-         SpatialCell *ncell = mpiGrid[nbrPair.first];
-         if (!ncell) continue;
-         int distanceInRefinedCells = -nbrPair.second[dimension];
-         if (distanceInRefinedCells == *it) {
-            foundSet.insert(nbrPair.first);
-            foundAtDistance = true;
-         }
-      } // end loop over neighbors
-      if (foundAtDistance) {
-         iSrc--;
-      }
-   } // end loop over negative distances
-   foundCells.assign(foundSet.begin(), foundSet.end());
-}
+//    iSrc = searchLength-1;
+//    // Iterate through negtive distances starting from the smallest distance.
+//    for (auto it = distancesminus.begin(); it != distancesminus.end(); ++it) {
+//       if (iSrc < 0) break; // found enough elements
+//       foundAtDistance = false; // reset
+//       // Check all neighbors at distance *it
+//       for (const auto& nbrPair : *NbrPairs) {
+//          SpatialCell *ncell = mpiGrid[nbrPair.first];
+//          if (!ncell) continue;
+//          int distanceInRefinedCells = -nbrPair.second[dimension];
+//          if (distanceInRefinedCells == *it) {
+//             foundSet.insert(nbrPair.first);
+//             foundAtDistance = true;
+//          }
+//       } // end loop over neighbors
+//       if (foundAtDistance) {
+//          iSrc--;
+//       }
+//    } // end loop over negative distances
+//    foundCells.assign(foundSet.begin(), foundSet.end());
+// }
 
 void prepareLocalTranslationCellLists(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
                                       const vector<CellID>& localCells) {

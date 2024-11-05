@@ -585,8 +585,8 @@ void calculateAcceleration(const uint popID,const uint globalMaxSubcycles,const 
    int timerId {phiprof::initializeTimer("cell-semilag-acc")};
 
    // Semi-Lagrangian acceleration for those cells which are subcycled
-   #pragma omp parallel for schedule(dynamic,1)
    std::cout << "Propagating (ACC) cells ";
+   #pragma omp parallel for schedule(dynamic,1)
    for (size_t c=0; c<propagatedCells.size(); ++c) {
       const CellID cellID = propagatedCells[c];
       std::cout << cellID << " ";
