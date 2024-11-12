@@ -607,8 +607,8 @@ void calculateAcceleration(const uint popID,const uint globalMaxSubcycles,const 
    calculateMoments_V(mpiGrid, propagatedCells, false);
    
    // Semi-Lagrangian acceleration for those cells which are subcycled
-   #pragma omp parallel for schedule(dynamic,1)
    std::cout << "Propagating (ACC) cells ";
+   #pragma omp parallel for schedule(dynamic,1)
    for (size_t c=0; c<propagatedCells.size(); ++c) {
       const CellID cellID = propagatedCells[c];
       std::cout << cellID << " ";
@@ -989,10 +989,12 @@ void interpolateMomentsForTimeclasses(
 
          if (P::tcVMomentPropagation == true) {
             if (SC->get_timeclass_turn_v()) { // clamping down values as they get updated
-               SC->parameters[cp_vx] = linearInterpolation(-0.25, 0.5*(SC->parameters[CellParams::VX_V_PREV]+SC->parameters[CellParams::VX_R_PREV]), 0.25, 0.5*(SC->parameters[CellParams::VX_V]+SC->parameters[CellParams::VX_R_PREV]), normModul);
-               SC->parameters[cp_vy] = linearInterpolation(-0.25, 0.5*(SC->parameters[CellParams::VY_V_PREV]+SC->parameters[CellParams::VY_R_PREV]), 0.25, 0.5*(SC->parameters[CellParams::VY_V]+SC->parameters[CellParams::VY_R_PREV]), normModul);
-               SC->parameters[cp_vz] = linearInterpolation(-0.25, 0.5*(SC->parameters[CellParams::VZ_V_PREV]+SC->parameters[CellParams::VZ_R_PREV]), 0.25, 0.5*(SC->parameters[CellParams::VZ_V]+SC->parameters[CellParams::VZ_R_PREV]), normModul);
-            }
+            
+               SC->parameters[cp_vx] = lagrangeInterpolation2order(-0.25, 0.5*(SC->parameters[CellParams::VX_V_PREV]+SC->parameters[CellParams::VX_R_PREV]), 0.25, 0.5*(SC->parameters[CellParams::VX_V]+SC->parameters[CellParams::VX_R_PREV]), 0.75, 0.5*(SC->parameters[CellParams::VX_V]+SC->parameters[CellParams::VX_R]), normModul);
+               SC->parameters[cp_vy] = lagrangeInterpolation2order(-0.25, 0.5*(SC->parameters[CellParams::VY_V_PREV]+SC->parameters[CellParams::VY_R_PREV]), 0.25, 0.5*(SC->parameters[CellParams::VY_V]+SC->parameters[CellParams::VY_R_PREV]), 0.75, 0.5*(SC->parameters[CellParams::VY_V]+SC->parameters[CellParams::VY_R]), normModul);
+               SC->parameters[cp_vz] = lagrangeInterpolation2order(-0.25, 0.5*(SC->parameters[CellParams::VZ_V_PREV]+SC->parameters[CellParams::VZ_R_PREV]), 0.25, 0.5*(SC->parameters[CellParams::VZ_V]+SC->parameters[CellParams::VZ_R_PREV]), 0.75, 0.5*(SC->parameters[CellParams::VZ_V]+SC->parameters[CellParams::VZ_R]), normModul);
+            
+            } else {
 
             Eigen::Transform<Real,3,Eigen::Affine> vUpdateMatrix = compute_acceleration_transformation(SC, 0, SC->parameters[CellParams::TIMECLASSDT]*(1.0/RTCpow));
             const Eigen::Matrix<Real,3,1> V(SC->parameters[cp_vx], SC->parameters[cp_vy], SC->parameters[cp_vz]);
@@ -1001,6 +1003,7 @@ void interpolateMomentsForTimeclasses(
             SC->parameters[cp_vx] = V_updated(0);
             SC->parameters[cp_vy] = V_updated(1);
             SC->parameters[cp_vz] = V_updated(2);
+            }
          }
 
          // temporary arrays for true moments.
