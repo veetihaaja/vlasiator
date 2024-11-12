@@ -6,7 +6,6 @@
 #include "../memoryallocation.h"
 #include "cpu_trans_map_amr.hpp"
 #include "cpu_trans_pencils.hpp"
-#include <sstream>
 
 using namespace std;
 using namespace spatial_cell;

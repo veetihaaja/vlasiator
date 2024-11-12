@@ -666,10 +666,10 @@ void update_remote_mapping_contribution(
          if(dir == ((int)dimension + 1) * direction) {
             p_ngbr = neighbor;
          }
-
          if(dir == -1 * ((int)dimension + 1) * direction) {
             m_ngbr = neighbor;
          }
+
       }
 
       //MPI_Barrier(MPI_COMM_WORLD);
@@ -719,7 +719,7 @@ void update_remote_mapping_contribution(
          
          receive_cells.push_back(local_cells[c]);
          receiveBuffers.push_back(mcell->neighbor_block_data[0]);
-      }
+      }    
    }
 
    // Do communication

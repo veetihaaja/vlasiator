@@ -350,6 +350,9 @@ void calculateSpatialTranslation(
    }
 
    // std::cout << "setting up tc cell vectors \n";
+   // Figure out which spatial cells are translated,
+   // result independent of particle species.
+   // If performing ghost translation, this is used for LB.
    for (size_t c=0; c<localCells.size(); ++c) {
       int cellTC = (int)mpiGrid[localCells[c]]->parameters[CellParams::TIMECLASS];
       
@@ -454,7 +457,7 @@ void calculateSpatialTranslation(
          if((P::fractionalTimestep % mod) == 0){
             
             std::cout << "rank " << myRank << ": " << tc_propagated_cells[tc].size() << " cells: calculateSpatialTranslation tc " << tc << " by dt " << P::timeclassDt[tc] <<"\n";
-              if (P::vlasovSolverGhostTranslate ) { //&& (P::amrMaxSpatialRefLevel > 0) ) {
+              if (P::vlasovSolverGhostTranslate && (P::amrMaxSpatialRefLevel > 0) ) {
                // Local translation without interim communication
                // Not yet implemented for non-AMR solver
                calculateSpatialGhostTranslation(

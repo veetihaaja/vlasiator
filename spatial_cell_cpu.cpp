@@ -37,9 +37,6 @@ namespace spatial_cell {
    uint64_t SpatialCell::mpi_transfer_type = 0;
    bool SpatialCell::mpiTransferAtSysBoundaries = false;
 
-   vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID> SpatialCell::null_vmesh = vmesh::VelocityMesh<vmesh::GlobalID,vmesh::LocalID>();
-
-
    SpatialCell::SpatialCell() {
       // Block list and cache always have room for all blocks
       this->sysBoundaryLayer=0; // Default value, layer not yet initialized

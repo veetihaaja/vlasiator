@@ -85,7 +85,6 @@ Real P::fieldSolverMaxCFL = NAN;
 Real P::fieldSolverMinCFL = NAN;
 uint P::fieldSolverSubcycles = 1;
 
-bool P::amrTransShortPencils = false; // TEMPORARY
 
 uint P::tstep = 0;
 uint P::tstep_min = 0;
@@ -460,7 +459,7 @@ bool P::addParameters() {
                         "ig_precipitation ig_deltaphi "+
                         "ig_inplanecurrent ig_b ig_e vg_drift vg_ionospherecoupling vg_connection vg_fluxrope fg_curvature "+
                         "vg_amr_drho vg_amr_du vg_amr_dpsq vg_amr_dbsq vg_amr_db vg_amr_alpha1 vg_amr_reflevel vg_amr_alpha2 "+
-                        "vg_gridcoordinates fg_gridcoordinates ");
+                        "vg_gridcoordinates fg_gridcoordinates vg_pressure_anisotropy vg_amr_vorticity");
 
    RP::addComposing(
        "variables_deprecated.output",

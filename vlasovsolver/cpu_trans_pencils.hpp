@@ -230,7 +230,6 @@ extern std::unordered_set<CellID> ghostTranslate_active_x;
 extern std::unordered_set<CellID> ghostTranslate_active_y;
 extern std::unordered_set<CellID> ghostTranslate_active_z;
 
-
 void prepareLocalTranslationCellLists(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
                                       const std::vector<CellID>& localCells);
 #endif
