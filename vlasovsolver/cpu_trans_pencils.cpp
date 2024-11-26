@@ -42,34 +42,6 @@ bool do_translate_cell(SpatialCell* SC, int tc){
    }
 }
 
-bool check_is_active(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid, CellID cid, int dimension) {
-   if (P::vlasovSolverGhostTranslate) {
-      switch (dimension) {
-         case 0:
-            if (ghostTranslate_active_x.count(cid)) {
-               return true;
-            }
-            break;
-         case 1:
-            if (ghostTranslate_active_y.count(cid)) {
-               return true;
-            }
-            break;
-         case 2:
-            if (ghostTranslate_active_z.count(cid)) {
-               return true;
-            }
-            break;
-         default:
-            cerr << __FILE__ << ":"<< __LINE__ << " Wrong dimension, abort"<<endl;
-            abort();
-      }
-      return false;
-   } else {
-      if (mpiGrid.is_local(cid)) return true;
-      return false;
-   }
-}
 
 bool check_is_written_to(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid, CellID cid, int dimension) {
    // Only called if doing ghost translation
@@ -134,39 +106,6 @@ bool check_is_active(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& 
    }
 }
 
-bool check_is_written_to(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid, CellID cid, int dimension) {
-   // Only called if doing ghost translation
-   SpatialCell *SC = mpiGrid[cid];
-   if (!SC) {
-      return false;
-   }
-   if (SC->sysBoundaryFlag != sysboundarytype::NOT_SYSBOUNDARY) {
-      return false;
-   }
-   // Order is z -> x -> y
-   switch (dimension) {
-      // checks for (cell) && (cell->sysBoundaryFlag == sysboundarytype::NOT_SYSBOUNDARY) are before call
-      case 0: // Second direction (x): Write into all cells which are used in y-translation
-         if (ghostTranslate_sources_y.count(cid)) {
-            return true;
-         }
-         break;
-      case 1: // Last direction (y): Write only into local cells
-         if (mpiGrid.is_local(cid)) {
-            return true;
-         }
-         break;
-      case 2: // First direction (z): Write into all cells which are used in x-translation
-         if (ghostTranslate_sources_x.count(cid)) {
-            return true;
-         }
-         break;
-      default:
-         cerr << __FILE__ << ":"<< __LINE__ << " Wrong dimension, abort"<<endl;
-         abort();
-   }
-   return false;
-}
 
 /* Get the one-dimensional neighborhood index for a given direction and neighborhood size.
  *

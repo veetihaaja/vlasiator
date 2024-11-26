@@ -85,6 +85,7 @@ Real P::fieldSolverMaxCFL = NAN;
 Real P::fieldSolverMinCFL = NAN;
 uint P::fieldSolverSubcycles = 1;
 
+bool P::amrTransShortPencils = false; // TEMPORARY
 
 uint P::tstep = 0;
 uint P::tstep_min = 0;

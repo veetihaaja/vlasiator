@@ -334,7 +334,7 @@ void initializeGrids(
 
 
    // Balance load before we transfer all data below
-   balanceLoad(mpiGrid, sysBoundaries, technicalGrid, false);
+   balanceLoad(mpiGrid, sysBoundaries, false);
    // Function includes re-calculation of local cells cache, but
    // setting third parameter to false skips preparation of
    // translation cell lists and building of pencils.
@@ -490,7 +490,7 @@ void setFaceNeighborRanks( dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& 
    }
 }
 
-void balanceLoad(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid, SysBoundary& sysBoundaries, FsGrid<fsgrids::technical, FS_STENCIL_WIDTH> & technicalGrid, bool doTranslationLists){
+void balanceLoad(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid, SysBoundary& sysBoundaries, bool doTranslationLists){
    // Invalidate cached cell lists
    Parameters::meshRepartitioned = true;
    std::cerr << "balanceLoad called \n";
@@ -661,8 +661,6 @@ void balanceLoad(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid, S
       mpiGrid[cells[i]]->set_mpi_transfer_enabled(true);
    }
 
-   // recompute coupling of grids after load balance
-   computeCoupling(mpiGrid, cells, technicalGrid);
 
    // Communicate all spatial data for FULL neighborhood, which
    // includes all data with the exception of dist function data
@@ -1190,115 +1188,117 @@ void initializeStencils(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
          neighborhood.push_back({{d, 0, 0}});
       }
    }
-   if (!mpiGrid.add_neighborhood(VLASOV_SOLVER_X_GHOST_NEIGHBORHOOD_ID, neighborhood)) {
-      std::cerr << "Failed to add neighborhood VLASOV_SOLVER_X_GHOST_NEIGHBORHOOD_ID \n";
-      abort();
-   }
+   // if (!mpiGrid.add_neighborhood(VLASOV_SOLVER_X_GHOST_NEIGHBORHOOD_ID, neighborhood)) {
+   //    std::cerr << "Failed to add neighborhood VLASOV_SOLVER_X_GHOST_NEIGHBORHOOD_ID \n";
+   //    abort();
+   // }
 
-   neighborhood.clear();
-   for (int d = -VLASOV_STENCIL_WIDTH-3; d <= VLASOV_STENCIL_WIDTH+3; d++) {
-      if (d != 0) {
-         neighborhood.push_back({{0, d, 0}});
-      }
-   }
-   if (!mpiGrid.add_neighborhood(VLASOV_SOLVER_Y_GHOST_NEIGHBORHOOD_ID, neighborhood)) { 
-      std::cerr << "Failed to add neighborhood VLASOV_SOLVER_Y_GHOST_NEIGHBORHOOD_ID \n";
-      abort();
-   }
+   // neighborhood.clear();
+   // for (int d = -VLASOV_STENCIL_WIDTH-3; d <= VLASOV_STENCIL_WIDTH+3; d++) {
+   //    if (d != 0) {
+   //       neighborhood.push_back({{0, d, 0}});
+   //    }
+   // }
+   // if (!mpiGrid.add_neighborhood(VLASOV_SOLVER_Y_GHOST_NEIGHBORHOOD_ID, neighborhood)) { 
+   //    std::cerr << "Failed to add neighborhood VLASOV_SOLVER_Y_GHOST_NEIGHBORHOOD_ID \n";
+   //    abort();
+   // }
 
-   neighborhood.clear();
-   for (int d = -VLASOV_STENCIL_WIDTH-3; d <= VLASOV_STENCIL_WIDTH+3; d++) {
-      if (d != 0) {
-         neighborhood.push_back({{0, 0, d}});
-      }
-   }
-   if (!mpiGrid.add_neighborhood(VLASOV_SOLVER_Z_GHOST_NEIGHBORHOOD_ID, neighborhood)) {
-      std::cerr << "Failed to add neighborhood VLASOV_SOLVER_Z_GHOST_NEIGHBORHOOD_ID \n";
-      abort();
-   }
+   // neighborhood.clear();
+   // for (int d = -VLASOV_STENCIL_WIDTH-3; d <= VLASOV_STENCIL_WIDTH+3; d++) {
+   //    if (d != 0) {
+   //       neighborhood.push_back({{0, 0, d}});
+   //    }
+   // }
+   // if (!mpiGrid.add_neighborhood(VLASOV_SOLVER_Z_GHOST_NEIGHBORHOOD_ID, neighborhood)) {
+   //    std::cerr << "Failed to add neighborhood VLASOV_SOLVER_Z_GHOST_NEIGHBORHOOD_ID \n";
+   //    abort();
+   // }
 
-   if (P::vlasovSolverGhostTranslate) {
-      neighborhood.clear();
-      for (int d = -VLASOV_STENCIL_WIDTH-1; d <= VLASOV_STENCIL_WIDTH+1; d++) {
-         if (d != 0) {
-            neighborhood.push_back({{d, 0, 0}});
-         }
-      }
-      if (!mpiGrid.add_neighborhood(VLASOV_SOLVER_X_GHOST_NEIGHBORHOOD_ID, neighborhood)){
-         std::cerr << "Failed to add neighborhood VLASOV_SOLVER_X_GHOST_NEIGHBORHOOD_ID \n";
-         abort();
-      }
 
-      neighborhood.clear();
-      for (int d = -VLASOV_STENCIL_WIDTH-1; d <= VLASOV_STENCIL_WIDTH+1; d++) {
-         if (d != 0) {
-            neighborhood.push_back({{0, d, 0}});
-         }
-      }
-      if (!mpiGrid.add_neighborhood(VLASOV_SOLVER_Y_GHOST_NEIGHBORHOOD_ID, neighborhood)){
-         std::cerr << "Failed to add neighborhood VLASOV_SOLVER_Y_GHOST_NEIGHBORHOOD_ID \n";
-         abort();
-      }
+   // if (P::vlasovSolverGhostTranslate) {
+   //    neighborhood.clear();
+   //    for (int d = -VLASOV_STENCIL_WIDTH-1; d <= VLASOV_STENCIL_WIDTH+1; d++) {
+   //       if (d != 0) {
+   //          neighborhood.push_back({{d, 0, 0}});
+   //       }
+   //    }
+   //    if (!mpiGrid.add_neighborhood(VLASOV_SOLVER_X_GHOST_NEIGHBORHOOD_ID, neighborhood)){
+   //       std::cerr << "Failed to add neighborhood VLASOV_SOLVER_X_GHOST_NEIGHBORHOOD_ID \n";
+   //       abort();
+   //    }
 
-      neighborhood.clear();
-      for (int d = -VLASOV_STENCIL_WIDTH-1; d <= VLASOV_STENCIL_WIDTH+1; d++) {
-         if (d != 0) {
-            neighborhood.push_back({{0, 0, d}});
-         }
-      }
-      if (!mpiGrid.add_neighborhood(VLASOV_SOLVER_Z_GHOST_NEIGHBORHOOD_ID, neighborhood)){
-         std::cerr << "Failed to add neighborhood VLASOV_SOLVER_Z_GHOST_NEIGHBORHOOD_ID \n";
-         abort();
-      }
+   //    neighborhood.clear();
+   //    for (int d = -VLASOV_STENCIL_WIDTH-1; d <= VLASOV_STENCIL_WIDTH+1; d++) {
+   //       if (d != 0) {
+   //          neighborhood.push_back({{0, d, 0}});
+   //       }
+   //    }
+   //    if (!mpiGrid.add_neighborhood(VLASOV_SOLVER_Y_GHOST_NEIGHBORHOOD_ID, neighborhood)){
+   //       std::cerr << "Failed to add neighborhood VLASOV_SOLVER_Y_GHOST_NEIGHBORHOOD_ID \n";
+   //       abort();
+   //    }
 
-      // Ghost translation required stencils
-      neighborhood.clear();
-      // First: full +GT stencil in Y (last direction to be translated)
-      for (int dy = -VLASOV_STENCIL_WIDTH-1; dy <= VLASOV_STENCIL_WIDTH+1; dy++){
-         if (dy != 0) {
-            neighborhood.push_back({{0, dy, 0}});
-         }
-      }
-      // Then: full + GT extensions in X from Y-translated cells
-      for (int dy = -P::vlasovSolverGhostTranslateExtent; dy <= (int)P::vlasovSolverGhostTranslateExtent; dy++){
-         for (int dx = -VLASOV_STENCIL_WIDTH-1; dx <= VLASOV_STENCIL_WIDTH+1; dx++){
-            if (dx != 0) {
-               neighborhood.push_back({{dx, dy, 0}});
-            }
-         }
-      }
-      // Then: full + GT extensions in Z from Y->X translated cells
-      for (int dy = -P::vlasovSolverGhostTranslateExtent; dy <= (int)P::vlasovSolverGhostTranslateExtent; dy++){
-         for (int dx = -P::vlasovSolverGhostTranslateExtent; dx <= (int)P::vlasovSolverGhostTranslateExtent; dx++){
-            for (int dz = -VLASOV_STENCIL_WIDTH-1; dz <= VLASOV_STENCIL_WIDTH+1; dz++){
-               if (dz != 0) {
-                  neighborhood.push_back({{dx, dy, dz}});
-               }
-            }
-         }
-      }
-      if (!mpiGrid.add_neighborhood(VLASOV_SOLVER_GHOST_NEIGHBORHOOD_ID, neighborhood)){
-         std::cerr << "Failed to add neighborhood VLASOV_SOLVER_GHOST_NEIGHBORHOOD_ID \n";
-         abort();
-      }
+   //    neighborhood.clear();
+   //    for (int d = -VLASOV_STENCIL_WIDTH-1; d <= VLASOV_STENCIL_WIDTH+1; d++) {
+   //       if (d != 0) {
+   //          neighborhood.push_back({{0, 0, d}});
+   //       }
+   //    }
+   //    if (!mpiGrid.add_neighborhood(VLASOV_SOLVER_Z_GHOST_NEIGHBORHOOD_ID, neighborhood)){
+   //       std::cerr << "Failed to add neighborhood VLASOV_SOLVER_Z_GHOST_NEIGHBORHOOD_ID \n";
+   //       abort();
+   //    }
 
-      // Ghost translation neighbourhood where we need to have neighbour information
-      neighborhood.clear();
-      for (int dy = -(int)P::vlasovSolverGhostTranslateExtent; dy <= (int)P::vlasovSolverGhostTranslateExtent; dy++){
-         for (int dx = -(int)P::vlasovSolverGhostTranslateExtent; dx <= (int)P::vlasovSolverGhostTranslateExtent; dx++){
-            for (int dz = -(int)P::vlasovSolverGhostTranslateExtent; dz <= (int)P::vlasovSolverGhostTranslateExtent; dz++){
-               if ((dz==0) && (dy==0) && (dx==0)) {
-                  continue;
-               }
-               neighborhood.push_back({{dx, dy, dz}});
-            }
-         }
-      }
-      if (!mpiGrid.add_neighborhood(VLASOV_SOLVER_GHOST_REQNEIGH_NEIGHBORHOOD_ID, neighborhood)){
-         std::cerr << "Failed to add neighborhood VLASOV_SOLVER_GHOST_REQNEIGH_NEIGHBORHOOD_ID \n";
-         abort();
-      }
-   }
+   //    // Ghost translation required stencils
+   //    neighborhood.clear();
+   //    // First: full +GT stencil in Y (last direction to be translated)
+   //    for (int dy = -VLASOV_STENCIL_WIDTH-1; dy <= VLASOV_STENCIL_WIDTH+1; dy++){
+   //       if (dy != 0) {
+   //          neighborhood.push_back({{0, dy, 0}});
+   //       }
+   //    }
+   //    // Then: full + GT extensions in X from Y-translated cells
+   //    for (int dy = -P::vlasovSolverGhostTranslateExtent; dy <= (int)P::vlasovSolverGhostTranslateExtent; dy++){
+   //       for (int dx = -VLASOV_STENCIL_WIDTH-1; dx <= VLASOV_STENCIL_WIDTH+1; dx++){
+   //          if (dx != 0) {
+   //             neighborhood.push_back({{dx, dy, 0}});
+   //          }
+   //       }
+   //    }
+   //    // Then: full + GT extensions in Z from Y->X translated cells
+   //    for (int dy = -P::vlasovSolverGhostTranslateExtent; dy <= (int)P::vlasovSolverGhostTranslateExtent; dy++){
+   //       for (int dx = -P::vlasovSolverGhostTranslateExtent; dx <= (int)P::vlasovSolverGhostTranslateExtent; dx++){
+   //          for (int dz = -VLASOV_STENCIL_WIDTH-1; dz <= VLASOV_STENCIL_WIDTH+1; dz++){
+   //             if (dz != 0) {
+   //                neighborhood.push_back({{dx, dy, dz}});
+   //             }
+   //          }
+   //       }
+   //    }
+   //    if (!mpiGrid.add_neighborhood(VLASOV_SOLVER_GHOST_NEIGHBORHOOD_ID, neighborhood)){
+   //       std::cerr << "Failed to add neighborhood VLASOV_SOLVER_GHOST_NEIGHBORHOOD_ID \n";
+   //       abort();
+   //    }
+
+   //    // Ghost translation neighbourhood where we need to have neighbour information
+   //    neighborhood.clear();
+   //    for (int dy = -(int)P::vlasovSolverGhostTranslateExtent; dy <= (int)P::vlasovSolverGhostTranslateExtent; dy++){
+   //       for (int dx = -(int)P::vlasovSolverGhostTranslateExtent; dx <= (int)P::vlasovSolverGhostTranslateExtent; dx++){
+   //          for (int dz = -(int)P::vlasovSolverGhostTranslateExtent; dz <= (int)P::vlasovSolverGhostTranslateExtent; dz++){
+   //             if ((dz==0) && (dy==0) && (dx==0)) {
+   //                continue;
+   //             }
+   //             neighborhood.push_back({{dx, dy, dz}});
+   //          }
+   //       }
+   //    }
+   //    if (!mpiGrid.add_neighborhood(VLASOV_SOLVER_GHOST_REQNEIGH_NEIGHBORHOOD_ID, neighborhood)){
+   //       std::cerr << "Failed to add neighborhood VLASOV_SOLVER_GHOST_REQNEIGH_NEIGHBORHOOD_ID \n";
+   //       abort();
+   //    }
+   // }
+
 
    if (P::vlasovSolverGhostTranslate) {
       neighborhood.clear();
@@ -1476,10 +1476,10 @@ void initializeStencils(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
          }
       }
    }
-   if(!mpiGrid.add_neighborhood(VLASOV_SOLVER_GHOST_NEIGHBORHOOD_ID, neighborhood)){
-      std::cerr << "Failed to add neighborhood VLASOV_SOLVER_GHOST_NEIGHBORHOOD_ID \n";
-      abort();
-   }
+   // if(!mpiGrid.add_neighborhood(VLASOV_SOLVER_GHOST_NEIGHBORHOOD_ID, neighborhood)){
+   //    std::cerr << "Failed to add neighborhood VLASOV_SOLVER_GHOST_NEIGHBORHOOD_ID \n";
+   //    abort();
+   // }
    return;
 }
 
