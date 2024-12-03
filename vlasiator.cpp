@@ -1021,6 +1021,10 @@ int main(int argn,char* args[]) {
       balanceLoad(mpiGrid, sysBoundaryContainer);
 
       computeDtimer.stop();
+
+      if (P::vlasovSolverGhostTranslate) {
+         getGhostNeighborsforTC(mpiGrid, cells);
+      }
       
       //go forward by dt/2 in V, initializes leapfrog split. In restarts the
       //the distribution function is already propagated forward in time by dt/2
@@ -1411,6 +1415,9 @@ int main(int argn,char* args[]) {
       if(P::dynamicTimestep  && P::tstep > P::tstep_min && P::fractionalTimestep == 0) {
          std::cout << "Computing new dts\n";
          computeNewTimeStep(mpiGrid, technicalGrid, newDt, dtIsChanged, newTimeclassDts);
+         if (P::vlasovSolverGhostTranslate) {
+            getGhostNeighborsforTC(mpiGrid, cells);
+         }
          if(myRank == MASTER_RANK){
             std::cout << "timeclass dts = ";
             for(int i = 0; i <= P::maxTimeclass; ++i){
@@ -1465,10 +1472,6 @@ int main(int argn,char* args[]) {
          sysBoundaryContainer.updateState(mpiGrid, perBGrid, BgBGrid, P::t + 0.5 * P::dt);
          timer.stop();
          addTimedBarrier("barrier-boundary-conditions");
-      }
-
-      if (P::vlasovSolverGhostTranslate) {
-         getGhostNeighborsforTC(mpiGrid, cells);
       }
 
       phiprof::Timer spatialSpaceTimer {"Spatial-space"};
