@@ -485,6 +485,36 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
    }
 }
 
+void getGhostNeighborsforTC(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
+                              const std::vector<CellID>& cellsToCheckNeighbors) {
+   /*
+   1st version
+   every timestep, go through every cell c, and get its ghost neighbours. 
+   Then, for every ghost neighbour, send c's timeclass to its requested_timeclass_ghosts
+   */
+   /*
+   2nd version TODO:
+   every timestep, check if computeNewTimestep changes any cells' timeclass. Then go through v1 functionality.
+   */
+
+   for (size_t c=0; c<cellsToCheckNeighbors.size(); ++c) {
+      const CellID cell = cellsToCheckNeighbors[c];
+      auto neighbors = mpiGrid.get_neighbors_of(cell, VLASOV_SOLVER_GHOST_NEIGHBORHOOD_ID);
+      auto& neighborsRef = *neighbors;
+      auto neighborsRemote = mpiGrid.get_remote_neighbors_of(cell, VLASOV_SOLVER_GHOST_NEIGHBORHOOD_ID);
+
+      // get_neighbours_of returns a pointer to a vector of pairs, and each pairs' first element is the CellID
+      // get_remote_neighbors_of returns a vector of CellIDs
+
+      for (size_t i=0; i<neighborsRef.size(); ++i) {
+         mpiGrid[(neighborsRef)[i].first]->requested_timeclass_ghosts.insert(mpiGrid[cell]->parameters[CellParams::TIMECLASS]);
+      }
+      for (size_t i=0; i<neighborsRemote.size(); ++i) {
+         mpiGrid[neighborsRemote[i]]->requested_timeclass_ghosts.insert(mpiGrid[cell]->parameters[CellParams::TIMECLASS]);
+      }
+   }
+}
+
 ObjectWrapper& getObjectWrapper() {
    return objectWrapper;
 }
@@ -1431,6 +1461,10 @@ int main(int argn,char* args[]) {
          sysBoundaryContainer.updateState(mpiGrid, perBGrid, BgBGrid, P::t + 0.5 * P::dt);
          timer.stop();
          addTimedBarrier("barrier-boundary-conditions");
+      }
+
+      if (P::vlasovSolverGhostTranslate) {
+         getGhostNeighborsforTC(mpiGrid, cells);
       }
 
       phiprof::Timer spatialSpaceTimer {"Spatial-space"};
