@@ -507,10 +507,14 @@ void getGhostNeighborsforTC(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>&
       // get_remote_neighbors_of returns a vector of CellIDs
 
       for (size_t i=0; i<neighborsRef.size(); ++i) {
-         mpiGrid[(neighborsRef)[i].first]->requested_timeclass_ghosts.insert(mpiGrid[cell]->parameters[CellParams::TIMECLASS]);
+         if (mpiGrid[(neighborsRef)[i].first]->parameters[CellParams::TIMECLASS] != mpiGrid[cell]->parameters[CellParams::TIMECLASS]) {
+            mpiGrid[(neighborsRef)[i].first]->requested_timeclass_ghosts.insert(mpiGrid[cell]->parameters[CellParams::TIMECLASS]);
+         }
       }
       for (size_t i=0; i<neighborsRemote.size(); ++i) {
-         mpiGrid[neighborsRemote[i]]->requested_timeclass_ghosts.insert(mpiGrid[cell]->parameters[CellParams::TIMECLASS]);
+         if (mpiGrid[(neighborsRemote)[i]]->parameters[CellParams::TIMECLASS] != mpiGrid[cell]->parameters[CellParams::TIMECLASS]) {
+            mpiGrid[neighborsRemote[i]]->requested_timeclass_ghosts.insert(mpiGrid[cell]->parameters[CellParams::TIMECLASS]);
+         }
       }
    }
 }
