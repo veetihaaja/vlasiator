@@ -151,6 +151,34 @@ namespace spatial_cell {
          }
       }
 
+      /* 
+      to make this work with timeclasses, we must add the following loops:
+
+      1. adding velocity blocks to places where matter might flow to from neighbours,
+      taking into consideration the neighbours' every timeclass mesh
+
+      2. ?
+
+      */
+      
+      // timeclass addition loop:
+
+      for (std::vector<SpatialCell*>::const_iterator neighbor=spatial_neighbors.begin();
+           neighbor != spatial_neighbors.end(); ++neighbor) { // go through neighbors
+         for (int tc : (*neighbor)->requested_timeclass_ghosts) { // go through neighbors' vmesh tc:s
+
+            auto ghostPop = (*neighbor)->ghostPopulations[{popID,tc}]; // get the ghost population
+            for (vmesh::LocalID block_index = 0; block_index<ghostPop.vmesh.size(); ++block_index) { //go through the vmesh of the ghost population
+               const vmesh::GlobalID globalID = ghostPop.vmesh.getGlobalID(block_index);
+
+               if (compute_block_has_content(globalID, popID)) {
+                  neighbors_have_content.insert(globalID);
+               }
+            }
+         }
+      }
+
+
       // REMOVE all blocks in this cell without content + without neighbors with content
       // better to do it in the reverse order, as then blocks at the
       // end are removed first, and we may avoid copying extra data.
