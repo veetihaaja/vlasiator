@@ -79,6 +79,12 @@ namespace spatial_cell {
          populations[popID].Upload();
          populations[popID].velocityBlockMinValue = spec.sparseMinValue;
          populations[popID].N_blocks = 0;
+
+         for (int tc = 0; tc <= P::maxTimeclass; tc++){
+            ghostPopulations[{popID,tc}].vmesh->initialize(spec.velocityMesh);
+            ghostPopulations[{popID,tc}].velocityBlockMinValue = spec.sparseMinValue;
+            ghostPopulations[{popID,tc}].N_blocks = 0;
+         }
       }
 
       // SplitVectors and hashmaps via pointers for unified memory
@@ -759,6 +765,61 @@ namespace spatial_cell {
    const Real& SpatialCell::get_max_v_dt(const uint popID) const {
       debug_population_check(popID);
       return populations[popID].max_dt[species::MAXVDT];
+   }
+
+   /** Get the current timeclass dt of this cell
+    * @return local dt
+   */
+   const Real& SpatialCell::get_tc_dt() const {
+      return P::timeclassDt[this->parameters[CellParams::TIMECLASS]];
+   }
+
+   const int SpatialCell::get_tc() const {      
+      return (int)this->parameters[CellParams::TIMECLASS];
+   }
+
+   const bool SpatialCell::get_timeclass_turn_v() const {
+      // If on max timeclass, we propagate on each loop.
+      int mod = 1 << (P::currentMaxTimeclass - (int)this->parameters[CellParams::TIMECLASS]);
+      bool ret = ((P::fractionalTimestep % mod) == 0);
+      return ret;
+   }
+
+   const bool SpatialCell::get_timeclass_turn_v(int tc) const {
+      // If on max timeclass, we propagate on each loop.
+      int mod = 1 << (P::currentMaxTimeclass - (int)tc);
+      bool ret = ((P::fractionalTimestep % mod) == 0);
+      return ret;
+   }
+
+   const bool SpatialCell::get_timeclass_turn_r() const {
+      return this->get_timeclass_turn_v();
+      /* // Obsolete tries for fancy and incorrect stepping
+      if (this->parameters[CellParams::TIMECLASS] == P::currentMaxTimeclass) {
+         return true;
+      }
+      else {
+         int mod = 1 << (P::currentMaxTimeclass - (int)this->parameters[CellParams::TIMECLASS]);
+         int mod2 = 1 << (P::currentMaxTimeclass - (int)this->parameters[CellParams::TIMECLASS] - 1);
+         mod2 = max(0,mod2);
+         bool ret = ((P::fractionalTimestep % mod) == mod2);
+         if (ret && (this->parameters[CellParams::CELLID] == 11 || this->parameters[CellParams::CELLID] == 12)){}
+            // std::cout << "R on tc  " << this->parameters[CellParams::TIMECLASS] << " ftstep " << P::fractionalTimestep <<", t " << P::tstep <<"\n";
+         return ret;
+      }
+      */
+   }
+
+   const bool SpatialCell::has_timeclass(int timeclass) const{
+      if (timeclass < 0 || 
+         (int)this->parameters[CellParams::TIMECLASS] == timeclass ||
+               this->requested_timeclass_ghosts.count(timeclass) > 0
+         ){
+            return true;
+         } 
+      else{
+            return false;
+         }
    }
 
    /** Get MPI datatype for sending the cell data.

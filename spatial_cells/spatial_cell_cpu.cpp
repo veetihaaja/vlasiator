@@ -419,7 +419,7 @@ namespace spatial_cell {
          ){
             return true;
          } 
-         else{
+      else{
             return false;
          }
    }
