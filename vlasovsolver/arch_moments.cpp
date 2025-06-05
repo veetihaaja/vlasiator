@@ -184,17 +184,17 @@ void calculateMoments_R(
 
    // override with optimized GPU version to launch
    // single kernel accessing all cells at once (10x faster)
+   std::vector<CellID> cells;
+   for (size_t c=0; c<allcells.size(); ++c) {
+         SpatialCell* cell = mpiGrid[allcells[c]];
+         if (cell->get_timeclass_turn_v()) cells.push_back(allcells[c]);
+   } 
    #ifdef USE_GPU
    gpu_calculateMoments_R(mpiGrid,cells,computeSecond);
    return;
    #endif
 
    phiprof::Timer computeMomentsTimer {"Compute _R moments"};
-   std::vector<CellID> cells;
-   for (size_t c=0; c<allcells.size(); ++c) {
-         SpatialCell* cell = mpiGrid[allcells[c]];
-         if (cell->get_timeclass_turn_v()) cells.push_back(allcells[c]);
-   } 
    for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
 #pragma omp parallel for schedule(dynamic,1)
       for (size_t c=0; c<cells.size(); ++c) {

@@ -25,6 +25,8 @@
 
 #include "../common.h"
 #include "../spatial_cells/spatial_cell_wrapper.hpp"
+#include <dccrg.hpp>
+#include <dccrg_cartesian_geometry.hpp>
 
 using namespace spatial_cell;
 
@@ -36,6 +38,8 @@ void gpu_accelerate_cells(
 
 void gpu_accelerate_cell(SpatialCell* spatial_cell,
                          const uint popID,
-                         const uint map_order);
+                         const uint map_order,
+                         const Real& dt,
+                         int timeclass);
 
 #endif

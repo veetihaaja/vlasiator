@@ -85,7 +85,7 @@ void gpu_accelerate_cells(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& m
       SpatialCell* SC = mpiGrid[cellID];
 
       phiprof::Timer semilagAccTimer {timerId};
-      gpu_accelerate_cell(SC,popID,map_order);
+      gpu_accelerate_cell(SC,popID,map_order, SC->get_tc_dt(), SC->get_tc());
       semilagAccTimer.stop();
    }
 }
@@ -106,8 +106,9 @@ void gpu_accelerate_cells(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& m
 
 void gpu_accelerate_cell(SpatialCell* spatial_cell,
                          const uint popID,
-                         const uint map_order
-   ) {
+                         const uint map_order,
+                         const Real& dt,
+                         int timeclass) {
 
    Population& pop = spatial_cell->get_population(popID);
    switch(map_order){

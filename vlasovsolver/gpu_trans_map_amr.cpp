@@ -399,7 +399,7 @@ bool trans_map_1d_amr(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>&
                       const vector<CellID>& remoteTargetCells,
                       std::vector<uint>& nPencilsLB,
                       const uint dimension,
-                      const Realf dt,
+                      const Realf dt, const int timeclass,
                       const uint popID) {
 
    phiprof::Timer setupTimer {"trans-amr-setup"};
