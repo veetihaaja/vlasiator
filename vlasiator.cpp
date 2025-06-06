@@ -1537,8 +1537,6 @@ int main(int argn,char* args[]) {
          CellParams::P_11,
          CellParams::P_22,
          CellParams::P_33,
-         P::fractionalTimestep,
-         P::currentMaxTimeclass,
          false
       );
       interpolateMomentsForTimeclasses(
@@ -1551,8 +1549,6 @@ int main(int argn,char* args[]) {
          CellParams::P_11_DT2,
          CellParams::P_22_DT2,
          CellParams::P_33_DT2,
-         P::fractionalTimestep,
-         P::currentMaxTimeclass,
          true
       );
 
