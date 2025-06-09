@@ -399,12 +399,19 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
          if (P::maxTimeclass == 1) {
             cell->parameters[CellParams::TIMECLASS] = min(int(cell->parameters[CellParams::XCRD] > -100/*epsilon*/)*P::maxTimeclass, P::maxTimeclass);
          } else if (P::maxTimeclass == 2) {
-            if (cell->parameters[CellParams::XCRD] < -15*(cell->parameters[CellParams::DX])) {
+            // if (cell->parameters[CellParams::XCRD] < 12*(cell->parameters[CellParams::DX])) {
+            //    cell->parameters[CellParams::TIMECLASS] = 0;
+            // } else if (cell->parameters[CellParams::XCRD] > 24*(cell->parameters[CellParams::DX])) {
+            //    cell->parameters[CellParams::TIMECLASS] = 2;
+            // } else {
+            //    cell->parameters[CellParams::TIMECLASS] = 1;
+            // }
+            if (cell->parameters[CellParams::XCRD] > 0.0) {
+               std::cout << "setting timeclass 1 for cell " << cell->parameters[CellParams::CELLID] << "\n";
                cell->parameters[CellParams::TIMECLASS] = 0;
-            } else if (cell->parameters[CellParams::XCRD] > 15*(cell->parameters[CellParams::DX])) {
-               cell->parameters[CellParams::TIMECLASS] = 2;
             } else {
-               cell->parameters[CellParams::TIMECLASS] = 1;
+               std::cout << "setting timeclass 2 for cell " << cell->parameters[CellParams::CELLID] << "\n";
+               cell->parameters[CellParams::TIMECLASS] = 2;
             }
          } else if (P::maxTimeclass == 3) {
             cell->parameters[CellParams::TIMECLASS] = min(int(cell->parameters[CellParams::XCRD] > -100/*epsilon*/)*P::maxTimeclass, P::maxTimeclass);
@@ -1530,29 +1537,36 @@ int main(int argn,char* args[]) {
       interpolateMomentsForTimeclasses(
          mpiGrid,
          CellParams::RHOM,
-         CellParams::VX,
-         CellParams::VY,
-         CellParams::VZ,
          CellParams::RHOQ,
          CellParams::P_11,
          CellParams::P_22,
          CellParams::P_33,
+         CellParams::VX,
+         CellParams::VY,
+         CellParams::VZ,
          false
       );
       interpolateMomentsForTimeclasses(
          mpiGrid,
          CellParams::RHOM_DT2,
-         CellParams::VX_DT2,
-         CellParams::VY_DT2,
-         CellParams::VZ_DT2,
          CellParams::RHOQ_DT2,
          CellParams::P_11_DT2,
          CellParams::P_22_DT2,
          CellParams::P_33_DT2,
+         CellParams::VX_DT2,
+         CellParams::VY_DT2,
+         CellParams::VZ_DT2,
          true
       );
 
-      updateParticlePopulations(mpiGrid);
+      //auto cell1 = mpiGrid[cells[5]];
+      //auto cell2 = mpiGrid[cells[20]];
+
+      //std::cout << "cell 1 tc "<< cell1->parameters[CellParams::TIMECLASS] << " VX " << cell1->parameters[CellParams::VX] << " VY " << cell1->parameters[CellParams::VY] << " VZ " << cell1->parameters[CellParams::VZ] << std::endl;
+      //std::cout << "cell 2 tc "<< cell2->parameters[CellParams::TIMECLASS] << " VX " << cell2->parameters[CellParams::VX] << " VY " << cell2->parameters[CellParams::VY] << " VZ " << cell2->parameters[CellParams::VZ] << std::endl;
+
+      //std::cout << "cell1 vx_v " << cell1->parameters[CellParams::VX_V] << " vx_r " << cell1->parameters[CellParams::VX_R] << std::endl;
+      //std::cout << "cell2 vx_v " << cell2->parameters[CellParams::VX_V] << " vx_r " << cell2->parameters[CellParams::VX_R] << std::endl;
 
       momentsTimer.stop();
       

@@ -85,13 +85,13 @@ double cubicHermiteSplineInterpolation(double x0, double y0, double x1, double y
 void interpolateMomentsForTimeclasses(
   dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
    const int cp_rhom,
-   const int cp_vx,
-   const int cp_vy,
-   const int cp_vz,
    const int cp_rhoq,
    const int cp_p11,
    const int cp_p22,
    const int cp_p33,
+   const int cp_vx,
+   const int cp_vy,
+   const int cp_vz,
    const bool dt2
 );
 

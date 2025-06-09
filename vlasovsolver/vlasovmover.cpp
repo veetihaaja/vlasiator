@@ -1110,13 +1110,13 @@ double cubicHermiteSplineInterpolation(double x0, double y0, double x1, double y
 void interpolateMomentsForTimeclasses(
   dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid,
    const int cp_rhom,
-   const int cp_vx,
-   const int cp_vy,
-   const int cp_vz,
    const int cp_rhoq,
    const int cp_p11,
    const int cp_p22,
    const int cp_p33,
+   const int cp_vx,
+   const int cp_vy,
+   const int cp_vz,
    const bool dt2 // true if second moment / dt2
 ) {
 
@@ -1198,6 +1198,8 @@ void interpolateMomentsForTimeclasses(
             normModul += 0.5/RTCpow; // for dt2, we need to shift the interpolation by 0.5
          }
 
+         std::cout << "interpolating moments for cell " << cellID << " at timeclass " << timeclass << ", normModul = " << normModul << "\n";
+
          // in this function the moments are calculated to an interval [0, 1] that matches a single timestep in real space, or [t, t + dt].
          // for example, the moment "at 0.5" means the moment at t+dt/2.
 
@@ -1241,6 +1243,14 @@ void interpolateMomentsForTimeclasses(
          std::vector<Real> avgMoments4(nMomentsToInterp);
          std::vector<Real> avgMoments5(nMomentsToInterp);
 
+         if ((P::tcMomentInterpolationType != -1 && P::tcMomentInterpolationType != 1 &&
+             P::tcMomentInterpolationType != 2 && P::tcMomentInterpolationType != 3)) {
+            std::cerr << "ERROR: Invalid value for P::tcMomentInterpolationType: " << P::tcMomentInterpolationType << "\n";
+            std::cerr << "Valid values are -1 (cubic Hermite), 1 (linear), 2 (lagrange 2nd order), 3 (lagrange 3rd order).\n";
+            std::cerr << "Exiting...\n";
+            exit(1);
+         }
+
          // for type of interpolation (P::tcMomentInterpolationType) -1 is cubic C^1 Hermite spline, 1 is linear, 2 is lagrange 2nd order, 3 is lagrange 3rd order.
 
          if (SC->get_timeclass_turn_v()) { // aka if translation moments are ahead of acceleration moments
@@ -1257,7 +1267,7 @@ void interpolateMomentsForTimeclasses(
 
                switch(P::tcMomentInterpolationType) {
                   case 1:
-                     SC->parameters[cp_rhom+i] = linearInterpolation(0.0, avgMoments3[i], 0.5, avgMoments2[i], normModul);
+                     SC->parameters[cp_rhom+i] = linearInterpolation(0.0, avgMoments2[i], 0.5, avgMoments1[i], normModul);
                      break;
                   case 2:
                      SC->parameters[cp_rhom+i] = lagrangeInterpolation2order(-0.5, avgMoments3[i], 0.0, avgMoments2[i], 0.5, avgMoments1[i], normModul);
