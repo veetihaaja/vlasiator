@@ -22,10 +22,12 @@
  */
 #include "common.h"
 #include <cstdlib>
+#include <ios>
 #include <iostream>
 #include <cmath>
 #include <vector>
 #include <sstream>
+#include <iomanip>
 #include <ctime>
 
 #ifdef _OPENMP
@@ -1673,14 +1675,58 @@ int simulate(int argn,char* args[]) {
 
       auto cell1 = mpiGrid[cells[5]];
       auto cell2 = mpiGrid[cells[20]];
-      if (true) {
-         for (uint i = 0; i < 11; ++i) {
-            std::cout << "cell1moment" << i << ": " << P::t << " " << cell1->parameters[CellParams::XCRD] << " " << cell1->parameters[CellParams::YCRD] << " " << cell1->parameters[CellParams::ZCRD] << " " << cell1->parameters[CellParams::RHOM+i] << std::endl;
-            std::cout << "cell1moment" << i << ": " << P::t + P::dt/2.0 << " " << cell1->parameters[CellParams::XCRD] << " " << cell1->parameters[CellParams::YCRD] << " " << cell1->parameters[CellParams::ZCRD] << " " << cell1->parameters[CellParams::RHOM_DT2+i] << std::endl;
-            std::cout << "cell2moment" << i << ": " << P::t << " " << cell2->parameters[CellParams::XCRD] << " " << cell2->parameters[CellParams::YCRD] << " " << cell2->parameters[CellParams::ZCRD] << " " << cell2->parameters[CellParams::RHOM+i] << std::endl;
-            std::cout << "cell2moment" << i << ": " << P::t + P::dt/2.0 << " " << cell2->parameters[CellParams::XCRD] << " " << cell2->parameters[CellParams::YCRD] << " " << cell2->parameters[CellParams::ZCRD] << " " << cell2->parameters[CellParams::RHOM_DT2+i] << std::endl;
-         }
-      }
+      // if (true) {
+      //    for (uint i = 0; i < 11; ++i) {
+      //       // Use fixed formatting with 8 digits of precision for numeric values, then reset to defaultfloat
+      //       std::cout << "cell1moment" << i << ": " << std::scientific << std::setprecision(8)
+      //                 << P::t << " "
+      //                 << cell1->parameters[CellParams::XCRD] << " " << cell1->parameters[CellParams::YCRD] << " " << cell1->parameters[CellParams::ZCRD] << " "
+      //                 << cell1->parameters[CellParams::RHOM+i] << " " << cell1->parameters[CellParams::RHOM_R+i] << " " << cell1->parameters[CellParams::RHOM_V+i] << " "
+      //                 << cell1->parameters[CellParams::BGBXVOL] + cell1->parameters[CellParams::PERBXVOL] << " "
+      //                 << cell1->parameters[CellParams::BGBYVOL] + cell1->parameters[CellParams::PERBYVOL] << " "
+      //                 << cell1->parameters[CellParams::BGBZVOL] + cell1->parameters[CellParams::PERBZVOL] << " "
+      //                 << cell1->parameters[CellParams::EXVOL] << " "
+      //                 << cell1->parameters[CellParams::EYVOL] << " "
+      //                 << cell1->parameters[CellParams::EZVOL]
+      //                 << std::defaultfloat << std::endl;
+
+      //       std::cout << "cell1moment" << i << ": " << std::scientific << std::setprecision(8)
+      //                 << (P::t + P::dt/2.0) << " "
+      //                 << cell1->parameters[CellParams::XCRD] << " " << cell1->parameters[CellParams::YCRD] << " " << cell1->parameters[CellParams::ZCRD] << " "
+      //                 << cell1->parameters[CellParams::RHOM_DT2+i] << " " << cell1->parameters[CellParams::RHOM_R+i] << " " << cell1->parameters[CellParams::RHOM_V+i] << " "
+      //                 << cell1->parameters[CellParams::BGBXVOL] + cell1->parameters[CellParams::PERBXVOL] << " "
+      //                 << cell1->parameters[CellParams::BGBYVOL] + cell1->parameters[CellParams::PERBYVOL] << " "
+      //                 << cell1->parameters[CellParams::BGBZVOL] + cell1->parameters[CellParams::PERBZVOL] << " "
+      //                 << cell1->parameters[CellParams::EXVOL] << " "
+      //                 << cell1->parameters[CellParams::EYVOL] << " "
+      //                 << cell1->parameters[CellParams::EZVOL]
+      //                 << std::defaultfloat << std::endl;
+
+      //       std::cout << "cell2moment" << i << ": " << std::scientific << std::setprecision(8)
+      //                 << P::t << " "
+      //                 << cell2->parameters[CellParams::XCRD] << " " << cell2->parameters[CellParams::YCRD] << " " << cell2->parameters[CellParams::ZCRD] << " "
+      //                 << cell2->parameters[CellParams::RHOM+i] << " " << cell2->parameters[CellParams::RHOM_R+i] << " " << cell2->parameters[CellParams::RHOM_V+i] << " "
+      //                 << cell2->parameters[CellParams::BGBXVOL] + cell2->parameters[CellParams::PERBXVOL] << " "
+      //                 << cell2->parameters[CellParams::BGBYVOL] + cell2->parameters[CellParams::PERBYVOL] << " "
+      //                 << cell2->parameters[CellParams::BGBZVOL] + cell2->parameters[CellParams::PERBZVOL] << " "
+      //                 << cell2->parameters[CellParams::EXVOL] << " "
+      //                 << cell2->parameters[CellParams::EYVOL] << " "
+      //                 << cell2->parameters[CellParams::EZVOL]
+      //                 << std::defaultfloat << std::endl;
+
+      //       std::cout << "cell2moment" << i << ": " << std::scientific << std::setprecision(8)
+      //                 << (P::t + P::dt/2.0) << " "
+      //                 << cell2->parameters[CellParams::XCRD] << " " << cell2->parameters[CellParams::YCRD] << " " << cell2->parameters[CellParams::ZCRD] << " "
+      //                 << cell2->parameters[CellParams::RHOM_DT2+i] << " " << cell2->parameters[CellParams::RHOM_R+i] << " " << cell2->parameters[CellParams::RHOM_V+i] << " "
+      //                 << cell2->parameters[CellParams::BGBXVOL] + cell2->parameters[CellParams::PERBXVOL] << " "
+      //                 << cell2->parameters[CellParams::BGBYVOL] + cell2->parameters[CellParams::PERBYVOL] << " "
+      //                 << cell2->parameters[CellParams::BGBZVOL] + cell2->parameters[CellParams::PERBZVOL] << " "
+      //                 << cell2->parameters[CellParams::EXVOL] << " "
+      //                 << cell2->parameters[CellParams::EYVOL] << " "
+      //                 << cell2->parameters[CellParams::EZVOL]
+      //                 << std::defaultfloat << std::endl;
+      //    }
+      // }
       momentsTimer.stop();
       
       // Propagate fields forward in time by dt. This needs to be done before the
