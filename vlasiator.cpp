@@ -314,7 +314,7 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
          cell->parameters[CellParams::TIMECLASSDT] = cell->get_tc_dt();
       }
    }
-   else if(P::tc_test_type == 2 || P::tc_test_type == 3){ 
+   else if(P::tc_test_type == 2 || P::tc_test_type == 3 || P::tc_test_type == 4){ 
       std::cerr << "TC test 2\n";
       if(P::maxTimeclass > 2){
          std::cerr << "This test works best with timeclass 1 or 2\n";
@@ -343,7 +343,7 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
 
          // first block: one half timeclass0 and other timeclassmax
          // second block: three parts: timeclassmax-2, timeclassmax-1, timeclassmax
-         if (P::maxTimeclass == 1) {
+         if (P::maxTimeclass == 1 && P::tc_test_type != 4) {
             cell->parameters[CellParams::TIMECLASS] = min(int(cell->parameters[CellParams::XCRD] > -100/*epsilon*/)*P::maxTimeclass, P::maxTimeclass);
          } else if (P::maxTimeclass == 2) {
             if (cell->parameters[CellParams::XCRD] < -15*(cell->parameters[CellParams::DX])) {
@@ -353,9 +353,17 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
             } else {
                cell->parameters[CellParams::TIMECLASS] = 1;
             }
-         } else if (P::maxTimeclass == 3) {
+         } else if (P::maxTimeclass == 3 && P::tc_test_type == 3) {
             cell->parameters[CellParams::TIMECLASS] = min(int(cell->parameters[CellParams::XCRD] > -100/*epsilon*/)*P::maxTimeclass, P::maxTimeclass);
          }
+	 else if(P::tc_test_type == 4){
+		 if (P::maxTimeclass != 1){
+			 abort();
+		 }
+             if (abs(cell->parameters[CellParams::XCRD]) < 8*cell->parameters[CellParams::DX] && abs(cell->parameters[CellParams::YCRD]) < 4*cell->parameters[CellParams::DX]){
+		 cell->parameters[CellParams::TIMECLASS] = 1;
+	     }
+	 }
          cell->parameters[CellParams::TIMECLASSDT] = cell->get_tc_dt();
       }
       
@@ -659,13 +667,6 @@ int simulate(int argn,char* args[]) {
       // if we are using timeclasses, we need to use ghost translation
       cerr << "(MAIN) Warning: Using timeclasses requires ghost translation, please turn GT on. exiting..." << endl;
       logFile << "(MAIN) Warning: Using timeclasses requires ghost translation, please turn GT on. exiting..." << endl;
-      exit(1);
-   }
-
-   if (P::maxTimeclass > 0 && P::amrMaxSpatialRefLevel == 0) {
-      // if we are using timeclasses, we need to use AMR
-      cerr << "(MAIN) Warning: Using timeclasses requires AMR, please turn AMR on. exiting..." << endl;
-      logFile << "(MAIN) Warning: Using timeclasses requires AMR, please turn AMR on. exiting..." << endl;
       exit(1);
    }
 
@@ -1086,7 +1087,7 @@ int simulate(int argn,char* args[]) {
       P::systemWritePath.pop_back();
       P::systemWriteFsGrid.pop_back();
    }
-
+   
    // For the MPI-rank based timeclasses. Implement to CellParams if cell-based.
    // Move to params.
 
@@ -1095,6 +1096,7 @@ int simulate(int argn,char* args[]) {
       //compute new dt
       phiprof::Timer computeDtimer {"compute-dt"};
       computeNewTimeStep(mpiGrid, technicalGrid, newDt, dtIsChanged, P::timeclassDt);
+      
       if (P::dynamicTimestep == true && dtIsChanged == true) {
          // Only actually update the timestep if dynamicTimestep is on
          P::dt=newDt;
@@ -1108,8 +1110,9 @@ int simulate(int argn,char* args[]) {
          }
          std::cout << endl;
       }
+      // std::cerr <<__FILE__<<":"<<__LINE__<<" Calling balanceLoad\n";
       balanceLoad(mpiGrid, sysBoundaryContainer, technicalGrid);
-
+      
       computeDtimer.stop();
       
       //go forward by dt/2 in V, initializes leapfrog split. In restarts the
@@ -1126,6 +1129,7 @@ int simulate(int argn,char* args[]) {
       propagateHalfTimer.stop();
 
       updatePreviousVMoments(mpiGrid, true);
+      // std::cerr <<__FILE__<<":"<<__LINE__<<" ("<<myRank <<") Calling balanceLoad\n";
 
       // Apply boundary conditions
       if (P::propagateVlasovTranslation || P::propagateVlasovAcceleration ) {
@@ -1134,6 +1138,7 @@ int simulate(int argn,char* args[]) {
          updateBoundariesTimer.stop();
          addTimedBarrier("barrier-boundary-conditions");
       }
+      // std::cerr <<__FILE__<<":"<<__LINE__<<" ("<<myRank <<")\n";
       // Also update all moments. They won't be transmitted to FSgrid until the field solver is called, though.
       phiprof::Timer computeMomentsTimer {"Compute interp moments"};
       std::cout << "for initial interpolated moments\n";
@@ -1156,7 +1161,7 @@ int simulate(int argn,char* args[]) {
 
       computeMomentsTimer.stop();
    }
-
+// std::cerr <<__FILE__<<":"<<__LINE__<<" ("<<myRank <<")\n";
    initTimer.stop();
 
    // ***********************************
@@ -1473,7 +1478,7 @@ int simulate(int argn,char* args[]) {
          break;
       }
 
-      std::cout << "main loop at" << __FILE__ << " " << __LINE__ << " " << P::tstep << " " << P::fractionalTimestep << std::endl;
+      // std::cout << "main loop at" << __FILE__ << " " << __LINE__ << " " << P::tstep << " " << P::fractionalTimestep << std::endl;
 
       //Re-loadbalance if needed
       //TODO - add LB measure and do LB if it exceeds threshold
@@ -1559,6 +1564,12 @@ int simulate(int argn,char* args[]) {
       //   -> do the acc shuffle for all cells to begin with
       std::vector<Real> newTimeclassDts = std::vector<Real>(P::maxTimeclass+1);
       if(P::dynamicTimestep  && P::tstep > P::tstep_min && P::fractionalTimestep == 0) {
+         if (P::maxTimeclass > 0) {
+            if(myRank == MASTER_RANK){
+               cerr << __FILE__ << ":" << __LINE__ << " Dynamic timestepping not implemented for timeclasses " << endl;
+            }
+            abort();
+         }
          std::cout << "Computing new dts\n";
          computeNewTimeStep(mpiGrid, technicalGrid, newDt, dtIsChanged, newTimeclassDts);
          // if (P::vlasovSolverGhostTranslate) {
@@ -1615,7 +1626,24 @@ int simulate(int argn,char* args[]) {
       // Update boundary condition states (time-varying)
       if (P::propagateVlasovTranslation || P::propagateVlasovAcceleration) {
          phiprof::Timer timer {"Update system boundaries (Vlasov pre-translation)"};
-         sysBoundaryContainer.updateState(mpiGrid, perBGrid, BgBGrid, P::t + 0.5 * P::dt);
+         sysBoundaryContainer.updateState(mpiGrid, technicalGrid, perBGrid, BgBGrid, P::t + 0.5 * P::dt);
+
+         // updateState leaves mpiGrid and fsgrid in mismatching states, interpolated moments need to be recalculated
+         // TODO: Check whether updated state is the same as previously so synchronization can be skipped when not needed?
+         calculateInterpolatedVelocityMoments(
+            mpiGrid,
+            CellParams::RHOM,
+            CellParams::VX,
+            CellParams::VY,
+            CellParams::VZ,
+            CellParams::RHOQ,
+            CellParams::P_11,
+            CellParams::P_22,
+            CellParams::P_33,
+            CellParams::P_23,
+            CellParams::P_13,
+            CellParams::P_12
+         );
          timer.stop();
          addTimedBarrier("barrier-boundary-conditions");
       }
@@ -1673,8 +1701,6 @@ int simulate(int argn,char* args[]) {
 
       updateParticlePopulations(mpiGrid);
 
-      auto cell1 = mpiGrid[cells[5]];
-      auto cell2 = mpiGrid[cells[20]];
       momentsTimer.stop();
       
       // Propagate fields forward in time by dt. This needs to be done before the
@@ -1814,7 +1840,7 @@ int simulate(int argn,char* args[]) {
       // Check timestep
       if (P::dt < P::bailout_min_dt) {
          stringstream s;
-         s << "The timestep dt=" << P::dt << " went below bailout.bailout_min_dt (" << to_string(P::bailout_min_dt) << ")." << endl;
+         s << "The timestep dt=" << P::dt << " went below bailout.min_dt (" << to_string(P::bailout_min_dt) << ")." << endl;
          bailout(true, s.str(), __FILE__, __LINE__);
       }
       //Move forward in time
