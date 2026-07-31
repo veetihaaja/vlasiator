@@ -486,6 +486,10 @@ int simulate(int argn,char* args[]) {
    fsgrid::FsData<std::array<Real, fsgrids::ehall::N_EHALL>> ehall(fsgridNumElements);
    fsgrid::FsData<std::array<Real, fsgrids::egradpe::N_EGRADPE>> egradpe(fsgridNumElements);
    fsgrid::FsData<std::array<Real, fsgrids::egradpe::N_EGRADPE>> egradpedt2(fsgridNumElements);
+#ifdef FS_ES
+   fsgrid::FsData<std::array<Real, fsgrids::efield::N_EFIELD>> e_es(fsgridNumElements);
+   fsgrid::FsData<std::array<Real, fsgrids::potential::N_POTENTIAL>> Phi(fsgridNumElements);
+#endif
    fsgrid::FsData<std::array<Real, fsgrids::moments::N_MOMENTS>> moments(fsgridNumElements);
    fsgrid::FsData<std::array<Real, fsgrids::moments::N_MOMENTS>> momentsdt2(fsgridNumElements);
    fsgrid::FsData<std::array<Real, fsgrids::dperb::N_DPERB>> dperb(fsgridNumElements);
@@ -510,6 +514,10 @@ int simulate(int argn,char* args[]) {
       mpiGrid,
       perb,
       bgb,
+#ifdef FS_ES
+      e_es,
+      Phi,
+#endif
       moments,
       momentsdt2,
       dmoments,
@@ -546,6 +554,10 @@ int simulate(int argn,char* args[]) {
       ehall,
       egradpe,
       egradpedt2,
+#if FS_ES
+      e_es,
+      Phi,
+#endif
       moments,
       momentsdt2,
       dperb,
@@ -636,6 +648,10 @@ int simulate(int argn,char* args[]) {
          ehall.view(),
          egradpe.view(),
          egradpedt2.view(),
+#ifdef FS_ES
+         e_es.view(),
+         Phi.view(),
+#endif
          moments.view(),
          momentsdt2.view(),
          dperb.view(),
@@ -651,7 +667,11 @@ int simulate(int argn,char* args[]) {
 
    phiprof::Timer getFieldsTimer {"getFieldsFromFsGrid"};
    fsgrid.updateGhostCells(vol.view());
-   getFieldsFromFsGrid(vol.view(), bgb.view(), egradpe.view(), dmoments.view(), technical.view(), fsgrid, mpiGrid, cells);
+   getFieldsFromFsGrid(vol.view(), bgb.view(), egradpe.view(),
+#ifdef FS_ES
+                       e_es.view(),
+#endif
+                       dmoments.view(), technical.view(), fsgrid, mpiGrid, cells);
    getFieldsTimer.stop();
 
    // Build communicator for ionosphere solving
@@ -860,7 +880,7 @@ int simulate(int argn,char* args[]) {
       phiprof::Timer ioTimer {"IO"};
 
       phiprof::Timer externalsTimer {"checkExternalCommands"};
-      if(myRank ==  MASTER_RANK) {
+      if(myRank == MASTER_RANK) {
          // check whether STOP or KILL or SAVE has been passed, should be done by MASTER_RANK only as it can reset P::bailout_write_restart
          checkExternalCommands();
       }
@@ -1104,7 +1124,7 @@ int simulate(int argn,char* args[]) {
          shrink_to_fit_grid_data(mpiGrid);
          shrinkTimer.stop();
 
-         if (refineNow || (!dtIsChanged && P::adaptRefinement && P::tstep % (P::rebalanceInterval * P::refineCadence) == 0 && P::t > P::refineAfter)) { 
+         if (refineNow || (!dtIsChanged && P::adaptRefinement && P::tstep % (P::rebalanceInterval * P::refineCadence) == 0 && P::t > P::refineAfter)) {
             logFile << "(AMR): Adapting refinement!"  << endl << writeVerbose;
             refineNow = false;
             if (!adaptRefinement(mpiGrid, technical.view(), fsgrid, sysBoundaryContainer, *project)) {
@@ -1288,6 +1308,10 @@ int simulate(int argn,char* args[]) {
             ehall.view(),
             egradpe.view(),
             egradpedt2.view(),
+#ifdef FS_ES
+            e_es.view(),
+            Phi.view(),
+#endif
             moments.view(),
             momentsdt2.view(),
             dperb.view(),
@@ -1306,7 +1330,11 @@ int simulate(int argn,char* args[]) {
          // Copy results back from fsgrid.
          fsgrid.updateGhostCells(vol.view());
          fsgrid.updateGhostCells(technical.view());
-         getFieldsFromFsGrid(vol.view(), bgb.view(), egradpe.view(), dmoments.view(), technical.view(), fsgrid, mpiGrid, cells);
+         getFieldsFromFsGrid(vol.view(), bgb.view(), egradpe.view(),
+#ifdef FS_ES
+                             e_es.view(),
+#endif
+                             dmoments.view(), technical.view(), fsgrid, mpiGrid, cells);
          getFieldsTimer.stop();
          propagateTimer.stop(cells.size(),"SpatialCells");
          addTimedBarrier("barrier-after-field-solver");
@@ -1359,7 +1387,7 @@ int simulate(int argn,char* args[]) {
       if (P::artificialPADiff){
          phiprof::Timer diffusionTimer {"Pitch-angle diffusion"};
          for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
-	      pitchAngleDiffusion(mpiGrid,popID);
+            pitchAngleDiffusion(mpiGrid,popID);
          }
          diffusionTimer.stop(computedCells, "Cells");
       }
