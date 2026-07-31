@@ -44,8 +44,8 @@ std::string P::V_field_name = "V";
 std::string P::rho_field_name = "rho";
 bool P::divide_rhov_by_rho = false;
 
-std::default_random_engine::result_type P::random_seed = 1;
-Distribution* (*P::distribution)(std::default_random_engine&) = NULL;
+std::knuth_b::result_type P::random_seed = 1;
+Distribution* (*P::distribution)(std::knuth_b&) = NULL;
 std::string P::distribution_name;
 Real P::temperature = 1e6;
 Real P::particle_vel = 0;
@@ -100,7 +100,7 @@ bool ParticleParameters::addParameters() {
    Readparameters::add<std::string>("particles.V_field_name", "Name of the Velocity data set in the input files", P::V_field_name, "V");
    Readparameters::add<std::string>("particles.rho_field_name", "Name of the Density data set in the input files", P::rho_field_name, "rho");
    Readparameters::add<bool>("particles.divide_rhov_by_rho", "Do the input file store rho_v and rho separately?", P::divide_rhov_by_rho, false);
-   Readparameters::add<std::default_random_engine::result_type>("particles.random_seed", "Random seed for particle creation.", P::random_seed,1);
+   Readparameters::add<std::knuth_b::result_type>("particles.random_seed", "Random seed for particle creation.", P::random_seed,1);
    Readparameters::add<std::string>("particles.distribution", "Type of distribution function to sample particles from.", P::distribution_name,
          std::string("maxwell"));
    Readparameters::add<Real>("particles.temperature", "Temperature of the particle distribution", P::temperature,1e6);
@@ -168,7 +168,7 @@ bool ParticleParameters::getParameters() {
 
    /* Look up particle distribution generator */
 
-   std::map<std::string, Distribution*(*)(std::default_random_engine&)> distribution_lookup;
+   std::map<std::string, Distribution*(*)(std::knuth_b&)> distribution_lookup;
    distribution_lookup["maxwell"]=&createDistribution<Maxwell_Boltzmann>;
    distribution_lookup["monoenergetic"]=&createDistribution<Monoenergetic>;
    distribution_lookup["kappa2"]=&createDistribution<Kappa2>;
