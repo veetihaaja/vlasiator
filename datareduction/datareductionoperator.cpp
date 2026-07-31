@@ -28,6 +28,8 @@
 #include <array>
 #include "datareductionoperator.h"
 #include "../object_wrapper.h"
+#include "../fieldsolver/fs_constants.h"
+#include "../fieldsolver/fs_common.h"
 
 
 using namespace std;

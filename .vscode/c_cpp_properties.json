@@ -17,7 +17,6 @@
             "defines": [
                 "FP_PRECISION=DP",
                 "DISTRIBUTION_FP_PRECISION=SPF",
-                "FIELDSOLVER=londrillo_delzanna",
                 "PROFILE",
                 "NDEBUG",
                 "ACC_SEMILAG_PQM",
@@ -49,7 +48,6 @@
             "defines": [
                 "FP_PRECISION=DP",
                 "DISTRIBUTION_FP_PRECISION=SPF",
-                "FIELDSOLVER=londrillo_delzanna",
                 "PROFILE",
                 "NDEBUG",
                 "ACC_SEMILAG_PQM",
@@ -81,7 +79,6 @@
             "defines": [
                 "FP_PRECISION=DP",
                 "DISTRIBUTION_FP_PRECISION=SPF",
-                "FIELDSOLVER=londrillo_delzanna",
                 "PROFILE",
                 "NDEBUG",
                 "ACC_SEMILAG_PQM",
@@ -113,7 +110,6 @@
             "defines": [
                 "FP_PRECISION=DP",
                 "DISTRIBUTION_FP_PRECISION=SPF",
-                "FIELDSOLVER=londrillo_delzanna",
                 "PROFILE",
                 "NDEBUG",
                 "ACC_SEMILAG_PQM",

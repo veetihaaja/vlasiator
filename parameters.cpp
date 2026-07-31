@@ -77,6 +77,7 @@ uint P::vlasovSolverGhostTranslateExtent = 0;
 Real P::fieldSolverMaxCFL = 0.5;
 Real P::fieldSolverMinCFL = 0.4;
 uint P::fieldSolverSubcycles = 1;
+std::string P::fieldSolverMethod = "default_fieldsolver";
 
 
 uint P::tstep = 0;
@@ -382,6 +383,7 @@ bool P::addParameters() {
            P::dt_ceil);
 
    // Field solver parameters
+   RP::add("fieldsolver.method", "Method to compute fields, default LDZ", P::fieldSolverMethod);
    RP::add("fieldsolver.maxWaveVelocity",
            "Maximum wave velocity allowed in the fastest velocity determination in m/s, default unlimited", P::maxWaveVelocity);
    RP::add("fieldsolver.maxSubcycles", "Maximum allowed field solver subcycles", P::maxFieldSolverSubcycles);
