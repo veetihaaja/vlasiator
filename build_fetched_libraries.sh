@@ -66,6 +66,15 @@ cp ../include/* $WORKSPACE/libraries${PLATFORM}/include
 cp ../lib/* $WORKSPACE/libraries${PLATFORM}/lib
 cd ../..
 
+# Build Hypre
+#git clone https://github.com/hypre-space/hypre.git
+echo "################# Building hypre ########################"
+cd hypre/src
+./configure --prefix=$WORKSPACE/libraries${PLATFORM}
+echo "make install"
+make install
+cd ../..
+
 # Build VLSV
 # if [[ $PLATFORM != "-appleM1" ]]; then
 #    git clone https://github.com/fmihpc/vlsv.git

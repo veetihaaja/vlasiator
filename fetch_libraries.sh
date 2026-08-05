@@ -15,6 +15,7 @@ PHIPROF_COMMIT="605a7247c85d967fe22fe079c96c817b461c92b1"
 VLSV_COMMIT="4b5c1e3f44d70b0388a1fbda651ddf8404eec6a4"
 PAPI_COMMIT="721ba0013473af6f9b7aa8ce5a2205e8403af2d1"
 JEMALLOC_COMMIT="7a34f18502e7b222724097cdcd499b437d189acc"
+HYPRE_COMMIT="9fbaf60dc9435e71ff5af984f1e12e2bf8be6ad8"
 
 TRILINOS_BRANCH="zoltanLBSafeAllreduce-issue15235"
 #TRILINOS_COMMIT="16ceeebdfbe0809a549e0543f2824a79ebc2aa2d"
@@ -41,6 +42,13 @@ echo "################# Fetching phiprof ######################"
 git clone --depth=1 https://github.com/fmihpc/phiprof/
 cd phiprof
 git_use_commit $PHIPROF_COMMIT
+cd ..
+
+# Hypre
+echo "################# Fetching hypre ########################"
+git clone --depth=1 https://github.com/hypre-space/hypre.git
+cd hypre
+git_use_commit $HYPRE_COMMIT
 cd ..
 
 # VLSV
