@@ -37,7 +37,6 @@ if [[ -z $SLURM_CPUS_PER_TASK ]]; then
    PARALLEL=$SLURM_CPUS_PER_TASK
 fi
 
-
 # Build phiprof
 #git clone https://github.com/fmihpc/phiprof/
 echo "################# Building phiprof ######################"
@@ -64,6 +63,17 @@ else
 fi
 cp ../include/* $WORKSPACE/libraries${PLATFORM}/include
 cp ../lib/* $WORKSPACE/libraries${PLATFORM}/lib
+cd ../..
+
+# Build Hypre
+#git clone https://github.com/hypre-space/hypre.git
+cd hypre/src
+echo "building HYPRES"
+pwd
+echo "./configure --prefix=$WORKSPACE/libraries${PLATFORM}"
+./configure --prefix=$WORKSPACE/libraries${PLATFORM}
+echo "make install"
+make install
 cd ../..
 
 # Build VLSV

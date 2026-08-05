@@ -43,6 +43,12 @@ cd phiprof
 git_use_commit $PHIPROF_COMMIT
 cd ..
 
+# Hypre
+git clone https://github.com/hypre-space/hypre.git
+cd hypre
+git checkout 9fbaf60dc9435e71ff5af984f1e12e2bf8be6ad8
+cd ..
+
 # VLSV
 echo "################# Fetching VLSV #########################"
 if [[ $PLATFORM != "-appleM1" ]]; then
