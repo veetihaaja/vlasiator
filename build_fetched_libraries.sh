@@ -69,7 +69,9 @@ cd ../..
 # Build Hypre
 #git clone https://github.com/hypre-space/hypre.git
 echo "################# Building hypre ########################"
-cd hypre/src
+cd hypre
+for f in $(grep -Ilr logFile .); do sed -i -e "s/logFile/hypre_logFile/g" $f; done
+cd src
 ./configure --prefix=$WORKSPACE/libraries${PLATFORM}
 echo "make install"
 make install
