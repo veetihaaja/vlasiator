@@ -4,13 +4,26 @@ import numpy as np
 import analysator
 import matplotlib.pyplot as plt
 import os
-import sys
+from bernstein import bernstein_root_in_bracket
+import argparse
+
 
 # parse command line
-if len(sys.argv) > 1:
-    dirname = sys.argv[1]
-else:
-    dirname = "."
+parser = argparse.ArgumentParser(description="Plot expected and observed dispersion relations")
+parser.add_argument("--title",
+                    dest="title",
+                    action="store",
+                    type=str,
+                    default="",
+                    help="Title above all plots (default: %(default)s)")
+parser.add_argument("dirname",
+                    nargs='*',
+                    action="store",
+                    type=str,
+                    default=".",
+                    help="Simulation directory (default: %(default)s)")
+args = parser.parse_args()
+
 
 # load environment
 ptinteractive = int(os.environ.get('PTNOINTERACTIVE', '0')) == 0
@@ -43,17 +56,25 @@ class SI:
     c = 2.9979e8 # m/s
 
 # Be clever about ignorable dimensions
-def auto_squeeze(array):
+def auto_squeeze_vec(array):
         if len(array.shape) == 4:
             return np.average(array, axis=(1,2))
         elif len(array.shape) == 3:
             return np.average(array, axis=1)
         else:
             return array
+def auto_squeeze_scalar(array):
+        assert len(array.shape) < 4, "scalar fields should maximally be 3d"
+        if len(array.shape) == 3:
+            return np.average(array, axis=(1,2))
+        elif len(array.shape) == 2:
+            return np.average(array, axis=1)
+        else:
+            return array
 
 # find timesteps that are present. Maybe we should outsource that to analysator
 timesteps = []
-for filename in glob.glob(dirname+"/bulk*vlsv"):
+for filename in glob.glob(args.dirname+"/bulk*vlsv"):
     parts = filename.split("/")[-1].split(".")
     if len(parts) == 3:
         timesteps.append(int(parts[1]))
@@ -67,8 +88,8 @@ variables = {}
 
 # Analyze first timestep
 for i,t in enumerate(timesteps[:1]):
-    #f = analysator.vlsvfile.VlsvReader(dirname+"/bulk."+"{:07d}".format(t)+".vlsv", fsGridDecomposition=[1,1,1])
-    f = analysator.vlsvfile.VlsvReader(dirname+"/bulk."+"{:07d}".format(t)+".vlsv")
+    #f = analysator.vlsvfile.VlsvReader(args.dirname+"/bulk."+"{:07d}".format(t)+".vlsv", fsGridDecomposition=[1,1,1])
+    f = analysator.vlsvfile.VlsvReader(args.dirname+"/bulk."+"{:07d}".format(t)+".vlsv")
 
     [xsize, ysize, zsize] = map(int,f.get_fsgrid_mesh_size()) # uint64t makes some other stuff unhappy
 
@@ -103,6 +124,28 @@ for i,t in enumerate(timesteps[:1]):
             variableunit["E"] = f.read_variable_info("fg_e").units
     else:
         have_E = False
+
+    if f.check_variable("fg_phi"):
+        have_Phi = True
+        if have_latex:
+            variablename["Phi"] = f.read_variable_info("fg_phi").latex
+            variableunit["Phi"] = f.read_variable_info("fg_phi").latexunits
+        else:
+            variablename["Phi"] = "Phi"
+            variableunit["Phi"] = f.read_variable_info("fg_phi").units
+    else:
+        have_Phi = False
+
+    if f.check_variable("fg_rhoq"):
+        have_rho = True
+        if have_latex:
+            variablename["rho"] = f.read_variable_info("fg_rhoq").latex
+            variableunit["rho"] = f.read_variable_info("fg_rhoq").latexunits
+        else:
+            variablename["rho"] = "rho"
+            variableunit["rho"] = f.read_variable_info("fg_rhoq").units
+    else:
+        have_rho = False
 
     if f.check_variable("vg_eje"):
         have_Eje = True
@@ -145,6 +188,7 @@ for i,t in enumerate(timesteps[:1]):
     else:
         have_ni = False
 
+# Report what we found in the file
 print("Found field grid with "+str(xsize)+"x"+str(ysize)+"x"+str(zsize)+" cells")
 
 dt = f.read_parameter("dt")
@@ -239,6 +283,7 @@ wpi = np.sqrt(ni0 * SI.e**2 / mp / SI.eps0)
 wpe = np.sqrt(ne0 * SI.e**2 / me / SI.eps0)
 vthi = np.sqrt(SI.kB * Ti0 / mp)
 vA = B0 / np.sqrt(SI.mu0 * (me*ne0 + mp*ni0))
+cS = np.sqrt(5./3. * SI.kB * Ti0 / mp)
 vthe = np.sqrt(SI.kB * Te0 / me)
 di = SI.c / wpi
 de = SI.c / wpe
@@ -264,6 +309,10 @@ if have_B:
     B = np.zeros( (len(timesteps), xsize, 5) , dtype=complex)
 if have_E:
     E = np.zeros( (len(timesteps), xsize, 5) , dtype=complex)
+if have_Phi:
+    Phi = np.zeros( (len(timesteps), xsize, 1) , dtype=complex)
+if have_rho:
+    rho = np.zeros( (len(timesteps), xsize, 1) , dtype=complex)
 if have_Eje:
     Eje = np.zeros( (len(timesteps), xsize, 5) , dtype=complex)
 if have_ne:
@@ -279,33 +328,39 @@ for i in tqdm(range(len(timesteps))):
     if not have_tqdm:
         print("Output step "+str(i)+"/"+str(len(timesteps))+" at time "+str(t))
 
-    #f = analysator.vlsvfile.VlsvReader(dirname+"/bulk."+"{:07d}".format(t)+".vlsv", fsGridDecomposition=[1,1,1])
-    f = analysator.vlsvfile.VlsvReader(dirname+"/bulk."+"{:07d}".format(t)+".vlsv")
+    #f = analysator.vlsvfile.VlsvReader(args.dirname+"/bulk."+"{:07d}".format(t)+".vlsv", fsGridDecomposition=[1,1,1])
+    f = analysator.vlsvfile.VlsvReader(args.dirname+"/bulk."+"{:07d}".format(t)+".vlsv")
 
     if have_B:
         fg_b = f.read_fsgrid_variable("fg_b")
-        B[i,:,:3] = auto_squeeze(fg_b)
+        B[i,:,:3] = auto_squeeze_vec(fg_b)
     if have_E:
         fg_e = f.read_fsgrid_variable("fg_e")
         # print("fg_e",fg_e.shape,"auto_squeeze",auto_squeeze(fg_e).shape)
         # fg_e (48, 32, 3) auto_squeeze (48, 3)
-        E[i,:,:3] = auto_squeeze(fg_e)
+        E[i,:,:3] = auto_squeeze_vec(fg_e)
+    if have_Phi:
+        fg_phi = f.read_fsgrid_variable("fg_phi")
+        Phi[i,:,0] = auto_squeeze_scalar(fg_phi)
+    if have_rho:
+        fg_rhoq = f.read_fsgrid_variable("fg_rhoq")
+        rho[i,:,0] = auto_squeeze_scalar(fg_rhoq)
     if have_Eje:
         cellids = f.read_variable('cellid')
         vg_eje = f.read_variable('vg_eje')
-        Eje[i,:,:3]= auto_squeeze(vg_eje[cellids.argsort()].reshape([1,zsize*ysize,xsize,3]))
+        Eje[i,:,:3]= auto_squeeze_vec(vg_eje[cellids.argsort()].reshape([1,zsize*ysize,xsize,3]))
     if have_ne:
         cellids = f.read_variable('cellid')
         vg_ne = f.read_variable('electron/vg_rho')
         # there must be a better way of doing this
         ne_ = vg_ne[cellids.argsort()].reshape([zsize*ysize,xsize]).T.reshape([xsize,zsize*ysize,1])
-        ne[i,:,:1] = auto_squeeze(ne_)
+        ne[i,:,0] = auto_squeeze_scalar(ne_)
         delta_ne[i,:,0] = ne[i,:,0] - ne0
     if have_ni:
         cellids = f.read_variable('cellid')
         vg_ni = f.read_variable('proton/vg_rho')
         ni_ = vg_ni[cellids.argsort()].reshape([zsize*ysize,xsize]).T.reshape([xsize,zsize*ysize,1])
-        ni[i,:,:1] = auto_squeeze(ni_)
+        ni[i,:,0] = auto_squeeze_scalar(ni_)
         delta_ni[i,:,0] = ni[i,:,0] - ni0
 
 if have_ni:
@@ -338,18 +393,25 @@ window = np.outer(spatial_window, temporal_window).T
 vectorcomponentnames = ["x","y","z", "left", "right"]
 scalarcomponentnames = [""]
 
+
+if have_E:
+    print("Ex", np.average(E[:,:,0]), np.std(E[:,:,0]))
+    print("Ey", np.average(E[:,:,1]), np.std(E[:,:,1]))
+    print("Ez", np.average(E[:,:,2]), np.std(E[:,:,2]))
+
+
 print("Plotting data")
 
-freqnorm = Wci
+freqnorm = wpe
 if have_latex:
-    freqnormlabel = r"$\Omega_{ci}$"
+    freqnormlabel = r"$\omega_{pe}$"
 else:
-    freqnormlabel = "W_ci"
-lengthnorm = ri
+    freqnormlabel = "w_pe"
+lengthnorm = lD
 if have_latex:
-    lengthnormlabel = r"$r_i$"
+    lengthnormlabel = r"$\lambda_D$"
 else:
-    lengthnormlabel = "r_i"
+    lengthnormlabel = "l_D"
 
 total = 0
 if have_B:
@@ -358,24 +420,37 @@ if have_B:
 if have_E:
     variables["E"] = E
     total += 3+5+5
+if have_Phi:
+    variables["Phi"] = Phi
+    total += 3
+if have_rho:
+    variables["rho"] = rho
+    total += 3
 if have_Eje:
     variables["Eje"] = Eje
     total += 3+5+5
 if have_ne:
     variables["ne"] = ne
     variables["deltane"] = delta_ne
-    total += 6
+    total += 3+3
 if have_ni:
     variables["ni"] = ni
     variables["deltani"] = delta_ni
-    total += 6
+    total += 3+3
 
 if have_tqdm:
     pbar = tqdm(total=total)
 
+maxbernstein = 10
+kbernstein = np.linspace(0.0, np.pi/dx, xsize+1)[1:]
+omegabernstein = np.zeros( (len(kbernstein), maxbernstein) )
+for i in range(maxbernstein):
+    omegabernstein[:,i] =  np.array([bernstein_root_in_bracket(k, i, Wce, lD, re, order=2*maxbernstein)
+                                     for k in kbernstein])
+
 # plot everything we have loaded and computed
 for variablecode,variable in variables.items():
-    if variablecode in ["ne", "ni", "deltane", "deltani"]: # the scalar components we know how to plow
+    if variablecode in ["ne", "ni", "deltane", "deltani", "Phi", "rho"]: # the scalar components we know how to plow
         componentnames = scalarcomponentnames
     else:
         componentnames = vectorcomponentnames
@@ -386,6 +461,7 @@ for variablecode,variable in variables.items():
         # plot x-t space
         if c < 3:
             plt.figure(variablecode+componentnames[c])
+            plt.title(args.title)
             X = np.linspace(xmin, xmax, xsize)
             T = np.linspace(timesteps[0], timesteps[-1], len(timesteps))
             vmax = np.amax(abs(variable[:,:,c].real))
@@ -402,7 +478,7 @@ for variablecode,variable in variables.items():
                 plt.xlabel("x / "+lengthnormlabel)
                 plt.ylabel("t * "+freqnormlabel)
             plt.tight_layout()
-            imgname = dirname+"/"+variablecode+componentnames[c]
+            imgname = args.dirname+"/"+variablecode+componentnames[c]
             plt.savefig(imgname+".png")
             plt.close()
             if have_tqdm:
@@ -410,6 +486,7 @@ for variablecode,variable in variables.items():
 
         # plot k-omega power
         plt.figure("k"+variablecode+componentnames[c])
+        plt.title(args.title)
         kV = np.fft.fftshift(np.fft.fft2(variable[:,:,c]*window))
         w  = 2.*np.pi*np.fft.fftshift(np.fft.fftfreq(tsize, d=dtout))
         kx = 2.*np.pi*np.fft.fftshift(np.fft.fftfreq(xsize, d=dx))
@@ -447,19 +524,16 @@ for variablecode,variable in variables.items():
         wplasma = w[maskP]
         kplasma = kP(wplasma)
 
-        # Ion plasma osciallations mode
-        def kP(w):
-            return 1./vthi * np.sqrt(1./3. * (w**2 - wpi**2))
-        maskP = np.logical_and(wpe>w, w>wpi)
-        wionplasma = w[maskP]
-        kionplasma = kP(wionplasma)
+        # Ion acoustic mode
+        def kS(w):
+            return w/cS
 
         power = kV.real**2 + kV.imag**2
         if np.amax(power) == 0.:
             power[:,:] = 1e-80
 
         vmax = np.ceil(np.log10(np.amax(power)))
-        vmin = vmax - 7
+        vmin = vmax - 10
 
         im = plt.pcolormesh(kx*lengthnorm, w/freqnorm, np.log10(power), shading='gouraud', vmin=vmin, vmax=vmax)
         if have_latex:
@@ -469,7 +543,7 @@ for variablecode,variable in variables.items():
             labelstr="log |~"+variablename[variablecode]+"_{"+componentnames[c]+"}|^2"
         plt.colorbar(im, label=labelstr)
         plt.plot( kplasma*lengthnorm,  wplasma/freqnorm, color="orange", linestyle=":", label="P_e")
-        plt.plot( kionplasma*lengthnorm, wionplasma/freqnorm, color="blue", linestyle=":", label="P_i")
+        plt.plot( kS(w)*lengthnorm,    w/freqnorm, color="orange", linestyle="--", label="c_S")
         plt.plot( kleftlf*lengthnorm,  wleftlf/freqnorm, color="red", linestyle=":", label="L")
         plt.plot(-kleftlf*lengthnorm,  wleftlf/freqnorm, color="red", linestyle=":")
         plt.plot( klefthf*lengthnorm,  wlefthf/freqnorm, color="red", linestyle=":")
@@ -478,6 +552,10 @@ for variablecode,variable in variables.items():
         plt.plot(-krightlf*lengthnorm, wrightlf/freqnorm, color="green", linestyle=":")
         plt.plot( krighthf*lengthnorm, wrighthf/freqnorm, color="green", linestyle=":")
         plt.plot(-krighthf*lengthnorm, wrighthf/freqnorm, color="green", linestyle=":")
+
+        for i in range(maxbernstein):
+            plt.plot(kbernstein*lengthnorm, omegabernstein[:,i]/freqnorm, color="white", linestyle=":")
+
         if Wci > 0.:
             plt.axhline(Wci/freqnorm, color="cyan", linestyle=":", linewidth=0.5, label="W_ci")
         if Wce > 0.:
@@ -490,11 +568,15 @@ for variablecode,variable in variables.items():
         else:
             plt.xlabel("k_x "+lengthnormlabel)
             plt.ylabel("w / "+freqnormlabel)
-        plt.xlim(kx[0]*lengthnorm, kx[-1]*lengthnorm)
-        plt.ylim(   0.,  1.2*Wci/freqnorm)
+        #plt.xlim(-0.5/ri*lengthnorm, 0.5/ri*lengthnorm)
+        #plt.ylim(   0., 1.5*Wci/freqnorm)
+        #plt.xlim(kx[0]*lengthnorm, kx[-1]*lengthnorm)
+        plt.xlim(-1.5/lD*lengthnorm, 1.5/lD*lengthnorm)
+        plt.ylim(   0.,  3.*wpe/freqnorm)
+        #plt.ylim(   0.,  1.2*Wci/freqnorm)
         plt.legend()
         plt.tight_layout()
-        imgname = dirname+"/k"+variablecode+componentnames[c]
+        imgname = args.dirname+"/k"+variablecode+componentnames[c]
         plt.savefig(imgname+".png")
         plt.close()
         if have_tqdm:
@@ -502,6 +584,7 @@ for variablecode,variable in variables.items():
 
         # plot t-k power
         plt.figure("s"+variablecode+componentnames[c])
+        plt.title(args.title)
         # compute the fft only over the x->kx direction, don't apply temporal windowing
         sV = np.fft.fftshift(np.fft.fft(variable[:,:,c]*spatial_window, axis=1), axes=1)
         spower = sV.real**2 + sV.imag**2
@@ -517,7 +600,7 @@ for variablecode,variable in variables.items():
             plt.xlabel("t * "+freqnormlabel)
             plt.ylabel("k_x "+lengthnormlabel)
         plt.tight_layout()
-        imgname = dirname+"/s"+variablecode+componentnames[c]
+        imgname = args.dirname+"/s"+variablecode+componentnames[c]
         plt.savefig(imgname+".png")
         plt.close()
         if have_tqdm:
