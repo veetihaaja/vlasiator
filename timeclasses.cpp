@@ -184,24 +184,18 @@ void calculateGlobalTcVariables(Real fsdt, Real globalMaxDt) {
    //setting fsdt smaller by the buffer amount
    //fsdt = fsdt / pow(2, P::timeclassBuffer);
 
+   if (P::tc_test_type != 0) {
+      // with special tests, let the user set the initial max timeclass, and don't change it based on CFL
+      P::currentMaxTimeclass = P::initialMaxTimeclass;
+      return;
+   }
+
    // This is the full range of timeclasses that could be used based on the physical environment
    int timeclassRange = max(int(log2(globalMaxDt/fsdt)),0);
    if (timeclassRange < P::initialMaxTimeclass) {
       // TODO figure this out if needed
       //std::cerr << "timeclassrange (" << (timeclassRange) << ") bigger than initialmaxtimeclass (" << P::initialMaxTimeclass << "), aborting" << std::endl;
       //abort();
-   }
-
-   if (P::tc_test_type == 1) {
-      P::currentMaxTimeclass = P::initialMaxTimeclass;
-      return;
-   }
-
-   if(P::tcOverrideTimeclass > -1 && P::tc_test_type != 0 && P::tc_test_type != 6){
-      //P::currentMaxTimeclass = min(P::initialMaxTimeclass,P::tcOverrideTimeclass);
-      // if we want a special test, just set the current timeclass to the initial one, and trust the programmer knows what they are doing.
-      P::currentMaxTimeclass = P::initialMaxTimeclass;
-      return;
    }
 
    // ... and we need to clamp that with the parameter for number of MaxTimeclasses

@@ -1332,7 +1332,8 @@ int simulate(int argn,char* args[]) {
             }
       }
 
-      if ((P::tstep > P::tstep_min && (P::dynamicTimestep || P::currentMaxTimeclass > 0)) && (P::tc_test_type == 0 || P::tc_test_type == 3)) {
+      // we only really want to deal with this with magnetospheric sims, atleast for now
+      if ((P::tstep > P::tstep_min && (P::dynamicTimestep || P::currentMaxTimeclass > 0)) && (P::projectName == "Magnetosphere")) {
 
          //check if global base dt is fine, and update cell dt limits
          auto timestepvector = computeNewTimeStep(mpiGrid, technicalGrid, dtMaxLocal, dtMaxGlobal, dtMinMaxLocal, dtMinMaxGlobal);
