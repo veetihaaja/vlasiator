@@ -932,8 +932,8 @@ void getGhostNeighborsforTC(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>&
 
       for (const CellID cell : tc_cells) {
 
-         const auto* neighbors = mpiGrid.get_neighbors_to(cell, Neighborhoods::VLASOV_SOLVER_TIMEGHOST_EXACT_HALO);
-         const auto* outerNeighbors = mpiGrid.get_neighbors_to(cell, Neighborhoods::VLASOV_SOLVER_TIMEGHOST_OUTER_HALO);
+         const auto* neighbors = mpiGrid.get_neighbors_of(cell, Neighborhoods::VLASOV_SOLVER_TIMEGHOST_EXACT_HALO);
+         const auto* outerNeighbors = mpiGrid.get_neighbors_of(cell, Neighborhoods::VLASOV_SOLVER_TIMEGHOST_OUTER_HALO);
 
          // get_neighbours_of returns a pointer to a vector of pairs, and each pairs' first element is the CellID
          // get_remote_neighbors_of returns a vector of CellIDs
@@ -952,7 +952,7 @@ void getGhostNeighborsforTC(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>&
                      break;
                   }
                }
-               if(!is_symm){
+               if(!is_symm && (cell != failcell)){
                   std::cerr << "ASYMERROR1 Cell " << cell << " has neighbor " << failcell << " that does not consider " << cell << " as its neighbor!\n";
                }
                symmetryref = mpiGrid.get_neighbors_to(cell, Neighborhoods::VLASOV_SOLVER_TIMEGHOST_EXACT_HALO);
@@ -964,7 +964,7 @@ void getGhostNeighborsforTC(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>&
                      break;
                   }
                }
-               if(!is_symm){
+               if((!is_symm) && (cell != failcell)){
                   std::cerr << "ASYMERROR2 Cell " << cell << " has neighbor " << failcell << " that does not consider " << cell << " as its neighbor via get_neighbors_to!\n";
                }
             }
@@ -985,7 +985,7 @@ void getGhostNeighborsforTC(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>&
                      break;
                   }
                }
-               if(!is_symm){
+               if(!is_symm && (cell != failcell)){
                   std::cerr << "ASYMERROR3 Cell copy-ghost " << cell << " has neighbor " << failcell << " that does not consider " << cell << " as its neighbor!\n";
                }
                symmetryref = mpiGrid.get_neighbors_to(cell, Neighborhoods::VLASOV_SOLVER_TIMEGHOST_OUTER_HALO);
@@ -997,7 +997,7 @@ void getGhostNeighborsforTC(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>&
                      break;
                   }
                }
-               if(!is_symm){
+               if(!is_symm && (cell != failcell)){
                   std::cerr << "ASYMERROR4 Cell copy-ghost " << cell << " has neighbor " << failcell << " that does not consider " << cell << " as its neighbor via get_neighbors_to!\n";
                }
 
@@ -1028,7 +1028,7 @@ void getGhostNeighborsforTC(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>&
       for (int timeclass = 0; timeclass <= P::currentMaxTimeclass; ++timeclass) {
          if (mpiGrid[cell]->requested_timeclass_ghosts.count(timeclass) > 0) {
             mpiGrid[cell]->requested_timeclass_copy_ghosts.erase(timeclass);
-            std::cerr << myRank << ": Cell " << cell << " has req_ghost of timeclass " << timeclass << ", removing req_copy_ghost of timeclass " << timeclass << "\n";
+            //std::cerr << myRank << ": Cell " << cell << " has req_ghost of timeclass " << timeclass << ", removing req_copy_ghost of timeclass " << timeclass << "\n";
          }
       }
    }
