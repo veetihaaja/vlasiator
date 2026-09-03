@@ -1231,7 +1231,7 @@ void getSeedIds(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGr
    // These neighborhoods no longer include the AMR addition beyond the regular vlasov stencil
    const int neighborhood = getNeighborhood(dimension, getNeigborhoodStencilLength());
 
- //#pragma omp parallel for
+   //#pragma omp parallel for // TODO commented pragmatically, figure out
    for (uint i=0; i<propagatedCells.size(); i++) {
       const CellID celli = propagatedCells[i];
       #ifdef DEBUG_PENCILS
@@ -1239,7 +1239,7 @@ void getSeedIds(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGr
       #endif
       bool addToSeedIds = P::amrTransShortPencils;
       if (addToSeedIds) {
-//#pragma omp critical
+//#pragma omp critical // TODO commented pragmatically, figure out
          seedIds.push_back({timeclass, celli});
          continue;
       }
@@ -1309,7 +1309,7 @@ void getSeedIds(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGr
          }
       } // finish check A
       if ( addToSeedIds ) {
-//#pragma omp critical (pencil_seedIds_push_back)
+//#pragma omp critical (pencil_seedIds_push_back) // TODO commented pragmatically, figure out
          seedIds.push_back({timeclass, celli});
          continue;
       }
@@ -1362,7 +1362,7 @@ void getSeedIds(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGr
       } // Finish B check
 
       if ( addToSeedIds ) {
-//#pragma omp critical
+//#pragma omp critical // TODO commented pragmatically, figure out
          seedIds.push_back({timeclass, celli});
          continue;
       }
@@ -1396,7 +1396,7 @@ void getSeedIds(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGr
       } // Finish C check
 
       if ( addToSeedIds ) {
-//#pragma omp critical (pencil_seedIds_push_back)
+//#pragma omp critical (pencil_seedIds_push_back) // TODO commented pragmatically, figure out
          seedIds.push_back({timeclass, celli});
       }
    }
@@ -1430,7 +1430,7 @@ void check_ghost_cells(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>
 
    std::vector<CellID> pencilIdsToSplit;
 
-#pragma omp parallel for
+   #pragma omp parallel for
    for (uint pencili = 0; pencili < pencils.N; ++pencili) {
 
       // This check isn't in use at the moment, because no pencils are ever flagged periodic..
@@ -1532,7 +1532,7 @@ void check_ghost_cells(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>
          #endif
          // Let's avoid modifying pencils while we are looping over it. Write down the indices of pencils
          // that need to be split and split them later.
-#pragma omp critical
+         #pragma omp critical
          {
             pencilIdsToSplit.push_back(pencili);
          }
@@ -1564,7 +1564,7 @@ void check_ghost_cells(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>
          abort();
       }
 
-// WARNING threading inside this function
+      // WARNING threading inside this function
       pencils.split(pencili,dx,dy);
 
    }
@@ -1857,7 +1857,7 @@ void prepareSeedIdsAndPencils(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Ge
 
    phiprof::Timer buildPencilsTimer {"buildPencils"};
 
-// #pragma omp parallel
+   //#pragma omp parallel
    {
       // Empty vectors for internal use of buildPencilsWithNeighbors. Could be default values but
       // default vectors are complicated. Should overload buildPencilsWithNeighbors like suggested here
@@ -1870,7 +1870,7 @@ void prepareSeedIdsAndPencils(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Ge
       std::vector<CellID>::iterator ibeg, iend;
       bool exit = false;
 
-#pragma omp for schedule(guided,8)
+      #pragma omp for schedule(guided,8)
       for (uint i=0; i<seedIds.size(); i++) {
          cuint seedId = seedIds[i].second;
          // if (seedIds[i].first == 1) exit = true;
@@ -1881,7 +1881,7 @@ void prepareSeedIdsAndPencils(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Ge
 
 
       // accumulate thread results in global set of pencils
-#pragma omp critical
+      #pragma omp critical
       {
          for (uint i=0; i<thread_pencils.N; i++) {
             // Use vector range constructor
@@ -1909,7 +1909,7 @@ void prepareSeedIdsAndPencils(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Ge
    phiprof::Timer findSourceRatiosTimer {"Find_source_cells_ratios_dz"};
    // Compute also the stencil around the pencil (source cells), and
    // Store source cell widths and target cell contribution ratios.
-#pragma omp parallel for schedule(guided)
+   #pragma omp parallel for schedule(guided)
    for (uint i=0; i<DimensionPencils[dimension].N; ++i) {
       const uint L = DimensionPencils[dimension].lengthOfPencils[i];
       CellID *pencilIds = DimensionPencils[dimension].ids.data() + DimensionPencils[dimension].idsStart[i];

@@ -69,7 +69,7 @@ void calculateCellMoments(spatial_cell::SpatialCell* cell,
       vmesh::VelocityMesh* vmesh    = cell->dev_get_velocity_mesh(popID);
       vmesh::VelocityBlockContainer* blockContainer = cell->dev_get_velocity_blocks(popID);
       #else
-      vmesh::VelocityMesh* vmesh    = cell->get_velocity_mesh(popID);
+      //vmesh::VelocityMesh* vmesh    = cell->get_velocity_mesh(popID);
       vmesh::VelocityBlockContainer* blockContainer = cell->get_velocity_blocks(popID);
       #endif
       const uint nBlocks = cell->get_velocity_mesh(popID)->size();
@@ -127,7 +127,7 @@ void calculateCellMoments(spatial_cell::SpatialCell* cell,
       vmesh::VelocityMesh* vmesh    = cell->dev_get_velocity_mesh(popID);
       vmesh::VelocityBlockContainer* blockContainer = cell->dev_get_velocity_blocks(popID);
       #else
-      vmesh::VelocityMesh* vmesh    = cell->get_velocity_mesh(popID);
+      //vmesh::VelocityMesh* vmesh    = cell->get_velocity_mesh(popID);
       vmesh::VelocityBlockContainer* blockContainer = cell->get_velocity_blocks(popID);
       #endif
       const uint nBlocks = cell->get_velocity_mesh(popID)->size();
@@ -195,7 +195,7 @@ void calculateMoments_R(
          if (cell->get_timeclass_turn_v()) cells.push_back(allcells[c]);
    } 
    for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
-#pragma omp parallel for schedule(dynamic,1)
+      #pragma omp parallel for schedule(dynamic,1)
       for (size_t c=0; c<cells.size(); ++c) {
          SpatialCell* cell = mpiGrid[cells[c]];
 
@@ -224,7 +224,7 @@ void calculateMoments_R(
          vmesh::VelocityMesh* vmesh    = cell->dev_get_velocity_mesh(popID);
          vmesh::VelocityBlockContainer* blockContainer = cell->dev_get_velocity_blocks(popID);
          #else
-         vmesh::VelocityMesh* vmesh    = cell->get_velocity_mesh(popID);
+         //vmesh::VelocityMesh* vmesh    = cell->get_velocity_mesh(popID);
          vmesh::VelocityBlockContainer* blockContainer = cell->get_velocity_blocks(popID);
          #endif
          const uint nBlocks = cell->get_velocity_mesh(popID)->size();
@@ -263,7 +263,7 @@ void calculateMoments_R(
       } // for-loop over spatial cells
    } // for-loop over particle species
 
-#pragma omp parallel for schedule(static)
+   #pragma omp parallel for schedule(static)
    for (size_t c=0; c<cells.size(); ++c) {
       SpatialCell* cell = mpiGrid[cells[c]];
       if (cell->sysBoundaryFlag == sysboundarytype::DO_NOT_COMPUTE) {
@@ -283,7 +283,7 @@ void calculateMoments_R(
    }
 
    for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
-#pragma omp parallel for schedule(dynamic,1)
+      #pragma omp parallel for schedule(dynamic,1)
       for (size_t c=0; c<cells.size(); ++c) {
          SpatialCell* cell = mpiGrid[cells[c]];
 
@@ -396,7 +396,7 @@ void calculateMoments_V(
          vmesh::VelocityMesh* vmesh    = cell->dev_get_velocity_mesh(popID);
          vmesh::VelocityBlockContainer* blockContainer = cell->dev_get_velocity_blocks(popID);
          #else
-         vmesh::VelocityMesh* vmesh    = cell->get_velocity_mesh(popID);
+         //vmesh::VelocityMesh* vmesh    = cell->get_velocity_mesh(popID);
          vmesh::VelocityBlockContainer* blockContainer = cell->get_velocity_blocks(popID);
          #endif
          const uint nBlocks = cell->get_velocity_mesh(popID)->size();
@@ -457,7 +457,7 @@ void calculateMoments_V(
    }
 
    for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
-#pragma omp parallel for schedule(dynamic,1)
+      #pragma omp parallel for schedule(dynamic,1)
       for (size_t c=0; c<cells.size(); ++c) {
          SpatialCell* cell = mpiGrid[cells[c]];
 
@@ -472,7 +472,7 @@ void calculateMoments_V(
          vmesh::VelocityMesh* vmesh    = cell->dev_get_velocity_mesh(popID);
          vmesh::VelocityBlockContainer* blockContainer = cell->dev_get_velocity_blocks(popID);
          #else
-         vmesh::VelocityMesh* vmesh    = cell->get_velocity_mesh(popID);
+         //vmesh::VelocityMesh* vmesh    = cell->get_velocity_mesh(popID);
          vmesh::VelocityBlockContainer* blockContainer = cell->get_velocity_blocks(popID);
          #endif
          const uint nBlocks = cell->get_velocity_mesh(popID)->size();
@@ -481,7 +481,7 @@ void calculateMoments_V(
          }
 
          const Real mass = getObjectWrapper().particleSpecies[popID].mass;
-         const Real charge = getObjectWrapper().particleSpecies[popID].charge;
+         //const Real charge = getObjectWrapper().particleSpecies[popID].charge;
 
          // Temporary array where moments are stored
          Real array[nMom2] = {0};
