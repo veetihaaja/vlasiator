@@ -94,56 +94,56 @@ bool AlfvenCascade::initialize(void) {
 void AlfvenCascade::addParameters() {
    typedef Readparameters RP;
    
-   RP::add("AlfvenCascade.numberOfWaves", "Number of waves in the simulation", 1);
+   RP::add<int>("AlfvenCascade.numberOfWaves", "Number of waves in the simulation", 1);
 
-   RP::addComposing("AlfvenCascade.wavelength", "Wavelength of wave (m)");
-   RP::addComposing("AlfvenCascade.amplitude", "Velocity amplitude (m/s)");
-   RP::addComposing("AlfvenCascade.phase", "Initial phase (rad)");
+   RP::addComposing<Real>("AlfvenCascade.wavelength", "Wavelength of wave (m)");
+   RP::addComposing<Real>("AlfvenCascade.amplitude", "Velocity amplitude (m/s)");
+   RP::addComposing<Real>("AlfvenCascade.phase", "Initial phase (rad)");
       
 
-   RP::add("AlfvenCascade.n0", "Background density (1/m^3)", 1e6);
-   RP::add("AlfvenCascade.B", "Background magnetic field strength (T)", 1e-8);
-   RP::add("AlfvenCascade.T", "Temperature (K)", 1e6);
-   RP::add("AlfvenCascade.spectralIndex", "Power law index for initial spectrum", -5.0/3.0);
-   RP::add("AlfvenCascade.randomSeed", "Seed for random phase generation", 12345);
-   RP::add("AlfvenCascade.verbose", "Verbose output", 1);
-   RP::add("AlfvenCascade.angle", "Wave angle (rad)",0.0);
-   RP::add("AlfvenCascade.gaussianMask", "True if using gaussian mask to initial perturbation", false);
-   RP::add("AlfvenCascade.gaussianMaskLocation", "Location of gaussian mask", 0.0);
-   RP::add("AlfvenCascade.gaussianMaskWidth", "Width of gaussian mask", 1.0);
+   RP::add<Real>("AlfvenCascade.n0", "Background density (1/m^3)", 1e6);
+   RP::add<Real>("AlfvenCascade.B", "Background magnetic field strength (T)", 1e-8);
+   RP::add<Real>("AlfvenCascade.T", "Temperature (K)", 1e6);
+   RP::add<Real>("AlfvenCascade.spectralIndex", "Power law index for initial spectrum", -5.0/3.0);
+   RP::add<Real>("AlfvenCascade.randomSeed", "Seed for random phase generation", 12345);
+   RP::add<Real>("AlfvenCascade.verbose", "Verbose output", 1);
+   RP::add<Real>("AlfvenCascade.angle", "Wave angle (rad)",0.0);
+   RP::add<Real>("AlfvenCascade.gaussianMask", "True if using gaussian mask to initial perturbation", false);
+   RP::add<Real>("AlfvenCascade.gaussianMaskLocation", "Location of gaussian mask", 0.0);
+   RP::add<Real>("AlfvenCascade.gaussianMaskWidth", "Width of gaussian mask", 1.0);
 
 }
 
 void AlfvenCascade::getParameters() {
-   typedef Readparameters RP;
-   Project::getParameters();
+   // typedef Readparameters RP;
+   // Project::getParameters();
 
-   RP::get("AlfvenCascade.numberOfWaves", nWaves);
+   // RP::get("AlfvenCascade.numberOfWaves", nWaves);
 
-   RP::get("AlfvenCascade.wavelength", wavelength);
-   RP::get("AlfvenCascade.amplitude", amplitude);
-   RP::get("AlfvenCascade.phase", phase);
+   // RP::get("AlfvenCascade.wavelength", wavelength);
+   // RP::get("AlfvenCascade.amplitude", amplitude);
+   // RP::get("AlfvenCascade.phase", phase);
 
-   // We need the correct number of parameters for the waves
-   if(   nWaves != (int)wavelength.size()
-      || nWaves != (int)amplitude.size()
-      || nWaves != (int)phase.size()
-   ) {
-      cerr << "AlfvenCascade.numberOfWaves is set to " << nWaves << " so the same number of values is required for AlfvenCascade.wavelength, AlfvenCascade.amplitude, AlfvenCascade.phase" << endl;
-      MPI_Abort(MPI_COMM_WORLD, 1);
-   }
+   // // We need the correct number of parameters for the waves
+   // if(   nWaves != (int)wavelength.size()
+   //    || nWaves != (int)amplitude.size()
+   //    || nWaves != (int)phase.size()
+   // ) {
+   //    cerr << "AlfvenCascade.numberOfWaves is set to " << nWaves << " so the same number of values is required for AlfvenCascade.wavelength, AlfvenCascade.amplitude, AlfvenCascade.phase" << endl;
+   //    MPI_Abort(MPI_COMM_WORLD, 1);
+   // }
 
-   // Get scalar parameters
-   RP::get("AlfvenCascade.n0", n0);
-   RP::get("AlfvenCascade.B", B);
-   RP::get("AlfvenCascade.T", T);
-   RP::get("AlfvenCascade.spectralIndex", spectralIndex);
-   RP::get("AlfvenCascade.randomSeed", randomSeed);
-   RP::get("AlfvenCascade.verbose", verbose);
-   RP::get("AlfvenCascade.angle", angle);
-   RP::get("AlfvenCascade.gaussianMask", gaussianMask);
-   RP::get("AlfvenCascade.gaussianMaskLocation", gaussianMaskLocation);
-   RP::get("AlfvenCascade.gaussianMaskWidth", gaussianMaskWidth);
+   // // Get scalar parameters
+   // RP::get("AlfvenCascade.n0", n0);
+   // RP::get("AlfvenCascade.B", B);
+   // RP::get("AlfvenCascade.T", T);
+   // RP::get("AlfvenCascade.spectralIndex", spectralIndex);
+   // RP::get("AlfvenCascade.randomSeed", randomSeed);
+   // RP::get("AlfvenCascade.verbose", verbose);
+   // RP::get("AlfvenCascade.angle", angle);
+   // RP::get("AlfvenCascade.gaussianMask", gaussianMask);
+   // RP::get("AlfvenCascade.gaussianMaskLocation", gaussianMaskLocation);
+   // RP::get("AlfvenCascade.gaussianMaskWidth", gaussianMaskWidth);
 
 }
 
@@ -249,9 +249,9 @@ Realf AlfvenCascade::fillPhaseSpace(spatial_cell::SpatialCell *cell,
       return rhosum;
    }
 
-void AlfvenCascade::setProjectBField(FsGrid<std::array<Real, fsgrids::bfield::N_BFIELD>, FS_STENCIL_WIDTH>& perBGrid,
-                                    FsGrid<std::array<Real, fsgrids::bgbfield::N_BGB>, FS_STENCIL_WIDTH>& BgBGrid,
-                                    FsGrid<fsgrids::technical, FS_STENCIL_WIDTH>& technicalGrid) {
+   void AlfvenCascade::setProjectBField(fsgrids::perbspan perb,
+                                 fsgrids::bgbspan bgb,
+                                 fsgrids::technicalspan technical, FieldSolverGrid &fsgrid) {
    // Set background field
    ConstantField bgField;
    bgField.initialize(B*cos(angle), B*sin(angle), 0.0); // Background field according to angle
@@ -262,46 +262,43 @@ void AlfvenCascade::setProjectBField(FsGrid<std::array<Real, fsgrids::bfield::N_
 
    creal mu0 = physicalconstants::MU_0;
 
-#pragma omp parallel for collapse(3)
-      for (int i = 0; i < localSize[0]; ++i) {
-         for (int j = 0; j < localSize[1]; ++j) {
-            for (int k = 0; k < localSize[2]; ++k) {
-               const std::array<Real, 3> x = perBGrid.getPhysicalCoords(i, j, k);
-               std::array<Real, fsgrids::bfield::N_BFIELD>* cell = perBGrid.get(i, j, k);
+   fsgrid.parallel_for([](int timerId) -> phiprof::Timer { return phiprof::Timer{timerId}; },
+                        phiprof::initializeTimer("setProjectBField"), technical,
+                        [=](const fsgrid::Coordinates &coordinates, const fsgrid::FsStencil& stencil, cuint sysBoundaryFlag, cuint sysBoundaryLayer) {
+      const std::array<Real, 3> xyz = coordinates.getPhysicalCoords(stencil.i, stencil.j, stencil.k);
+      const std::array<Real, 3> gridSpacing = coordinates.physicalGridSpacing;
+      auto& cell = perb[stencil.ooo()];
 
-               Real Bx = 0.0, By = 0.0, Bz = 0.0;
+      Real Bx = 0.0, By = 0.0, Bz = 0.0;
 
-               // Sum contributions from all waves
-               for (int idx = 0; idx < nWaves; idx++) {
-                   Real cosalpha = cos(angle);
-                   Real sinalpha = sin(angle);
-                   Real kwave = 2 * M_PI / wavelength.at(idx);
-                   Real xpar = x[0] * cosalpha + x[1] * sinalpha;
+      // Sum contributions from all waves
+      for (int idx = 0; idx < nWaves; idx++) {
+         Real cosalpha = cos(angle);
+         Real sinalpha = sin(angle);
+         Real kwave = 2 * M_PI / wavelength.at(idx);
+         Real xpar = x[0] * cosalpha + x[1] * sinalpha;
 
-                   // Calculate B1 from v1 using Alfvén wave relation
-                   Real B1 = std::pow(-1.0,idx) * amplitude.at(idx) * sqrt(mu0 * rho0);
+         // Calculate B1 from v1 using Alfvén wave relation
+         Real B1 = std::pow(-1.0,idx) * amplitude.at(idx) * sqrt(mu0 * rho0);
 
-                   Real Bperp = 0.0, Bpara = 0.0;
+         Real Bperp = 0.0, Bpara = 0.0;
 
-                   if (!gaussianMask) {
-                     Bperp = B1 * sin(kwave * xpar + phase.at(idx));
-                     Bpara = B1 * cos(kwave * xpar + phase.at(idx));
-                   } else {
-                     Real gaussianVal = exp(-((x[0] - gaussianMaskLocation) * (x[0] - gaussianMaskLocation)) / (2 * gaussianMaskWidth * gaussianMaskWidth));
-                     Bperp = B1 * sin(kwave * xpar + phase.at(idx)) * gaussianVal;
-                     Bpara = B1 * cos(kwave * xpar + phase.at(idx)) * gaussianVal;
-                   }
-                   Bx += -Bperp * sinalpha;
-                   By += Bperp * cosalpha;
-                   Bz += Bpara;
-               }
-
-               cell->at(fsgrids::bfield::PERBX) = Bx;
-               cell->at(fsgrids::bfield::PERBY) = By;
-               cell->at(fsgrids::bfield::PERBZ) = Bz;
-            }
+         if (!gaussianMask) {
+            Bperp = B1 * sin(kwave * xpar + phase.at(idx));
+            Bpara = B1 * cos(kwave * xpar + phase.at(idx));
+         } else {
+            Real gaussianVal = exp(-((x[0] - gaussianMaskLocation) * (x[0] - gaussianMaskLocation)) / (2 * gaussianMaskWidth * gaussianMaskWidth));
+            Bperp = B1 * sin(kwave * xpar + phase.at(idx)) * gaussianVal;
+            Bpara = B1 * cos(kwave * xpar + phase.at(idx)) * gaussianVal;
          }
+            Bx += -Bperp * sinalpha;
+            By += Bperp * cosalpha;
+            Bz += Bpara;
       }
+
+      cell->at(fsgrids::bfield::PERBX) = Bx;
+      cell->at(fsgrids::bfield::PERBY) = By;
+      cell->at(fsgrids::bfield::PERBZ) = Bz;
    }
 }
 

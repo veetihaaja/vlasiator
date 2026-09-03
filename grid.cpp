@@ -779,7 +779,7 @@ void balanceLoad(dccrg::Dccrg<SpatialCell, dccrg::Cartesian_Geometry>& mpiGrid, 
    }
    updateBlocksTimer.stop();
 // std::cerr << __FILE__<<":"<<__LINE__<<"\n";
-   /phiprof::Timer updateBoundariesTimer {"update sysboundaries"};
+   phiprof::Timer updateBoundariesTimer {"update sysboundaries"};
    sysBoundaries.updateSysBoundariesAfterLoadBalance( mpiGrid );
    // std::cerr << __FILE__<<":"<<__LINE__<<"\n";
    updateBoundariesTimer.stop();

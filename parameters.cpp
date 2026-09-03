@@ -512,7 +512,7 @@ bool P::addParameters() {
    RP::add("loadBalance.algorithm", "Load balancing algorithm to be used", P::loadBalanceAlgorithm);
    RP::add("loadBalance.tolerance", "Load imbalance tolerance", P::loadBalanceOptions["IMBALANCE_TOL"]);
    RP::add("loadBalance.rebalanceInterval", "Load rebalance interval (steps)", P::rebalanceInterval);
-   RP::add("loadBalance.timeclassLBmantissa", "Effect of timeclass to load balance weight of a cell. LB_w = LW_w*loadBalance.timeclassLBmantissa^timeclass", 2);
+   RP::add("loadBalance.timeclassLBmantissa", "Effect of timeclass to load balance weight of a cell. LB_w = LW_w*loadBalance.timeclassLBmantissa^timeclass", P::timeclassLBmantissa);
 
    RP::add("loadBalance.optionKey", "Zoltan option key. Has to be matched by loadBalance.optionValue.",P::loadBalanceKeys);
    RP::add("loadBalance.optionValue", "Zoltan option value. Has to be matched by loadBalance.optionKey.",P::loadBalanceValues);

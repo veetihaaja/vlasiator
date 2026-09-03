@@ -196,6 +196,9 @@ std::vector<Real> computeNewTimeStep(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_G
 
    Real localDt, baseDt, fsdt;
 
+   int myRank;
+   MPI_Comm_rank(MPI_COMM_WORLD,&myRank);
+
    // localDt: max dt in the local MPI domain
    localDt = meanVlasovCFL * dtMaxLocal[0];
    localDt = min(localDt,meanVlasovCFL * dtMaxLocal[1] * P::maxSlAccelerationSubcycles);
@@ -878,7 +881,7 @@ int simulate(int argn,char* args[]) {
       //std::cerr << __FILE__ << " " << __LINE__ << std::endl;
       computeDtimer.stop();
 
-      balanceLoad(mpiGrid, sysBoundaryContainer, technicalGrid);
+      balanceLoad(mpiGrid, sysBoundaryContainer, technical.view(), fsgrid);
       
       //std::cerr << __FILE__ << " " << __LINE__ << std::endl;
 

@@ -31,12 +31,11 @@
 #include "../velocity_mesh_parameters.h"
 
 #include "Alfven/Alfven.h"
-#include "AlfvenCascade/AlfvenCascade.h"
+// #include "AlfvenCascade/AlfvenCascade.h"
 #include "Diffusion/Diffusion.h"
 #include "Dispersion/Dispersion.h"
 #include "Distributions/Distributions.h"
 #include "Firehose/Firehose.h"
-#include "FastWave/FastWave.h"
 #include "Flowthrough/Flowthrough.h"
 #include "Fluctuations/Fluctuations.h"
 #include "Harris/Harris.h"
