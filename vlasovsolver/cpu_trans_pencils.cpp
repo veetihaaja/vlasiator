@@ -1317,7 +1317,7 @@ void getSeedIds(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGr
          }
       } // finish check A
       if ( addToSeedIds ) {
-#pragma omp critical (pencil_seedIds_push_back)
+#pragma omp critical
          seedIds.push_back({timeclass, celli});
          continue;
       }
@@ -1413,7 +1413,7 @@ void getSeedIds(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGr
       } // Finish C check
 
       if ( addToSeedIds ) {
-#pragma omp critical (pencil_seedIds_push_back)
+#pragma omp critical
          seedIds.push_back({timeclass, celli});
       }
    }
@@ -1791,7 +1791,9 @@ void prepareSeedIdsAndPencils(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Ge
             propagatedCells.push_back(localCells[c]);
          }
       }
-      if(P::currentMaxTimeclass >= 0){ // Not possible with current forced GT setup
+      if(P::currentMaxTimeclass > 0){ // Not possible with current forced GT setup
+         std::cerr << "Implementation pending, you tried to use timeclasses without Ghost Translation!" << std::endl;
+         abort();
          for (int i = 0; i <= P::currentMaxTimeclass; ++i){
             tc_propagatedCells.push_back(vector<CellID>());
             for (size_t c=0; c<localCells.size(); ++c) {
@@ -1854,7 +1856,7 @@ void prepareSeedIdsAndPencils(const dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Ge
 
    phiprof::Timer buildPencilsTimer {"buildPencils"};
 
-// #pragma omp parallel
+#pragma omp parallel
    {
       // Empty vectors for internal use of buildPencilsWithNeighbors. Could be default values but
       // default vectors are complicated. Should overload buildPencilsWithNeighbors like suggested here
