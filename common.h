@@ -98,6 +98,7 @@ namespace Neighborhoods {
       VLASOV_SOLVER_GHOST_REQNEIGH, /*!< all ghost translation neighbors which require own neighbor information */
       VLASOV_SOLVER_TIMEGHOST_EXACT_HALO,
       VLASOV_SOLVER_TIMEGHOST_OUTER_HALO,
+      VLASOV_SOLVER_TIMEGHOST_REQ,
       VLASOV_SOLVER_TIMEGHOST_HALODIFF,
       VLASOV_SOLVER_X_GHOST_TIMECLASS,
       VLASOV_SOLVER_Y_GHOST_TIMECLASS,

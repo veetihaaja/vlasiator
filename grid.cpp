@@ -129,7 +129,7 @@ void initializeGrids(
    std::cerr << "neighborhood_size after GT " << neighborhood_size << "\n";
    if (P::initialMaxTimeclass > 0) {
        P::timeclassFullHaloExtent = P::timeclassExactHaloExtent + P::timeclassOuterHaloExtent;
-       neighborhood_size = max(neighborhood_size, P::timeclassFullHaloExtent);
+       neighborhood_size = max(neighborhood_size, P::timeclassFullHaloExtent+1);
       std::cerr << "neighborhood_size after timeclasses " << neighborhood_size << "\n";
    }
  
@@ -873,7 +873,7 @@ void prepareAMRLists(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGri
 
    if (P::currentMaxTimeclass > 0) {
       const vector<CellID>& localCells = getLocalCells();
-      const vector<CellID> remote_cells = mpiGrid.get_remote_cells_on_process_boundary(Neighborhoods::VLASOV_SOLVER_TIMEGHOST_OUTER_HALO);
+      const vector<CellID> remote_cells = mpiGrid.get_remote_cells_on_process_boundary(Neighborhoods::VLASOV_SOLVER_TIMEGHOST_REQ);
       
       mpiGrid.force_update_cell_neighborhoods(remote_cells);
 
@@ -1817,8 +1817,40 @@ void initializeStencils(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpi
 
       std::cerr << "size of VLASOV_SOLVER_TIMEGHOST_OUTER_HALO_NEIGHBORHOOD_ID = " << neighborhood_outer.size() << "\n";
 
-      timeclassOuter.stop();
+
+      neighborhood_outer.clear();
+
+      std::cerr << "timeclassFullHaloExtent = " << P::timeclassFullHaloExtent << "\n";
+
+      // neighborhood.clear();
+      // stencils for timeghost haloes
+      // first one using timeclassexacthaloextent = vlasovSolverGhostTranslateExtent
+
+      // std::set<neigh_t> neighborhood_outer;
+
+      // for(auto n : neighborhood){
+
+         for (int dy = -P::timeclassFullHaloExtent-1; dy <= P::timeclassFullHaloExtent+1; dy++){
+            for (int dx = -P::timeclassFullHaloExtent-1; dx <= P::timeclassFullHaloExtent+1; dx++){
+               for (int dz = -P::timeclassFullHaloExtent-1; dz <= P::timeclassFullHaloExtent+1; dz++){
+                  neigh_t offsets = {{dx, dy, dz}};
+                  if ((dz==0) && (dy==0) && (dx==0)) {
+                     continue;
+                  }
+                   neighborhood_outer.insert({{dx, dy, dz}});
+               }
+            }
+         }
+      // }
+      for (auto it : neighborhood_outer){
+         all_neighborhoods.emplace(it);
+      }
+      if (!mpiGrid.add_neighborhood(Neighborhoods::VLASOV_SOLVER_TIMEGHOST_REQ, std::vector<neigh_t>(neighborhood_outer.begin(), neighborhood_outer.end()))){
+         std::cerr << "Failed to add neighborhood VLASOV_SOLVER_TIMEGHOST_REQ_NEIGHBORHOOD_ID \n";
+         abort();
+      }
          
+      timeclassOuter.stop();
       // phiprof::Timer timeclassDiff {"Stencils init, timeclass, diff"};
       // // third one using the other two's difference
       // std::set<neigh_t> neighborhood_diff;
