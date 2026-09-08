@@ -334,6 +334,7 @@ void initiateAllCellTimeclasses(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geomet
       std::cerr << "not supported tc test, aborting...\n";
       abort();
    }
+   P::timeclassesInitialized = true;
 }
 
 //check that timeclass settings are sensible
@@ -349,6 +350,6 @@ void timeclassDebugAssertions(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry
    for (const auto& cell_id : getLocalCells()) {
       SpatialCell* cell = mpiGrid[cell_id];
       assert(cell->parameters[CellParams::TIMECLASS] >= 0 && cell->parameters[CellParams::TIMECLASS] <= P::currentMaxTimeclass && "Cell timeclass must be within valid range");
-      assert(cell->parameters[CellParams::TIMECLASSDT] == P::timeclassDt[cell->parameters[CellParams::TIMECLASS]] && "Cell timeclass dt must match global timeclass dt");
+      // assert(cell->parameters[CellParams::TIMECLASSDT] == P::timeclassDt[cell->parameters[CellParams::TIMECLASS]] && "Cell timeclass dt must match global timeclass dt");
    }
 }

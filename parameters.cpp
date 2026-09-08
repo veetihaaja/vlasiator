@@ -84,6 +84,7 @@ bool P::forcedConvection = false;
 Real P::tcStaticSphereRadiusLvl1 = 0.0;
 Real P::tcStaticSphereRadiusLvl2 = 0.0;
 Real P::tcStaticSphereRadiusLvl3 = 0.0;
+bool P::timeclassesInitialized = false;
 
 vector<Real> P::timeclassDt;
 vector<Real> P::timeclassTime;
@@ -113,8 +114,9 @@ int P::tcOverrideTimeclass = -1;
 int P::tc_test_type = 0;
 int P::tcMomentInterpolationType = 1;
 bool P::tcVMomentPropagation = true;
-int P::timeclassExactHaloExtent = 3;
-int P::timeclassOuterHaloExtent = 3;
+int P::timeclassExactHaloExtent = 2;
+int P::timeclassOuterHaloExtent = 1;
+int P::timeclassFullHaloExtent = P::timeclassExactHaloExtent + P::timeclassOuterHaloExtent;
 
 Realf P::tcBoxHalfWidthX = 2e7;
 Realf P::tcBoxHalfWidthY = 2e7;

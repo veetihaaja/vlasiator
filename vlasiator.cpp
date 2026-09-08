@@ -36,6 +36,9 @@
 #include <iostream>
 #include <chrono>
 
+#include <unistd.h>
+
+
 #ifdef _OPENMP
    #include <omp.h>
 #endif
@@ -1858,6 +1861,10 @@ int main(int argn, char* args[]) {
          }
       }
    }
+
+   pid_t pid = getpid();
+   std::cerr << "My rank = " << myRank << " PID = " << pid << std::endl;
+
 
    int ret {simulate(argn, args)};
 
