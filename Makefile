@@ -62,7 +62,6 @@ ifeq ($(USE_ES),1)
     $(info compiling electrostatic solver as well)
     # Add -DFS_ES to also compile an explicit electrostatic solver
     COMPFLAGS += -DFS_ES
-    LIBS += ${LIB_HYPRE}
     OBJS += es_main.o es_electric_field.o
 else
     $(info skipping electrostatic solver)
@@ -75,7 +74,6 @@ ifeq ($(USE_AP),1)
     $(info compiling implicit field solver as well)
     # Add -DFS_AP to also compile an implicit electromagnetic solver
     COMPFLAGS += -DFS_AP
-    LIBS += ${LIB_HYPRE}
     OBJS += ap_electric_field.o
 else
     $(info skipping implicit field solver)
@@ -227,6 +225,12 @@ LIBS += ${LIB_PAPI}
 LIBS += ${LIB_OCTREE_COMPRESSOR}
 LIBS += ${LIB_ZFP}
 LIBS += ${LIB_NN_COMPRESSOR}
+ifeq ($(USE_ES),1)
+	LIBS += ${LIB_HYPRE}
+endif
+ifeq ($(USE_AP),1)
+	LIBS += ${LIB_HYPRE}
+endif
 
 # Define common dependencies
 DEPS_COMMON = common.h common.cpp definitions.h mpiconversion.h logger.h object_wrapper.h
