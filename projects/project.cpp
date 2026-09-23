@@ -32,6 +32,7 @@
 
 #include "Alfven/Alfven.h"
 #include "Dispersion/Dispersion.h"
+#include "LandauDamping/LandauDamping.h"
 #include "Distributions/Distributions.h"
 #include "Flowthrough/Flowthrough.h"
 #include "Fluctuations/Fluctuations.h"
@@ -649,6 +650,7 @@ Project* createProject() {
         projects::Shock* _Shock = new projects::Shock();
         projects::Shocktest* _Shocktest = new projects::Shocktest();
         projects::Distributions* _Distributions=new projects::Distributions();
+        projects::LandauDamping* _LandauDamping = new projects::LandauDamping();
 
         _Multipeak->addCommonParameters();
         _Multipeak->addParameters();
@@ -668,6 +670,7 @@ Project* createProject() {
         _Dispersion->addParameters();
         _Shock->addParameters();
         _Shocktest->addParameters();
+        _LandauDamping->addParameters();
 
         return nullptr;
 
@@ -728,6 +731,9 @@ Project* createProject() {
 
     } else if (Parameters::projectName=="Dispersion") {
         project=new projects::Dispersion();
+
+    } else if (Parameters::projectName=="LandauDamping") {
+        project=new projects::LandauDamping();
 
     } else if (Parameters::projectName=="Template") {
         project=new projects::Template();
