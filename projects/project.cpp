@@ -33,6 +33,8 @@
 #include "Alfven/Alfven.h"
 #include "Dispersion/Dispersion.h"
 #include "Distributions/Distributions.h"
+#include "Firehose/Firehose.h"
+#include "LCCP_reconnection/LCCP_reconnection.h"
 #include "Flowthrough/Flowthrough.h"
 #include "Fluctuations/Fluctuations.h"
 #include "Harris/Harris.h"
@@ -637,6 +639,9 @@ Project* createProject() {
         projects::Magnetosphere* _Magnetosphere=new projects::Magnetosphere();
         projects::LossCone* _Losscone=new projects::LossCone();
         projects::test_fp* _test_fp=new projects::test_fp();
+        projects::Firehose* _Firehose = new projects::Firehose();
+        projects::LCCP_Reconnection* _LCCP_Reconnection = new projects::LCCP_Reconnection();
+        projects::Diffusion* _Diffusion = new projects::Diffusion();
         projects::Harris* _Harris = new projects::Harris();
         projects::Riemann1* _Riemann1 = new projects::Riemann1();
         projects::TestHall* _TestHall = new projects::TestHall();
@@ -656,6 +661,8 @@ Project* createProject() {
         _Magnetosphere->addParameters();
         _Flowthrough->addParameters();
         _test_fp->addParameters();
+        _Firehose->addParameters();
+        _LCCP_Reconnection->addParameters();
         _Distributions->addParameters();
         _Harris->addParameters();
         _Riemann1->addParameters();
@@ -692,6 +699,15 @@ Project* createProject() {
 
     } else if (Parameters::projectName=="test_fp") {
         project=new projects::test_fp();
+
+    } else if (Parameters::projectName=="Firehose") {
+        project=new projects::Firehose();    
+      
+   } else if (Parameters::projectName=="LCCP_reconnection") {
+        project=new projects::LCCP_Reconnection();
+
+    } else if (Parameters::projectName=="Diffusion") {
+        project=new projects::Diffusion();
 
     } else if (Parameters::projectName=="Harris") {
         project=new projects::Harris();

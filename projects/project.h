@@ -50,6 +50,12 @@ namespace projects {
          exp(- mass * (vx*vx + vy*vy + vz*vz) / (2.0 * physicalconstants::K_B * T));
    }
 
+   ARCH_HOSTDEV inline Realf MaxwellianPhaseSpaceDensity_LCCP_reconnection(
+      creal& vx, creal& vy, creal& vz, creal& v_ts, creal& rho) {
+      return (rho / pow((sqrt(2.0 * numbers::pi) * v_ts), 3.0)) * exp(- (vx*vx + vy*vy + vz*vz)/(2.0 * v_ts * v_ts));
+   }
+
+
    /** Returns the phase-space density of a Tri-Maxwellian distribution function
     * NOTE: This function is called inside parallel region so it must be declared as const.
     * @param vx The vx-coordinate relative to the Tri-Maxwellian centre
