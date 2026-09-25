@@ -35,6 +35,7 @@
 #include "Dispersion/Dispersion.h"
 #include "Distributions/Distributions.h"
 #include "Firehose/Firehose.h"
+#include "LCCP_reconnection/LCCP_reconnection.h"
 #include "Flowthrough/Flowthrough.h"
 #include "Fluctuations/Fluctuations.h"
 #include "Harris/Harris.h"
@@ -640,6 +641,7 @@ Project* createProject() {
         projects::LossCone* _Losscone=new projects::LossCone();
         projects::test_fp* _test_fp=new projects::test_fp();
         projects::Firehose* _Firehose = new projects::Firehose();
+        projects::LCCP_Reconnection* _LCCP_Reconnection = new projects::LCCP_Reconnection();
         projects::Diffusion* _Diffusion = new projects::Diffusion();
         projects::Harris* _Harris = new projects::Harris();
         projects::Riemann1* _Riemann1 = new projects::Riemann1();
@@ -661,6 +663,7 @@ Project* createProject() {
         _Flowthrough->addParameters();
         _test_fp->addParameters();
         _Firehose->addParameters();
+        _LCCP_Reconnection->addParameters();
         _Distributions->addParameters();
         _Diffusion->addParameters();
         _Harris->addParameters();
@@ -700,7 +703,10 @@ Project* createProject() {
         project=new projects::test_fp();
 
     } else if (Parameters::projectName=="Firehose") {
-        project=new projects::Firehose();
+        project=new projects::Firehose();    
+      
+   } else if (Parameters::projectName=="LCCP_reconnection") {
+        project=new projects::LCCP_Reconnection();
 
     } else if (Parameters::projectName=="Diffusion") {
         project=new projects::Diffusion();
