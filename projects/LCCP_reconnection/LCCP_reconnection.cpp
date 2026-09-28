@@ -46,7 +46,8 @@ namespace projects {
 
    void LCCP_Reconnection::addParameters() {
       typedef Readparameters RP;
-      RP::add<Real>("LCCP_Reconnection.B0", "B0", this->B0,1.0e-10);
+      RP::add<Real>("LCCP_Reconnection.B0", "B0", this->B0,6.871e-7);
+      RP::add<Real>("LCCP_Reconnecton.ionInertialLength", "ionInertialLength", this->ionInertialLength,227694.0);
 
       // Per-population parameters
       for(uint i=0; i< getObjectWrapper().particleSpecies.size(); i++) {
@@ -56,19 +57,8 @@ namespace projects {
          this->speciesParamsRead.push_back(sP);
          RP::add<Real>(pop + "_LCCP_Reconnection.rho", "Number density (m^-3)", sP->rho,10.e8);
          RP::add<Real>(pop + "_LCCP_Reconnection.Temperature", "Temperature (K)", sP->T,0.86456498092);
-         if (pop == "proton") {
-            this->ionT = sP->T;
-            this->ionMass = getObjectWrapper().particleSpecies[i].mass;
-            this->ionRho = sP->rho;
-         }
-         if (pop == "electron") {
-            this->electronT = sP->T;
-            this->electronMass = getObjectWrapper().particleSpecies[i].mass;
-         }
 
       }
-      // now that we have values, we can calculate stuff
-      this->ionInertialLength = physicalconstants::LIGHT_SPEED / sqrt(this->ionRho * physicalconstants::CHARGE * physicalconstants::CHARGE / (physicalconstants::EPS_0 * this->ionMass));
    }
 
    void LCCP_Reconnection::getParameters(){
@@ -92,12 +82,13 @@ namespace projects {
       const Real x  = cell->parameters[CellParams::XCRD] + 0.5*cell->parameters[CellParams::DX];
       const Real y  = cell->parameters[CellParams::YCRD] + 0.5*cell->parameters[CellParams::DY];
       // const Real z  = cell->parameters[CellParams::ZCRD] + 0.5*cell->parameters[CellParams::DZ];
+      const Real L = P::xmax-P::xmin;
 
       creal mass = getObjectWrapper().particleSpecies[popID].mass;
       creal charge = getObjectWrapper().particleSpecies[popID].charge;
       creal mu0 = physicalconstants::MU_0;
 
-      creal rho = sP.rho * (1.0/cosh(y/(this->ionInertialLength*0.5))) * (1.0/cosh(y/(this->ionInertialLength*0.5)));
+      creal rho = sP.rho * (1.0/cosh((y - 0.25*L)/(this->ionInertialLength*0.5*L))) * (1.0/cosh((y - 0.25*L)/(this->ionInertialLength*0.5*L)) - 1.0/cosh((y - 0.75*L)/(this->ionInertialLength*0.5*L))) * (1.0/cosh((y - 0.75*L)/(this->ionInertialLength*0.5*L)));
 
       Real Theta = sP.T / (this->ionT + this->electronT);
       Real v_ts = sqrt((Theta * this->B0 * this->B0)/ (2.0 * physicalconstants::MU_0 * sP.rho * mass));
@@ -162,6 +153,7 @@ namespace projects {
          // local copies for lambda capture
          const Real ionInertialLength_lcl = this->ionInertialLength;
          const Real B0_lcl = this->B0;
+         const Real L = P::xmax-P::xmin;
 
          fsgrid.parallel_for([](int timerId) -> phiprof::Timer { return phiprof::Timer{timerId}; },
                              phiprof::initializeTimer("setProjectBField"), technical,
@@ -173,7 +165,8 @@ namespace projects {
             const Real dx = gridSpacing[0];
             const Real dy = gridSpacing[1];
 
-            cell[fsgrids::bfield::PERBX] = B0_lcl * tanh(xyz[1] / (ionInertialLength_lcl * 0.5)); // Bx for the reconnection test
+            // using a double current sheet setup
+            cell[fsgrids::bfield::PERBX] = B0_lcl * ( tanh((xyz[1] - L * 0.25) / (L*ionInertialLength_lcl * 0.5)) - tanh((xyz[1] - L * 0.75) / (L*ionInertialLength_lcl * 0.5)) -1.0);
             cell[fsgrids::bfield::PERBY] = 0.0;
             cell[fsgrids::bfield::PERBZ] = 0.0;
          });
