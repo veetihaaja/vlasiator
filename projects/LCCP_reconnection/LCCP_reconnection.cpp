@@ -209,9 +209,8 @@ namespace projects {
 
             // adding perturbation to y = 0.25L and y = -0.25L current sheets
 
-            cell[fsgrids::bfield::PERBX] += -1.0*(phi0 * M_PI / L)* (cos(M_PI * (xyz[0] + 0.25*L) / L)*sin(M_PI * (xyz[0] + 0.25*L) / L) + cos(M_PI * (xyz[0] - 0.25*L) / L)*sin(M_PI * (xyz[0] - 0.25*L) / L));
-            cell[fsgrids::bfield::PERBY] += 1.0*(phi0 * M_PI / L)* (sin(M_PI * (xyz[0] + 0.25*L) / L)*cos(M_PI * (xyz[0] + 0.25*L) / L) + sin(M_PI * (xyz[0] - 0.25*L) / L)*cos(M_PI * (xyz[0] - 0.25*L) / L));
-
+            cell[fsgrids::bfield::PERBX] += -1.0*(2.0 * phi0 * M_PI / L)* (sin(M_PI * (xyz[0]) / L)*cos(2.0*M_PI * (xyz[1]-0.25*L) / L));// + cos(M_PI * (xyz[0]) / L)*sin(M_PI * (xyz[1] - 0.25*L) / L));
+            cell[fsgrids::bfield::PERBY] += 1.0*(2.0 * phi0 * M_PI / L)* (cos(M_PI * (xyz[0]) / L)*sin(2.0*M_PI * (xyz[1]-0.25*L) / L));// + sin(M_PI * (xyz[0]) / L)*cos(M_PI * (xyz[1] - 0.25*L) / L));
 
          });
       }
