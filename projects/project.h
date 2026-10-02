@@ -50,12 +50,13 @@ namespace projects {
          exp(- mass * (vx*vx + vy*vy + vz*vz) / (2.0 * physicalconstants::K_B * T));
    }
 
+   // special vdf setter for the LCCP reconnection test
    ARCH_HOSTDEV inline Realf MaxwellianPhaseSpaceDensity_LCCP_reconnection(
       creal& vx, creal& vy, creal& vz, creal& v_ts, creal& v_ds, creal& rho, creal& rho_b) {
 
       const Real pert = (rho / pow((sqrt(2.0 * numbers::pi) * v_ts), 3.0)) * exp(- (vx*vx + vy*vy + (vz-v_ds)*(vz-v_ds))/(2.0 * v_ts * v_ts)); 
 
-      const Real background = (rho_b / pow((sqrt(2.0 * numbers::pi) * v_ts), 3.0)) * exp(- (vx*vx + vy*vy + vz*vz)/(2.0 * v_ts * v_ts));
+      const Real background =  (rho_b / pow((sqrt(2.0 * numbers::pi) * v_ts), 3.0)) * exp(- (vx*vx + vy*vy + vz*vz)/(2.0 * v_ts * v_ts));
       return pert + background;
    }
 
