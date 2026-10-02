@@ -30,7 +30,9 @@ namespace projects {
 
    struct LCCP_ReconnectionSpeciesParameters {
       Real rho;
-      Real T;
+      //Real T;
+      Real thermalSpeed;
+      Real driftSpeed;
    };
 
    class LCCP_Reconnection: public Project {
@@ -56,12 +58,7 @@ namespace projects {
       
       Real B0;
       Real ionInertialLength;
-      Real electronMass; // these are here globally for reasons
-      Real ionMass; 
-      Real electronT;
-      Real ionT;
-      Real ionRho;
-      Real Theta;
+      bool useDoubleCS;
       std::vector<LCCP_ReconnectionSpeciesParameters> speciesParams;
       std::vector<LCCP_ReconnectionSpeciesParameters*> speciesParamsRead;
    } ; // class LCCP_Reconnection
