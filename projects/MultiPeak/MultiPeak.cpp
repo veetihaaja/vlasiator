@@ -65,6 +65,11 @@ void MultiPeak::addParameters() {
    RP::add<Real>("MultiPeak.lambda", "B cosine perturbation wavelength (m)", this->lambda, 1.0);
    RP::add<std::string>("MultiPeak.densityModel", "Which spatial density model is used?", this->densModelString,
                        "uniform");
+   RP::add<Real>("MultiPeak.slabMinX", "Slab density model: inclusive lower x bound of the slab (m).", this->slabMinX, 0.0);
+   RP::add<Real>("MultiPeak.slabMaxX", "Slab density model: inclusive upper x bound of the slab (m).", this->slabMaxX, 0.0);
+   RP::add<Real>("MultiPeak.slabTransitionWidth",
+                 "Slab density model: width (m) of a smooth tanh transition at each edge, "
+                 "instead of a literal step. 0.0 (default) = hard step.", this->slabTransitionWidth, 0.0);
 
    // Per-population parameters
    for (uint i = 0; i < getObjectWrapper().particleSpecies.size(); i++) {
@@ -91,6 +96,8 @@ void MultiPeak::getParameters() {
      this->densityModel = Uniform; 
    else if (this->densModelString == "testcase")
      this->densityModel = TestCase;
+   else if (this->densModelString == "slab")
+     this->densityModel = Slab;
    for (uint i = 0; i < getObjectWrapper().particleSpecies.size(); i++) {
 
       const std::string& pop = getObjectWrapper().particleSpecies[i].name;
@@ -130,6 +137,28 @@ void MultiPeak::getParameters() {
             rhoFactor = 1.0;
             if ((x >= 3.9e5 && x <= 6.1e5) && (y >= 3.9e5 && y <= 6.1e5)) {
                rhoFactor = 1.5;
+            }
+            break;
+         case Slab:
+            // Plasma fills [slabMinX, slabMaxX] in x only (the POS model is 1D);
+            // vacuum (rhoFactor = 0) outside. Cell classified by its centre x.
+            // slabTransitionWidth == 0: the original literal step. A true
+            // mathematical discontinuity in rho, fed through an elliptic
+            // (Gauss-law) correction, produces a local E-field that scales
+            // with 1/(transition width) -- i.e. diverges as that width goes
+            // to zero on a fixed grid, independent of any dynamics. No
+            // explicit scheme represents a true discontinuity exactly on a
+            // discrete grid; this is what the slabTransitionWidth parameter
+            // is for. slabTransitionWidth > 0: a smooth tanh transition of
+            // that width at each edge instead, rhoFactor =
+            // [tanh((x-slabMinX)/w) - tanh((x-slabMaxX)/w)]/2, which -> the
+            // hard step pointwise as w -> 0 (checked in slab_smooth_test.cpp)
+            // but is actually representable (not divergent) at any w > 0.
+            if (slabTransitionWidth > 0.0) {
+               rhoFactor = 0.5*(tanh((x - slabMinX)/slabTransitionWidth)
+                               - tanh((x - slabMaxX)/slabTransitionWidth));
+            } else {
+               rhoFactor = (x >= slabMinX && x <= slabMaxX) ? 1.0 : 0.0;
             }
             break;
          default:
@@ -228,6 +257,28 @@ void MultiPeak::getParameters() {
             rhoFactor = 1.0;
             if ((x >= 3.9e5 && x <= 6.1e5) && (y >= 3.9e5 && y <= 6.1e5)) {
                rhoFactor = 1.5;
+            }
+            break;
+         case Slab:
+            // Plasma fills [slabMinX, slabMaxX] in x only (the POS model is 1D);
+            // vacuum (rhoFactor = 0) outside. Cell classified by its centre x.
+            // slabTransitionWidth == 0: the original literal step. A true
+            // mathematical discontinuity in rho, fed through an elliptic
+            // (Gauss-law) correction, produces a local E-field that scales
+            // with 1/(transition width) -- i.e. diverges as that width goes
+            // to zero on a fixed grid, independent of any dynamics. No
+            // explicit scheme represents a true discontinuity exactly on a
+            // discrete grid; this is what the slabTransitionWidth parameter
+            // is for. slabTransitionWidth > 0: a smooth tanh transition of
+            // that width at each edge instead, rhoFactor =
+            // [tanh((x-slabMinX)/w) - tanh((x-slabMaxX)/w)]/2, which -> the
+            // hard step pointwise as w -> 0 (checked in slab_smooth_test.cpp)
+            // but is actually representable (not divergent) at any w > 0.
+            if (slabTransitionWidth > 0.0) {
+               rhoFactor = 0.5*(tanh((x - slabMinX)/slabTransitionWidth)
+                               - tanh((x - slabMaxX)/slabTransitionWidth));
+            } else {
+               rhoFactor = (x >= slabMinX && x <= slabMaxX) ? 1.0 : 0.0;
             }
             break;
          default:
