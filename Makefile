@@ -232,7 +232,7 @@ DEPS_COMMON = common.h common.cpp definitions.h mpiconversion.h logger.h object_
 
 OBJS += 	version.o memoryallocation.o memory_report.o backgroundfield.o quadr.o dipole.o linedipole.o vectordipole.o constantfield.o integratefunction.o \
 	datareducer.o datareductionoperator.o dro_populations.o \
-	donotcompute.o ionosphere.o copysphere.o outflow.o inflow.o setmaxwellian.o\
+	donotcompute.o ionosphere.o copysphere.o outflow.o inflow.o setmaxwellian.o conductingwall.o\
 	compression_tools.o\
 	fieldtracing.o compression.o arch_moments.o \
 	sysboundary.o sysboundarycondition.o particle_species.o\
