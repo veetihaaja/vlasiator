@@ -83,6 +83,9 @@ testpackage: CXXFLAGS += -DUSE_JEMALLOC -DJEMALLOC_NO_DEMANGLE
 
 LIBRARY_PREFIX = $(CURDIR)/libraries-$(VLASIATOR_ARCH)
 
+INC_HYPRE = -I${LIBRARY_PREFIX}/include
+LIB_HYPRE = -L${LIBRARY_PREFIX}/lib -lHYPRE
+
 #compiled libraries mostly in modules
 LIB_PROFILE = -L$(LIBRARY_PREFIX)/lib -lphiprof -lgfortran -Wl,-rpath=$(LIBRARY_PREFIX)/lib
 INC_PROFILE = -isystem $(LIBRARY_PREFIX)/include
