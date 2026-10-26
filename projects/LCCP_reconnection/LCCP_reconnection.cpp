@@ -35,7 +35,7 @@
 using namespace std;
 
 namespace projects {
-   LCCP_Reconnection::LCCP_Reconnection(): Project() { }
+   LCCP_Reconnection::LCCP_Reconnection(): TriAxisSearch() { }
    LCCP_Reconnection::~LCCP_Reconnection() { }
 
    bool LCCP_Reconnection::initialize(void) {
@@ -147,6 +147,71 @@ namespace projects {
    }
 
    void LCCP_Reconnection::calcCellParameters(spatial_cell::SpatialCell* cell,creal& t) {}
+
+   Realf LCCP_Reconnection::probePhaseSpace(spatial_cell::SpatialCell *cell,
+                                        const uint popID,
+                                        Real vx_in, Real vy_in, Real vz_in
+      ) const {
+
+      const LCCP_ReconnectionSpeciesParameters& sP = this->speciesParams[popID];
+
+      // Fetch spatial cell center coordinates
+      const Real x  = cell->parameters[CellParams::XCRD] + 0.5*cell->parameters[CellParams::DX];
+      const Real y  = cell->parameters[CellParams::YCRD] + 0.5*cell->parameters[CellParams::DY];
+      // const Real z  = cell->parameters[CellParams::ZCRD] + 0.5*cell->parameters[CellParams::DZ];
+      //const Real Lx = 12.8 * this->ionInertialLength;
+      //const Real Ly = 6.4 * this->ionInertialLength;
+      const Real Lx = (P::xmax - P::xmin) * 0.5;
+      const Real Ly = (P::ymax - P::ymin) * 0.5;
+
+      creal mass = getObjectWrapper().particleSpecies[popID].mass;
+      creal charge = getObjectWrapper().particleSpecies[popID].charge;
+      creal mu0 = physicalconstants::MU_0;
+      Real rho_drift;
+
+      if (this->useDoubleCS) {
+         // two current sheets at y = 0.5 * Ly and y = -0.5 * Ly
+         rho_drift = sP.rho * (
+            1.0 / pow(cosh((y + 0.5 * Ly) / (this->ionInertialLength * 0.5)), 2)
+            + 1.0 / pow(cosh((y - 0.5 * Ly) / (this->ionInertialLength * 0.5)), 2)
+         );
+      } else {
+         // one current sheet at y = 0
+         rho_drift = sP.rho * 1.0 / pow(cosh(y / (this->ionInertialLength * 0.5)), 2);
+      }
+
+      creal rho_background = sP.rho * 0.2;
+
+      creal v_ts = sP.thermalSpeed;
+      Real v_ds = sP.driftSpeed;
+      
+      if (this->useDoubleCS && y>=0) {
+         v_ds *= -1.0;
+      }
+
+      const Realf value = MaxwellianPhaseSpaceDensity_LCCP_reconnection(vx_in, vy_in, vz_in, v_ts, v_ds, rho_drift, rho_background);
+
+      return value;
+   }
+
+   std::vector<std::array<Real, 3> > LCCP_Reconnection::getV0(
+                                                creal x,
+                                                creal y,
+                                                creal z,
+                                                const uint popID
+                                               ) const {
+      const LCCP_ReconnectionSpeciesParameters& sP = speciesParams[popID];
+      Real v_ds = sP.driftSpeed;
+      
+      if (this->useDoubleCS && y>=0) {
+         v_ds *= -1.0;
+      }
+      // each cell has effectively two peaks: one at v_ds and one at 0
+
+      vector<std::array<Real, 3> > centerPoints = {{0.0, 0.0, 0.0}, {0.0, 0.0, -v_ds}};
+
+      return centerPoints;
+   }
 
    void LCCP_Reconnection::setProjectBField(fsgrids::perbspan perb,
                                  fsgrids::bgbspan bgb,

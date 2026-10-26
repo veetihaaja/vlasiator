@@ -24,7 +24,7 @@
 #define LCCP_RECONNECTION_H
 
 #include "../../definitions.h"
-#include "../project.h"
+#include "../projectTriAxisSearch.h"
 
 namespace projects {
 
@@ -35,7 +35,7 @@ namespace projects {
       Real driftSpeed;
    };
 
-   class LCCP_Reconnection: public Project {
+   class LCCP_Reconnection: public TriAxisSearch {
     public:
       LCCP_Reconnection();
       virtual ~LCCP_Reconnection();
@@ -54,8 +54,14 @@ namespace projects {
       virtual Realf fillPhaseSpace(spatial_cell::SpatialCell *cell,
                                   const uint popID,
                                   const uint nRequested) const override;
-      virtual void calcCellParameters(spatial_cell::SpatialCell* cell,creal& t) override;
-      
+      virtual Realf probePhaseSpace(spatial_cell::SpatialCell* cell,
+                                    const uint popID,
+                                    Real vx_in, Real vy_in, Real vz_in
+                                   ) const override;
+
+      virtual void calcCellParameters(spatial_cell::SpatialCell* cell, creal& t) override;
+      virtual std::vector<std::array<Real, 3>> getV0(creal x, creal y, creal z, const uint popID) const override;
+
       Real B0;
       Real ionInertialLength;
       bool useDoubleCS;
