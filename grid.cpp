@@ -388,7 +388,7 @@ void initializeGrids(
 
 
    phiprof::Timer finishFSGridTimer {"Finish fsgrid setup"};
-#ifdef FS_AP
+#ifdef FS_LCCL
    feedMomentsIntoFsGrid(mpiGrid, cells, moments, technical.view(), fsgrid, false);
    if (!P::isRestart) {
       // WARNING this means moments and dt2 moments are the same here at t=0, which is a feature so far.

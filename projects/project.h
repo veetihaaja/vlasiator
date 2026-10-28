@@ -116,7 +116,7 @@ namespace projects {
        * (e.g. a density perturbation on only one species) need this to
        * satisfy Gauss's law at t=0, which several field-solver schemes'
        * consistency arguments depend on -- see Liu et al. 2025 Sec. 2.1 for
-       * the AP/RME scheme specifically. General over x/y/z: no assumption
+       * the LCCL/RME scheme specifically. General over x/y/z: no assumption
        * that rho varies in only one dimension.
        * \param moments fsgrid moments, already populated with the initial rho.
        * \param e fsgrid electric field to initialize (overwritten, not added to).

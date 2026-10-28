@@ -213,7 +213,7 @@ namespace SBC {
 
    void ConductingWall::fieldSolverBoundaryCondHallElectricField(fsgrids::ehallspan ehall,
                                                                   const fsgrid::FsStencil& stencil, cuint component) {
-      // Hall term is not used by the AP field solver; zeroed for interface completeness only, matching Outflow.
+      // Hall term is not used by the LCCL field solver; zeroed for interface completeness only, matching Outflow.
       array<Real, fsgrids::ehall::N_EHALL>& cp = ehall[stencil.ooo()];
       switch (component) {
       case 0:
@@ -242,7 +242,7 @@ namespace SBC {
    void ConductingWall::fieldSolverBoundaryCondGradPeElectricField(
        fsgrids::egradpespan EGradPe, const fsgrid::FsStencil& stencil,
        cuint component) {
-      // Electron pressure gradient term is not used by the AP field solver; zeroed for interface completeness.
+      // Electron pressure gradient term is not used by the LCCL field solver; zeroed for interface completeness.
       EGradPe[stencil.ooo()][fsgrids::egradpe::EXGRADPE + component] = 0.0;
    }
 

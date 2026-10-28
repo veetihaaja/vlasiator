@@ -2,7 +2,7 @@
 """
 SI-unit derivation and .cfg generator for the GEM reconnection challenge
 (Liu, Cai, Cao & Lapenta 2025, JCP 528:113840, Section 5.4), for Vlasiator's
-AP (CSL-RME) field solver.
+LCCL (CSL-RME) field solver.
 
 ----------------------------------------------------------------------------
 WHY THIS SCRIPT EXISTS (the c/v_a issue)
@@ -188,7 +188,7 @@ def content_radius_and_margin(label, mass, T, vts, vd, minValue, v_max):
           f"-> margin={margin*100:.1f}% [{status}]")
     return status
 
-# ----- Debye length, for awareness (the AP solver does not require resolving
+# ----- Debye length, for awareness (the LCCL solver does not require resolving
 # it, unlike an explicit scheme, but it's a useful diagnostic regardless) -----
 lambda_D = vte / wpi / math.sqrt(mi / me)  # = sqrt(eps0 kB Te / (n0 q^2))
 
@@ -255,7 +255,7 @@ cfg = f"""\
 # GEM reconnection challenge, reproducing Liu, Cai, Cao & Lapenta 2025
 # (JCP 528:113840), Section 5.4.
 #
-# Requires: AP solver + boundary-condition patches (ES_FS branch, on top of
+# Requires: LCCL solver + boundary-condition patches (ES_FS branch, on top of
 # dd574e33); gem/0001-conducting-wall.patch (new ConductingWall boundary);
 # gem/0002-harris-gem-extension.patch (Harris project: y-dependent density,
 # species drift, background population, island perturbation).
@@ -331,7 +331,7 @@ face = y+
 face = y-
 
 [fieldsolver]
-method = AP
+method = LCCL
 theta = 1.0
 enforceGaussLaw = 1
 lowPassFilter = 1

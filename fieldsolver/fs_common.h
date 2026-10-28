@@ -60,7 +60,7 @@ bool propagateFields(fsgrids::perbspan perb,
 #endif
                      fsgrids::momentsspan moments,
                      fsgrids::momentsspan momentsdt2,
-#ifdef FS_AP
+#ifdef FS_LCCL
                      // per-species rho_s^k and J_s^{k*}, one span entry per
                      // population
                      std::vector<fsgrids::speciesrhoqspan>& speciesRhoQ,

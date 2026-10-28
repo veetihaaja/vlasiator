@@ -254,7 +254,7 @@ void feedMomentsIntoFsGrid(dccrg::Dccrg<SpatialCell, dccrg::Cartesian_Geometry>&
    }
 }
 
-#ifdef FS_AP
+#ifdef FS_LCCL
 void feedSpeciesMomentsIntoFsGrid(dccrg::Dccrg<SpatialCell, dccrg::Cartesian_Geometry>& mpiGrid,
                            const std::vector<CellID>& cells,
                            const std::vector<std::vector<Real>>& speciesRhoQ,

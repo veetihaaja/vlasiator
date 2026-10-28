@@ -2,7 +2,7 @@
 /*
  * This file is part of Vlasiator.
  *
- * AP (CSL-RME) field solver -- Liu, Cai, Cao, Lapenta (2025), J. Comput.
+ * LCCL (CSL-RME) field solver -- Liu, Cai, Cao, Lapenta (2025), J. Comput.
  * Phys. 528, 113840. Implements Eqs. (23), (35)-(41), (45): the
  * reformulated-Maxwell electric field solve (Eq. 38) replacing the old
  * explicit RK2/Ohm's-law propagateFields, keeping Faraday's law (Eq. 23) and
@@ -55,12 +55,12 @@
  * \param speciesJ     J_s^{k*} per population
  * \param Bnode        perturbed B, node-centered
  * \param bgb          background B, volume-averaged
- * \param theta        the AP splitting parameter
+ * \param theta        the LCCL splitting parameter
  * \param dt           current timestep.
  * \param outMu        output as 3x3 tensor per cell
  * \param outJhat      output as 3 vector per cell
  */
-void ap_BuildSpeciesTensors(
+void lccl_BuildSpeciesTensors(
    std::vector<fsgrids::speciesrhoqspan>& speciesRhoQ,
    std::vector<fsgrids::speciesjspan>& speciesJ,
    std::span<const std::array<Real,3>> Bnode,
@@ -75,7 +75,7 @@ void ap_BuildSpeciesTensors(
 
 /*! Assemble and solve Eq. (38) for E^{k+theta} via HYPRE IJ + BoomerAMG,
  *  then compute E^{k+1} (Eq. 40). */
-bool ap_SolveElectricField(
+bool lccl_SolveElectricField(
    std::span<const std::array<Real,3>> Ek,
    std::span<const std::array<Real,3>> Bk,
    fsgrids::constbgbspan bgb,
@@ -93,7 +93,7 @@ bool ap_SolveElectricField(
 
 /*! Faraday update: B^{k+1} = B^k - dt curl(E^{k+theta})  (Eq. 23), then
  *  B^{k+theta} = theta B^{k+1} + (1-theta) B^k  (Eq. 39).  */
-void ap_UpdateMagneticField(
+void lccl_UpdateMagneticField(
    std::span<const std::array<Real,3>> Bk,
    std::span<const std::array<Real,3>> Etheta,
    std::span<std::array<Real,3>> Bkp1,
@@ -107,7 +107,7 @@ void ap_UpdateMagneticField(
 );
 
 /*! Gauss's-law (Boris) correction (Eq. 45 then Eq. 41). */
-void ap_GaussLawCorrection(
+void lccl_GaussLawCorrection(
    std::span<std::array<Real,3>> Ekp1,
    std::span<const std::array<Real,3>> Ek,
    std::span<const std::array<Real,1>> rho,
@@ -117,14 +117,14 @@ void ap_GaussLawCorrection(
    Real dt
 );
 
-/*! Top-level AP entry point, called from propagateFields.
+/*! Top-level LCCL entry point, called from propagateFields.
  *
  * dt == 0: one-time setup call. Initialises the node-centred state from
  * perb/e and publishes it to vol; no field is advanced and the Yee arrays are
  * left exactly as the project set them.
  * dt  > 0: advances one step following Algorithm 3.4 of the paper, step (2).
  */
-bool ap_propagateFields(fsgrids::perbspan perb,
+bool lccl_propagateFields(fsgrids::perbspan perb,
                      fsgrids::perbspan perbdt2,
                      fsgrids::efieldspan e,
                      fsgrids::efieldspan edt2,

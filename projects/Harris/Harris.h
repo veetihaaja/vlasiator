@@ -79,7 +79,7 @@ namespace projects {
       bool DOUBLE_SHEET;   /*!< If true, two Harris sheets of opposite polarity at y=+-L/2 (L = domain
                                  half-height), fully periodic in y -- see getPopulationsAt() and
                                  setProjectBField(). If false (default), the original single sheet. */
-      int CURRENT_LOADING; /*!< 0: analytic drifts; 1: drifts scaled so the loaded current equals the AP
+      int CURRENT_LOADING; /*!< 0: analytic drifts; 1: drifts scaled so the loaded current equals the LCCL
                                  solver's discrete curl(B)/mu0; 2: also the in-sheet share of the
                                  perturbation's current (doubleSheet) -- see getPopulationsAt(). */
       Real WALL_HALF_HEIGHT; /*!< single sheet: sheet-to-wall distance used by the perturbation; 0 = domain half-height */

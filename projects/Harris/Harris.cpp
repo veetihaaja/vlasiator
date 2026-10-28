@@ -60,7 +60,7 @@ namespace projects {
               "same sign as the single-sheet formula, sheet 2 (y=+L/2, opposite polarity) at the opposite "
               "sign -- see getPopulationsAt() and setProjectBField(). Default false (original single sheet).", this->DOUBLE_SHEET, false);
       RP::add<int>("Harris.currentLoading", "How the sheet drifts are loaded. 0: analytic Harris drifts. "
-              "1: each sheet's drifts scaled so the loaded current equals the AP solver's centred discrete "
+              "1: each sheet's drifts scaled so the loaded current equals the LCCL solver's centred discrete "
               "curl of the initial B/mu0 (removes the step-1 current impulse at the sheets). 2: as 1, and "
               "also load the in-sheet share n_sheet/n_total of the perturbation's discrete current "
               "(doubleSheet only; needs a background population). Default 0.", this->CURRENT_LOADING, 0);
@@ -136,7 +136,7 @@ namespace projects {
       }
    }
 
-   /*! Ratio of the AP solver's centred difference of tanh(u/lambda0) (node Bx is exact at the cell
+   /*! Ratio of the LCCL solver's centred difference of tanh(u/lambda0) (node Bx is exact at the cell
     * centre here, the faces sharing its y) to the analytic derivative, at offset u from a sheet:
     * [tanh(a+d)-tanh(a-d)]/(2d sech^2 a) = (sinh(2d)/2d)/(1 + sinh^2(d) sech^2(a)), a=u/lambda0,
     * d=dy/lambda0. Written this way it stays exact where tanh(a+-d) both round to +-1.
@@ -147,7 +147,7 @@ namespace projects {
       return (sinh(2.0 * d) / (2.0 * d)) / (1.0 + sinh(d) * sinh(d) * sech * sech);
    }
 
-   /*! (curl dB)_z/mu0 of the doubleSheet island perturbation as the AP solver sees it: face values
+   /*! (curl dB)_z/mu0 of the doubleSheet island perturbation as the LCCL solver sees it: face values
     * from setProjectBField(), node values as the mean of each cell's two faces, centred curl.
     * Closed form for phi = -phi0*cos(a X)*sin(b Y), a=pi/Lx, b=pi/Ly; x, y are cell centres.
     */
@@ -520,7 +520,7 @@ namespace projects {
                   // phi = -phi0*cos(pi*xc/Lx)*sin(pi*yc/Ly_l): one wavelength along x with the X-line at
                   // xc=0 on both sheets -- Sec. 5.4's island on sheet 1 and its mirror image on sheet 2.
                   // delta_B = grad(phi) x e_z = (dphi/dy, -dphi/dx, 0). Bx is evaluated on its x-face and
-                  // By on its y-face, so the face average the AP solver uses for node values is 2nd order.
+                  // By on its y-face, so the face average the LCCL solver uses for node values is 2nd order.
                   const Real xf  = xyz[0] - xmid_l;
                   const Real yf  = xyz[1] - ymid_l;
                   const Real xcD = xf + 0.5 * gridSpacing[0];

@@ -92,7 +92,7 @@ Eigen::Transform<Real,3,Eigen::Affine> compute_acceleration_transformation(
      = 2 * M_PI * getObjectWrapper().particleSpecies[popID].mass
      / (getObjectWrapper().particleSpecies[popID].charge * B_mag);
 
-   // Only LDZ needs the Hall/bulk-velocity pivot reconstruction; ES and AP
+   // Only LDZ needs the Hall/bulk-velocity pivot reconstruction; ES and LCCL
    // hand us the complete E
    const bool fieldSolverNeedsHallReconstruction = (P::fieldSolverMethod == "LDZ" || P::fieldSolverMethod == "default_fieldsolver");
 
@@ -120,7 +120,7 @@ Eigen::Transform<Real,3,Eigen::Affine> compute_acceleration_transformation(
                                               spatial_cell->parameters[CellParams::VZ_V]);
    }
 
-   // The electric field from ES/AP or
+   // The electric field from ES/LCCL or
    const Eigen::Matrix<Real,3,1> E(spatial_cell->parameters[CellParams::EXVOL],
                                    spatial_cell->parameters[CellParams::EYVOL],
                                    spatial_cell->parameters[CellParams::EZVOL]);
@@ -166,7 +166,7 @@ Eigen::Transform<Real,3,Eigen::Affine> compute_acceleration_transformation(
          total_transform=Translation<Real,3>( (std::abs(getObjectWrapper().particleSpecies[popID].charge)/getObjectWrapper().particleSpecies[popID].mass) * EgradPe * substeps_dt) * total_transform;
       }
 
-      // Electric field acceleration, only for ES and AP field solver
+      // Electric field acceleration, only for ES and LCCL field solver
       if (!fieldSolverNeedsHallReconstruction) {
          total_transform=Translation<Real,3>( (getObjectWrapper().particleSpecies[popID].charge/getObjectWrapper().particleSpecies[popID].mass) * E * substeps_dt) * total_transform;
       }

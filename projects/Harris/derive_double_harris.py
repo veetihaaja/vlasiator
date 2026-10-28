@@ -2,7 +2,7 @@
 """
 SI-unit derivation and .cfg generator for a DOUBLE Harris-sheet variant of
 the GEM reconnection challenge (Liu, Cai, Cao & Lapenta 2025, JCP 528:113840,
-Section 5.4), for Vlasiator's AP (CSL-RME) field solver and the
+Section 5.4), for Vlasiator's LCCL (CSL-RME) field solver and the
 Harris.doubleSheet=1 extension (see that patch's own commit message for the
 full derivation of the double-sheet B-field/density/drift/perturbation
 formulas this script's outputs feed into).
@@ -63,7 +63,7 @@ STAGES (MODE, FROZEN_FIELDS)
 1. MODE="1d", FROZEN_FIELDS=True: x-invariant sheet, no perturbation, B
    frozen and E=0. The loaded VDF is then an exact Vlasov equilibrium, so any
    change is Vlasov-solver error.
-2. MODE="1d", FROZEN_FIELDS=False: same, with the AP field solve.
+2. MODE="1d", FROZEN_FIELDS=False: same, with the LCCL field solve.
 3. MODE="2d": full GEM run with the island perturbation.
 
 Running this script writes the cfg named in CFG_NAME into the same directory.
@@ -110,7 +110,7 @@ SPARSITY_REL_BACKGROUND = 1.0e-4
 THETA = 1.0
 LOW_PASS_FILTER = False # re-diffused B every step and drove the earlier bailouts
 # Harris.currentLoading (needs the harris-current-loading patch). 1 loads the sheet drifts so the
-# plasma current equals the AP solver's discrete curl(B)/mu0, removing the step-1 current impulse
+# plasma current equals the LCCL solver's discrete curl(B)/mu0, removing the step-1 current impulse
 # at the sheets that launched lower-hybrid waves; 2 also loads the in-sheet share of the island
 # perturbation's current (doubleSheet); 0 is the analytic Harris loading.
 CURRENT_LOADING = 1
@@ -308,7 +308,7 @@ def block_sparsity_check(label, mass, T, vts, vd, minValue, v_max, nblk):
           f"kept blocks/cell max {max_kept}, mean {sum(nkept)/max(len(nkept),1):.0f}")
     return status, spare, lost, sum(nkept) / max(len(nkept), 1)
 
-# ----- Debye length, for awareness (the AP solver does not require resolving
+# ----- Debye length, for awareness (the LCCL solver does not require resolving
 # it, unlike an explicit scheme, but it's a useful diagnostic regardless) -----
 lambda_D = vte / wpi / math.sqrt(mi / me)  # = sqrt(eps0 kB Te / (n0 q^2))
 
@@ -345,7 +345,7 @@ print(f"MODE={MODE}, FROZEN_FIELDS={FROZEN_FIELDS}: x half-extent {Lx_run:.6e} m
 print(f"GEOMETRY={GEOMETRY}: Ly = {Ly:.6e} m  (Ny={Ny}, dy={dy:.6e} m)"
       + (f"; walls at y=+-{Ly_wall:.6e} m, {NG} boundary rows beyond each" if GEOMETRY == "single" else ""))
 print(f"dt = {dt:.6e} s   t_max = {t_max:.6e} s   ({t_max/dt:.0f} steps)")
-# AP translation runs as theta*dt then (1-theta)*dt; Vlasiator's translation moves mass at
+# LCCL translation runs as theta*dt then (1-theta)*dt; Vlasiator's translation moves mass at
 # most one cell per call (cpu_trans_map_amr.cpp), so each sub-step needs CFL < 1.
 cfl_e = ve_max * max(THETA, 1.0 - THETA) * dt / dx
 print(f"fastest electrons (v={ve_max:.3e} m/s): translation CFL per sub-step = {cfl_e:.3f}"
@@ -390,7 +390,7 @@ if GEOMETRY == "double":
 deviations.append(f"theta={THETA:g} (the paper does not state its value for Sec. 5.4)")
 if LOW_PASS_FILTER:
     deviations.append("lowPassFilter=1, which is not in the paper")
-stage = ("1D x-invariant equilibrium test, no perturbation, " + ("fields FROZEN (B fixed, E=0)" if FROZEN_FIELDS else "AP field solve on")
+stage = ("1D x-invariant equilibrium test, no perturbation, " + ("fields FROZEN (B fixed, E=0)" if FROZEN_FIELDS else "LCCL field solve on")
          if MODE == "1d" else "2D GEM run" + (", fields FROZEN" if FROZEN_FIELDS else ""))
 override_note = ("# Overrides: " + " ".join(OVERRIDES) + "\n") if OVERRIDES else ""
 geometry_note = ("# DOUBLE Harris-sheet variant of the GEM reconnection challenge (Liu, Cai, Cao &\n"
@@ -518,7 +518,7 @@ velocity_space_wall_block_margin = {WALL_BLOCK_MARGIN}
 
 {boundary_block}
 [fieldsolver]
-method = AP
+method = LCCL
 theta = {THETA:g}
 enforceGaussLaw = 1
 lowPassFilter = {int(LOW_PASS_FILTER)}

@@ -73,7 +73,7 @@ void feedMomentsIntoFsGrid(dccrg::Dccrg<SpatialCell, dccrg::Cartesian_Geometry>&
                            fsgrid::FsData<std::array<Real, fsgrids::moments::N_MOMENTS>>& moments,
                            fsgrids::technicalspan technical, FieldSolverGrid &fsgrid, bool dt2 = false);
 
-#ifdef FS_AP
+#ifdef FS_LCCL
 /*! Take per-species rho_s^k / J_s^{k*} from DCCRG-side flat
  * arrays and put them into per-population Fieldsolver-grid arrays.
  * \param mpiGrid       The DCCRG grid for its coupling maps

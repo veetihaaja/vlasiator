@@ -1,4 +1,4 @@
-#include "ap_electric_field.hpp"
+#include "lccl_electric_field.hpp"
 #include <cmath>
 #include <map>
 #include <memory>
@@ -9,7 +9,7 @@
 using namespace std;
 
 // Everything below treats E and B as 3-vectors stored per cell.
-static_assert(fsgrids::bfield::N_BFIELD == 3 && fsgrids::efield::N_EFIELD == 3, "AP solver assumes 3-component E and B");
+static_assert(fsgrids::bfield::N_BFIELD == 3 && fsgrids::efield::N_EFIELD == 3, "LCCL solver assumes 3-component E and B");
 static_assert(fsgrids::bfield::PERBX == 0 && fsgrids::bfield::PERBY == 1 && fsgrids::bfield::PERBZ == 2, "component order");
 static_assert(fsgrids::efield::EX == 0 && fsgrids::efield::EY == 1 && fsgrids::efield::EZ == 2, "component order");
 
@@ -104,7 +104,7 @@ static std::vector<CurlTerm> curlCurlStencil(int outComp, const std::array<Real,
 // All quantities are collocated, so the reaction term is purely local.
 struct MatEntry { int comp; int di, dj, dk; Real val; };
 
-static std::vector<MatEntry> ap_EquationRow(int comp, const std::array<Real,9>& mu,
+static std::vector<MatEntry> lccl_EquationRow(int comp, const std::array<Real,9>& mu,
                                             const std::array<Real,3>& dxyz,
                                             Real reactionScale, Real muScale, Real curlScale) {
    std::vector<MatEntry> row;
@@ -128,21 +128,21 @@ struct ApNodeState {
    ApNodeField E; // E^k at nodes
    explicit ApNodeState(size_t n) : B(n), E(n) {}
 };
-std::unique_ptr<ApNodeState> apNodeState;
+std::unique_ptr<ApNodeState> lcclNodeState;
 } // namespace
 
 // Yee -> node: the inverse pairing of the node -> Yee map below. E is exactly
 // the 4-edge mean that calculateVolumeAveragedFields uses for EXVOL/EYVOL/EZVOL;
 // B is the mean of the two faces of the cell (the legacy PERB?VOL without its
 // slope-limited curvature correction, so that no nonlinear limiter enters).
-static void ap_YeeToNodes(fsgrids::perbspan perb, fsgrids::efieldspan e,
+static void lccl_YeeToNodes(fsgrids::perbspan perb, fsgrids::efieldspan e,
                           std::span<ApVec3> Bn, std::span<ApVec3> En,
                           fsgrids::technicalspan technical, FieldSolverGrid& fsgrid) {
    fsgrid.updateGhostCells(perb);
    fsgrid.updateGhostCells(e);
    fsgrid.parallel_for(
       [](int timerId) -> phiprof::Timer { return phiprof::Timer{timerId}; },
-      phiprof::initializeTimer("AP: Yee -> node"), technical,
+      phiprof::initializeTimer("LCCL: Yee -> node"), technical,
       [&](const fsgrid::Coordinates& coordinates, const fsgrid::FsStencil& stencil,
           cuint sysBoundaryFlag, cuint sysBoundaryLayer) {
          if (sysBoundaryFlag == sysboundarytype::DO_NOT_COMPUTE || sysBoundaryFlag == sysboundarytype::OUTER_BOUNDARY_PADDING) { return; }
@@ -172,12 +172,12 @@ static void ap_YeeToNodes(fsgrids::perbspan perb, fsgrids::efieldspan e,
 
 // Node -> Yee, for output. B_c: mean of the two cells sharing the face.
 // E_c: mean of the 4 cells sharing the edge. (Transpose of the map above.)
-static void ap_NodesToYee(std::span<const ApVec3> Bn, std::span<const ApVec3> En,
+static void lccl_NodesToYee(std::span<const ApVec3> Bn, std::span<const ApVec3> En,
                           fsgrids::perbspan perbOut, fsgrids::efieldspan eOut,
                           fsgrids::technicalspan technical, FieldSolverGrid& fsgrid) {
    fsgrid.parallel_for(
       [](int timerId) -> phiprof::Timer { return phiprof::Timer{timerId}; },
-      phiprof::initializeTimer("AP: node -> Yee"), technical,
+      phiprof::initializeTimer("LCCL: node -> Yee"), technical,
       [&](const fsgrid::Coordinates& coordinates, const fsgrid::FsStencil& stencil,
           cuint sysBoundaryFlag, cuint sysBoundaryLayer) {
          if (sysBoundaryFlag == sysboundarytype::DO_NOT_COMPUTE || sysBoundaryFlag == sysboundarytype::OUTER_BOUNDARY_PADDING) { return; }
@@ -208,23 +208,23 @@ static void ap_NodesToYee(std::span<const ApVec3> Bn, std::span<const ApVec3> En
 // The persistent state is created (and filled from the Yee arrays) on first use
 // and whenever the dt==0 setup call is made, which covers fresh starts (project
 // initial conditions) and restarts (first real step).
-static ApNodeState& ap_GetNodeState(fsgrids::perbspan perb, fsgrids::efieldspan e,
+static ApNodeState& lccl_GetNodeState(fsgrids::perbspan perb, fsgrids::efieldspan e,
                                     fsgrids::technicalspan technical, FieldSolverGrid& fsgrid,
                                     bool forceRebuild) {
-   if (forceRebuild || !apNodeState || apNodeState->B.size() != (size_t)fsgrid.getNumStorageCells()) {
-      apNodeState = std::make_unique<ApNodeState>(fsgrid.getNumStorageCells());
-      ap_YeeToNodes(perb, e, apNodeState->B.view(), apNodeState->E.view(), technical, fsgrid);
+   if (forceRebuild || !lcclNodeState || lcclNodeState->B.size() != (size_t)fsgrid.getNumStorageCells()) {
+      lcclNodeState = std::make_unique<ApNodeState>(fsgrid.getNumStorageCells());
+      lccl_YeeToNodes(perb, e, lcclNodeState->B.view(), lcclNodeState->E.view(), technical, fsgrid);
    }
-   return *apNodeState;
+   return *lcclNodeState;
 }
 
 // Write the fields the Vlasov push will use straight into the volume-averaged
 // slots of vol. No interpolation: the node values are the cell-centre values.
-static void ap_PublishToVol(std::span<const ApVec3> B, std::span<const ApVec3> E, fsgrids::volspan vol,
+static void lccl_PublishToVol(std::span<const ApVec3> B, std::span<const ApVec3> E, fsgrids::volspan vol,
                             fsgrids::technicalspan technical, FieldSolverGrid& fsgrid) {
    fsgrid.parallel_for(
       [](int timerId) -> phiprof::Timer { return phiprof::Timer{timerId}; },
-      phiprof::initializeTimer("AP: publish fields to vol"), technical,
+      phiprof::initializeTimer("LCCL: publish fields to vol"), technical,
       [&](const fsgrid::Coordinates& coordinates, const fsgrid::FsStencil& stencil,
           cuint sysBoundaryFlag, cuint sysBoundaryLayer) {
          if (sysBoundaryFlag == sysboundarytype::DO_NOT_COMPUTE || sysBoundaryFlag == sysboundarytype::OUTER_BOUNDARY_PADDING) { return; }
@@ -243,7 +243,7 @@ static void ap_PublishToVol(std::span<const ApVec3> B, std::span<const ApVec3> E
  * Section 2: alpha_s / mu / J-hat  (Eqs. 35-37), evaluated at the nodes
  * ============================================================ */
 
-void ap_BuildSpeciesTensors(
+void lccl_BuildSpeciesTensors(
    std::vector<fsgrids::speciesrhoqspan>& speciesRhoQ,
    std::vector<fsgrids::speciesjspan>& speciesJ,
    std::span<const ApVec3> Bnode,
@@ -259,7 +259,7 @@ void ap_BuildSpeciesTensors(
 
    fsgrid.parallel_for(
       [](int timerId) -> phiprof::Timer { return phiprof::Timer{timerId}; },
-      phiprof::initializeTimer("AP: build alpha_s, mu, J-hat"),
+      phiprof::initializeTimer("LCCL: build alpha_s, mu, J-hat"),
       technical,
       [&](const fsgrid::Coordinates& coordinates, const fsgrid::FsStencil& stencil,
           cuint sysBoundaryFlag, cuint sysBoundaryLayer) {
@@ -323,7 +323,7 @@ void ap_BuildSpeciesTensors(
  * Section 3: Eq. (38) -- HYPRE IJ assembly + BoomerAMG-preconditioned GMRES
  * ============================================================ */
 
-bool ap_SolveElectricField(
+bool lccl_SolveElectricField(
    std::span<const ApVec3> Ek,
    std::span<const ApVec3> Bk,
    fsgrids::constbgbspan bgb,
@@ -350,7 +350,7 @@ bool ap_SolveElectricField(
    // Outflow boundary, so only ever apply it on a genuinely 1D-in-x grid.
    const auto globalSizeForAbsorbing = fsgrid.getGlobalSize();
    const bool outflowAbsorbingActive =
-      P::apOutflowAbsorbing && globalSizeForAbsorbing[1] == 1 && globalSizeForAbsorbing[2] == 1;
+      P::lcclOutflowAbsorbing && globalSizeForAbsorbing[1] == 1 && globalSizeForAbsorbing[2] == 1;
 
    // ---- Step 1: global DOF numbering (contiguous per rank by construction) ----
    long long dofOffset = 0;
@@ -369,7 +369,7 @@ bool ap_SolveElectricField(
    fsgrid::FsData<std::array<Real,1>> dofBase(fsgrid.getNumStorageCells());
    fsgrid.parallel_for(
       [](int timerId) -> phiprof::Timer { return phiprof::Timer{timerId}; },
-      phiprof::initializeTimer("AP: assign DOF numbering"), technical,
+      phiprof::initializeTimer("LCCL: assign DOF numbering"), technical,
       [&](const fsgrid::Coordinates& coordinates, const fsgrid::FsStencil& stencil,
           cuint sysBoundaryFlag, cuint sysBoundaryLayer) {
          const long long lidx = localLinear(stencil.i, stencil.j, stencil.k);
@@ -403,7 +403,7 @@ bool ap_SolveElectricField(
 
    fsgrid.serial_for( // serial: HYPRE_IJMatrixSetValues below is not thread-safe per-row without extra care
       [](int timerId) -> phiprof::Timer { return phiprof::Timer{timerId}; },
-      phiprof::initializeTimer("AP: assemble Eq.38 system"), technical,
+      phiprof::initializeTimer("LCCL: assemble Eq.38 system"), technical,
       [&](const fsgrid::Coordinates& coordinates, const fsgrid::FsStencil& stencil,
           cuint sysBoundaryFlag, cuint sysBoundaryLayer) {
 
@@ -461,9 +461,9 @@ bool ap_SolveElectricField(
             // face-normal component) is untouched -- this transverse-wave
             // relationship says nothing about the normal component, so it
             // keeps the existing (0) dispatch. Uses Bk (this step's B^k,
-            // the only B available yet -- ap_UpdateMagneticField, which
+            // the only B available yet -- lccl_UpdateMagneticField, which
             // computes this step's B^{k+theta}/B^{k+1}, hasn't run yet at
-            // this point in ap_propagateFields): a one-step lag, same
+            // this point in lccl_propagateFields): a one-step lag, same
             // spirit as 0008's own direct-pinning lag for Outflow's B.
             const bool useAbsorbing = outflowAbsorbingActive && (sysBoundaryFlag == sysboundarytype::OUTFLOW);
             // bc is needed regardless of useAbsorbing: comp==0 (Ex) always
@@ -496,7 +496,7 @@ bool ap_SolveElectricField(
             const HYPRE_BigInt row = globalDof(lid, comp);
 
             std::map<HYPRE_BigInt, Real> rowVals;
-            for (const auto& entry : ap_EquationRow(comp, mu[lid], dxyz, reactionScale, muScale, curlScale)) {
+            for (const auto& entry : lccl_EquationRow(comp, mu[lid], dxyz, reactionScale, muScale, curlScale)) {
                if (!stencil.cellExists(entry.di, entry.dj, entry.dk)) { continue; }
                const size_t nlid = stencil.indexFromOffset(entry.di, entry.dj, entry.dk);
                rowVals[globalDof(nlid, entry.comp)] += entry.val;
@@ -557,13 +557,13 @@ bool ap_SolveElectricField(
    HYPRE_GMRESGetNumIterations(gmres, &its);
    HYPRE_GMRESGetFinalRelativeResidualNorm(gmres, &relres);
    if (myRank == MASTER_RANK) {
-      fprintf(stderr, "apSolveElectricField: GMRES/BoomerAMG finished, relres=%e after %d iters\n", (double)relres, (int)its);
+      fprintf(stderr, "lcclSolveElectricField: GMRES/BoomerAMG finished, relres=%e after %d iters\n", (double)relres, (int)its);
    }
 
    // ---- Step 4: extract E^{k+theta}, compute E^{k+1} (Eq. 40) ----
    fsgrid.serial_for(
       [](int timerId) -> phiprof::Timer { return phiprof::Timer{timerId}; },
-      phiprof::initializeTimer("AP: extract E^(k+theta), compute E^(k+1)"), technical,
+      phiprof::initializeTimer("LCCL: extract E^(k+theta), compute E^(k+1)"), technical,
       [&](const fsgrid::Coordinates& coordinates, const fsgrid::FsStencil& stencil,
           cuint sysBoundaryFlag, cuint sysBoundaryLayer) {
          // Boundary-flagged cells (uncomputed or genuine) were already fully
@@ -598,7 +598,7 @@ bool ap_SolveElectricField(
  * Section 4: Faraday update (Eq. 23, 39), on the nodes
  * ============================================================ */
 
-void ap_UpdateMagneticField(
+void lccl_UpdateMagneticField(
    std::span<const ApVec3> Bk,
    std::span<const ApVec3> Etheta,
    std::span<ApVec3> Bkp1,
@@ -616,7 +616,7 @@ void ap_UpdateMagneticField(
    // for pass 2 below.
    fsgrid.parallel_for(
       [](int timerId) -> phiprof::Timer { return phiprof::Timer{timerId}; },
-      phiprof::initializeTimer("AP: Faraday update, interior"), technical,
+      phiprof::initializeTimer("LCCL: Faraday update, interior"), technical,
       [&](const fsgrid::Coordinates& coordinates, const fsgrid::FsStencil& stencil,
           cuint sysBoundaryFlag, cuint sysBoundaryLayer) {
          if (sysBoundaryFlag != sysboundarytype::NOT_SYSBOUNDARY) { return; }
@@ -641,7 +641,7 @@ void ap_UpdateMagneticField(
    fsgrid.updateGhostCells(Bkp1);
 
    // Pass 2: boundary-flagged cells. Uncomputed cells (no dispatchable
-   // SysBoundaryCondition -- see the matching note in ap_SolveElectricField)
+   // SysBoundaryCondition -- see the matching note in lccl_SolveElectricField)
    // are left untouched, same as pass 1 skipped them. Genuine boundary
    // cells are DIRECTLY PINNED (for now): both Bkp1 and Btheta take
    // fieldSolverBoundaryCondMagneticField's value, rather than deriving
@@ -654,7 +654,7 @@ void ap_UpdateMagneticField(
    // handled yet.
    fsgrid.parallel_for(
       [](int timerId) -> phiprof::Timer { return phiprof::Timer{timerId}; },
-      phiprof::initializeTimer("AP: Faraday update, boundary"), technical,
+      phiprof::initializeTimer("LCCL: Faraday update, boundary"), technical,
       [&](const fsgrid::Coordinates& coordinates, const fsgrid::FsStencil& stencil,
           cuint sysBoundaryFlag, cuint sysBoundaryLayer) {
          if (sysBoundaryFlag == sysboundarytype::NOT_SYSBOUNDARY) { return; }
@@ -680,7 +680,7 @@ void ap_UpdateMagneticField(
  * next step's E^k); E^{k+theta}, which the Vlasov push already uses, is not.
  */
 
-void ap_GaussLawCorrection(
+void lccl_GaussLawCorrection(
    std::span<ApVec3> Ekp1,
    std::span<const ApVec3> Ek,
    std::span<const std::array<Real,1>> rho,   // rho^k at the nodes
@@ -712,7 +712,7 @@ void ap_GaussLawCorrection(
    fsgrid::FsData<std::array<Real,1>> dofBase(fsgrid.getNumStorageCells());
    fsgrid.parallel_for(
       [](int timerId) -> phiprof::Timer { return phiprof::Timer{timerId}; },
-      phiprof::initializeTimer("AP: assign phi DOF numbering"), technical,
+      phiprof::initializeTimer("LCCL: assign phi DOF numbering"), technical,
       [&](const fsgrid::Coordinates& coordinates, const fsgrid::FsStencil& stencil,
           cuint sysBoundaryFlag, cuint sysBoundaryLayer) {
          const long long lidx = localLinear(stencil.i, stencil.j, stencil.k);
@@ -781,7 +781,7 @@ void ap_GaussLawCorrection(
       double maxAbsRhoOverEps_local = 0.0, xAtMax_local = 0.0;
       fsgrid.serial_for(
          [](int timerId) -> phiprof::Timer { return phiprof::Timer{timerId}; },
-         phiprof::initializeTimer("AP: compute mean(rho)"), technical,
+         phiprof::initializeTimer("LCCL: compute mean(rho)"), technical,
          [&](const fsgrid::Coordinates& coordinates, const fsgrid::FsStencil& stencil,
              cuint sysBoundaryFlag, cuint sysBoundaryLayer) {
             if (sysBoundaryFlag != sysboundarytype::NOT_SYSBOUNDARY) { hasAnchor_local = true; return; }
@@ -799,14 +799,14 @@ void ap_GaussLawCorrection(
       MPI_Allreduce(&hasAnchor_local, &hasAnchorGlobal, 1, MPI_C_BOOL, MPI_LOR, MPI_COMM_WORLD);
       meanRhoOverEps = hasAnchorGlobal ? 0.0 : (sumRho_global / nInteriorGlobal);
       int myRankForDiag; MPI_Comm_rank(MPI_COMM_WORLD, &myRankForDiag);
-      fprintf(stderr, "apGaussLawCorrection: rank %d: max|rho/eps0|=%e at x=%e m (hasAnchor=%d, meanRhoOverEps=%e)\n",
+      fprintf(stderr, "lcclGaussLawCorrection: rank %d: max|rho/eps0|=%e at x=%e m (hasAnchor=%d, meanRhoOverEps=%e)\n",
               myRankForDiag, (double)maxAbsRhoOverEps_local, (double)xAtMax_local,
               hasAnchorGlobal ? 1 : 0, meanRhoOverEps);
    }
 
    fsgrid.serial_for(
       [](int timerId) -> phiprof::Timer { return phiprof::Timer{timerId}; },
-      phiprof::initializeTimer("AP: assemble Gauss-correction system"), technical,
+      phiprof::initializeTimer("LCCL: assemble Gauss-correction system"), technical,
       [&](const fsgrid::Coordinates& coordinates, const fsgrid::FsStencil& stencil,
           cuint sysBoundaryFlag, cuint sysBoundaryLayer) {
          const size_t lid = stencil.ooo();
@@ -816,7 +816,7 @@ void ap_GaussLawCorrection(
          // to -- DO_NOT_COMPUTE/OUTER_BOUNDARY_PADDING (nothing physical
          // here at all) and genuine boundary cells alike (Maxwellian,
          // Outflow, ...: their E was already finalised by
-         // ap_SolveElectricField's own identity-row dispatch, so there's no
+         // lccl_SolveElectricField's own identity-row dispatch, so there's no
          // meaningful correction to solve for there either -- there's no
          // fieldSolverBoundaryCondPhi-style API to dispatch through even if
          // there were, since this correction is unique to this solver).
@@ -927,7 +927,7 @@ void ap_GaussLawCorrection(
 
    fsgrid.serial_for(
       [](int timerId) -> phiprof::Timer { return phiprof::Timer{timerId}; },
-      phiprof::initializeTimer("AP: hand Gauss-correction system to HYPRE IJ"), technical,
+      phiprof::initializeTimer("LCCL: hand Gauss-correction system to HYPRE IJ"), technical,
       [&](const fsgrid::Coordinates& coordinates, const fsgrid::FsStencil& stencil,
           cuint sysBoundaryFlag, cuint sysBoundaryLayer) {
          const long long lidx = stencil.i + lx*((long long)stencil.j + ly*stencil.k);
@@ -983,7 +983,7 @@ void ap_GaussLawCorrection(
       HYPRE_PCGGetNumIterations(pcgSolver, &pcgIts);
       HYPRE_PCGGetFinalRelativeResidualNorm(pcgSolver, &pcgRelres);
       if (myRank == MASTER_RANK) {
-         fprintf(stderr, "apGaussLawCorrection: Hypre PCG/BoomerAMG finished with relative residual %e "
+         fprintf(stderr, "lcclGaussLawCorrection: Hypre PCG/BoomerAMG finished with relative residual %e "
                          "after %d iterations\n", (double)pcgRelres, (int)pcgIts);
       }
    }
@@ -1008,7 +1008,7 @@ void ap_GaussLawCorrection(
       int phiNonFiniteLocal = phiNonFinite ? 1 : 0, phiNonFiniteGlobal = 0;
       MPI_Allreduce(&phiNonFiniteLocal, &phiNonFiniteGlobal, 1, MPI_INT, MPI_MAX, MPI_COMM_WORLD);
       if (myRank == MASTER_RANK) {
-         fprintf(stderr, "apGaussLawCorrection: solved phi, max|phi|=%e%s\n", maxAbsPhiGlobal,
+         fprintf(stderr, "lcclGaussLawCorrection: solved phi, max|phi|=%e%s\n", maxAbsPhiGlobal,
                  phiNonFiniteGlobal ? "  *** NaN/Inf IN SOLVED PHI ***" : "");
       }
    }
@@ -1027,7 +1027,7 @@ void ap_GaussLawCorrection(
    fsgrid::FsData<std::array<Real,1>> phiGrid(fsgrid.getNumStorageCells());
    fsgrid.serial_for(
       [](int timerId) -> phiprof::Timer { return phiprof::Timer{timerId}; },
-      phiprof::initializeTimer("AP: stage phi"), technical,
+      phiprof::initializeTimer("LCCL: stage phi"), technical,
       [&](const fsgrid::Coordinates& coordinates, const fsgrid::FsStencil& stencil,
           cuint sysBoundaryFlag, cuint sysBoundaryLayer) {
          const long long lidx = stencil.i + lx*((long long)stencil.j + ly*stencil.k);
@@ -1039,11 +1039,11 @@ void ap_GaussLawCorrection(
    if (pcgRelres <= 1.0) {
       fsgrid.parallel_for(
          [](int timerId) -> phiprof::Timer { return phiprof::Timer{timerId}; },
-         phiprof::initializeTimer("AP: apply Gauss correction to E"), technical,
+         phiprof::initializeTimer("LCCL: apply Gauss correction to E"), technical,
          [&](const fsgrid::Coordinates& coordinates, const fsgrid::FsStencil& stencil,
              cuint sysBoundaryFlag, cuint sysBoundaryLayer) {
             // Not just DO_NOT_COMPUTE/OUTER_BOUNDARY_PADDING: a genuine boundary
-            // cell's Ekp1 was already finalised by ap_SolveElectricField's own
+            // cell's Ekp1 was already finalised by lccl_SolveElectricField's own
             // identity-row dispatch (fieldSolverBoundaryCondElectricField),
             // before this function was even called. Subtracting a
             // phi-gradient here would silently overwrite that pinned value.
@@ -1062,7 +1062,7 @@ void ap_GaussLawCorrection(
       fsgrid.updateGhostCells(Ekp1);
 
    } else if (myRank == MASTER_RANK) {
-      fprintf(stderr, "apGaussLawCorrection: relres=%e > 1.0 -- solve diverged, "
+      fprintf(stderr, "lcclGaussLawCorrection: relres=%e > 1.0 -- solve diverged, "
                       "SKIPPING correction this step, E left unmodified\n", (double)pcgRelres);
    }
 }
@@ -1072,14 +1072,14 @@ void ap_GaussLawCorrection(
  * ============================================================ */
 
 // Reports max|E| (over all 3 components, all local cells)
-static void ap_ReportFieldMagnitude(const char* label, std::span<const ApVec3> field,
+static void lccl_ReportFieldMagnitude(const char* label, std::span<const ApVec3> field,
                                      fsgrids::technicalspan technical, FieldSolverGrid& fsgrid) {
    int myRank; MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
    double maxAbsLocal[3] = {0.0, 0.0, 0.0};
    bool nonFiniteLocal = false;
    fsgrid.serial_for(
       [](int timerId) -> phiprof::Timer { return phiprof::Timer{timerId}; },
-      phiprof::initializeTimer("AP: report field magnitude"), technical,
+      phiprof::initializeTimer("LCCL: report field magnitude"), technical,
       [&](const fsgrid::Coordinates& coordinates, const fsgrid::FsStencil& stencil,
           cuint sysBoundaryFlag, cuint sysBoundaryLayer) {
          if (sysBoundaryFlag == sysboundarytype::DO_NOT_COMPUTE || sysBoundaryFlag == sysboundarytype::OUTER_BOUNDARY_PADDING) { return; }
@@ -1105,7 +1105,7 @@ static void ap_ReportFieldMagnitude(const char* label, std::span<const ApVec3> f
 // cos^2(k*dx/2)). Two-pass: every filtered value is computed from the
 // original, then copied back. Not part of the paper; off unless
 // fieldsolver.lowPassFilter is set.
-static void ap_ApplyLowPassFilter1D(std::span<ApVec3> field, int axis, fsgrids::technicalspan technical, FieldSolverGrid& fsgrid) {
+static void lccl_ApplyLowPassFilter1D(std::span<ApVec3> field, int axis, fsgrids::technicalspan technical, FieldSolverGrid& fsgrid) {
    const auto localSize = fsgrid.getLocalSize();
    const int lx = localSize[0], ly = localSize[1], lz = localSize[2];
    std::vector<ApVec3> filtered((size_t)lx*ly*lz);
@@ -1115,7 +1115,7 @@ static void ap_ApplyLowPassFilter1D(std::span<ApVec3> field, int axis, fsgrids::
 
    fsgrid.serial_for(
       [](int timerId) -> phiprof::Timer { return phiprof::Timer{timerId}; },
-      phiprof::initializeTimer("AP: low-pass filter, compute"), technical,
+      phiprof::initializeTimer("LCCL: low-pass filter, compute"), technical,
       [&](const fsgrid::Coordinates& coordinates, const fsgrid::FsStencil& stencil,
           cuint sysBoundaryFlag, cuint sysBoundaryLayer) {
          // Not just DO_NOT_COMPUTE/OUTER_BOUNDARY_PADDING: this filter was built
@@ -1140,7 +1140,7 @@ static void ap_ApplyLowPassFilter1D(std::span<ApVec3> field, int axis, fsgrids::
 
    fsgrid.serial_for(
       [](int timerId) -> phiprof::Timer { return phiprof::Timer{timerId}; },
-      phiprof::initializeTimer("AP: low-pass filter, write back"), technical,
+      phiprof::initializeTimer("LCCL: low-pass filter, write back"), technical,
       [&](const fsgrid::Coordinates& coordinates, const fsgrid::FsStencil& stencil,
           cuint sysBoundaryFlag, cuint sysBoundaryLayer) {
          // A genuine boundary cell's own pinned value must not be
@@ -1155,17 +1155,17 @@ static void ap_ApplyLowPassFilter1D(std::span<ApVec3> field, int axis, fsgrids::
 }
 
 // Separable filter in all three dimensions
-static void ap_ApplyLowPassFilter3D(std::span<ApVec3> field, fsgrids::technicalspan technical, FieldSolverGrid& fsgrid) {
-   ap_ApplyLowPassFilter1D(field, 0, technical, fsgrid);
-   ap_ApplyLowPassFilter1D(field, 1, technical, fsgrid);
-   ap_ApplyLowPassFilter1D(field, 2, technical, fsgrid);
+static void lccl_ApplyLowPassFilter3D(std::span<ApVec3> field, fsgrids::technicalspan technical, FieldSolverGrid& fsgrid) {
+   lccl_ApplyLowPassFilter1D(field, 0, technical, fsgrid);
+   lccl_ApplyLowPassFilter1D(field, 1, technical, fsgrid);
+   lccl_ApplyLowPassFilter1D(field, 2, technical, fsgrid);
 }
 
 /* ============================================================
  * Section 7: propagateFields entry point
  * ============================================================ */
 
-bool ap_propagateFields(fsgrids::perbspan perb,
+bool lccl_propagateFields(fsgrids::perbspan perb,
                      fsgrids::perbspan perbdt2,
                      fsgrids::efieldspan e,
                      fsgrids::efieldspan edt2,
@@ -1182,7 +1182,7 @@ bool ap_propagateFields(fsgrids::perbspan perb,
 
    if (subcycles != 1) {
       stringstream s;
-      s << "propagateFields (AP/CSL-RME): subcycles=" << subcycles << " requested, but the "
+      s << "propagateFields (LCCL/CSL-RME): subcycles=" << subcycles << " requested, but the "
         << "implicit Eq. (38) solve doesn't subcycle. Callers must pass subcycles=1.";
       bailout(true, s.str(), __FILE__, __LINE__);
    }
@@ -1196,10 +1196,10 @@ bool ap_propagateFields(fsgrids::perbspan perb,
    const Real theta = P::FieldSolverTheta;
    const Real c = physicalconstants::LIGHT_SPEED;
 
-   ApNodeState& state = ap_GetNodeState(perb, e, technical, fsgrid, dt==0.0);
+   ApNodeState& state = lccl_GetNodeState(perb, e, technical, fsgrid, dt==0.0);
 
    // dt==0 special case: vlasiator.cpp calls this once before the main loop
-   // specifically for one-time setup. ap_SolveElectricField divides by dt and
+   // specifically for one-time setup. lccl_SolveElectricField divides by dt and
    // dt^2, so nothing is advanced. The initial node-centred fields are
    // published to vol (the Vlasov solver reads them from there); the Yee arrays
    // are left exactly as the project set them.
@@ -1208,7 +1208,7 @@ bool ap_propagateFields(fsgrids::perbspan perb,
    if (dt == 0.0) {
       fsgrid.parallel_for(
          [](int timerId) -> phiprof::Timer { return phiprof::Timer{timerId}; },
-         phiprof::initializeTimer("AP: initial half-step Yee arrays"), technical,
+         phiprof::initializeTimer("LCCL: initial half-step Yee arrays"), technical,
          [&](const fsgrid::Coordinates& coordinates, const fsgrid::FsStencil& stencil,
              cuint sysBoundaryFlag, cuint sysBoundaryLayer) {
             if (sysBoundaryFlag == sysboundarytype::DO_NOT_COMPUTE || sysBoundaryFlag == sysboundarytype::OUTER_BOUNDARY_PADDING) { return; }
@@ -1218,38 +1218,38 @@ bool ap_propagateFields(fsgrids::perbspan perb,
          });
       fsgrid.updateGhostCells(perbdt2);
       fsgrid.updateGhostCells(edt2);
-      ap_PublishToVol(state.B.view(), state.E.view(), vol, technical, fsgrid);
+      lccl_PublishToVol(state.B.view(), state.E.view(), vol, technical, fsgrid);
       return true;
    }
 
    const size_t nStorage = fsgrid.getNumStorageCells();
    fsgrid::FsData<std::array<Real,9>> mu(nStorage);
    ApNodeField Jhat(nStorage);
-   ap_BuildSpeciesTensors(speciesRhoQ, speciesJ, state.B.view(), bgb, technical, fsgrid, theta, dt, mu, Jhat);
+   lccl_BuildSpeciesTensors(speciesRhoQ, speciesJ, state.B.view(), bgb, technical, fsgrid, theta, dt, mu, Jhat);
 
    // Step (2b): E^{k+theta} from Eq. (38), E^{k+1} from Eq. (40)
    ApNodeField Etheta(nStorage), Ekp1(nStorage), Btheta(nStorage), Bkp1(nStorage);
-   const bool converged = ap_SolveElectricField(state.E.view(), state.B.view(), bgb, mu.view(), Jhat.view(),
+   const bool converged = lccl_SolveElectricField(state.E.view(), state.B.view(), bgb, mu.view(), Jhat.view(),
                                                 Etheta.view(), Ekp1.view(), technical, fsgrid, sysBoundaries,
                                                 c, theta, dt);
-   ap_ReportFieldMagnitude("ap_propagateFields: after raw solve (E^{k+theta})", Etheta.view(), technical, fsgrid);
+   lccl_ReportFieldMagnitude("lccl_propagateFields: after raw solve (E^{k+theta})", Etheta.view(), technical, fsgrid);
 
-   if (P::apLowPassFilter) {
-      ap_ApplyLowPassFilter3D(Etheta.view(), technical, fsgrid);
-      ap_ApplyLowPassFilter3D(Ekp1.view(), technical, fsgrid);
+   if (P::lcclLowPassFilter) {
+      lccl_ApplyLowPassFilter3D(Etheta.view(), technical, fsgrid);
+      lccl_ApplyLowPassFilter3D(Ekp1.view(), technical, fsgrid);
    }
 
    // Step (2c): B^{k+1} from Eq. (23), B^{k+theta} from Eq. (39)
-   ap_UpdateMagneticField(state.B.view(), Etheta.view(), Bkp1.view(), Btheta.view(), bgb, technical, fsgrid,
+   lccl_UpdateMagneticField(state.B.view(), Etheta.view(), Bkp1.view(), Btheta.view(), bgb, technical, fsgrid,
                           sysBoundaries, theta, dt);
 
    // Step (2d): Gauss correction of E^{k+1} only. rho^k is the total charge density
    // at the start of the step, the same speciesRhoQ that defines mu (Eq. 36).
-   if (P::apEnforceGaussLaw) {
+   if (P::lcclEnforceGaussLaw) {
       fsgrid::FsData<std::array<Real,1>> rho(nStorage);
       fsgrid.parallel_for(
          [](int timerId) -> phiprof::Timer { return phiprof::Timer{timerId}; },
-         phiprof::initializeTimer("AP: total rho^k"), technical,
+         phiprof::initializeTimer("LCCL: total rho^k"), technical,
          [&](const fsgrid::Coordinates& coordinates, const fsgrid::FsStencil& stencil,
              cuint sysBoundaryFlag, cuint sysBoundaryLayer) {
             if (sysBoundaryFlag == sysboundarytype::DO_NOT_COMPUTE || sysBoundaryFlag == sysboundarytype::OUTER_BOUNDARY_PADDING) { return; }
@@ -1260,20 +1260,20 @@ bool ap_propagateFields(fsgrids::perbspan perb,
             }
             rho[lid][0] = sum;
          });
-      ap_GaussLawCorrection(Ekp1.view(), state.E.view(), rho.view(), mu.view(), technical, fsgrid, dt);
+      lccl_GaussLawCorrection(Ekp1.view(), state.E.view(), rho.view(), mu.view(), technical, fsgrid, dt);
    }
 
-   if (P::apLowPassFilter) {
-      ap_ApplyLowPassFilter3D(Bkp1.view(), technical, fsgrid);
-      ap_ApplyLowPassFilter3D(Btheta.view(), technical, fsgrid);
+   if (P::lcclLowPassFilter) {
+      lccl_ApplyLowPassFilter3D(Bkp1.view(), technical, fsgrid);
+      lccl_ApplyLowPassFilter3D(Btheta.view(), technical, fsgrid);
    }
 
    // Hand-off to the Vlasov solver (Eq. 20): E^{k+theta}, B^{k+theta} straight into vol.
-   ap_PublishToVol(Btheta.view(), Etheta.view(), vol, technical, fsgrid);
+   lccl_PublishToVol(Btheta.view(), Etheta.view(), vol, technical, fsgrid);
 
    // Yee-lattice quantities for output and for everything else that expects them.
-   ap_NodesToYee(Btheta.view(), Etheta.view(), perbdt2, edt2, technical, fsgrid); // time level k+theta
-   ap_NodesToYee(Bkp1.view(),   Ekp1.view(),   perb,    e,    technical, fsgrid); // time level k+1
+   lccl_NodesToYee(Btheta.view(), Etheta.view(), perbdt2, edt2, technical, fsgrid); // time level k+theta
+   lccl_NodesToYee(Bkp1.view(),   Ekp1.view(),   perb,    e,    technical, fsgrid); // time level k+1
 
    // The corrected E^{k+1} and B^{k+1} become E^k and B^k of the next step.
    state.E.swap(Ekp1);

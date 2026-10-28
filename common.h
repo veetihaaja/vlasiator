@@ -330,7 +330,7 @@ namespace fsgrids {
       N_MOMENTS
    };
 
-   #ifdef FS_AP
+   #ifdef FS_LCCL
    enum speciesrhoq {
       SRHOQ, /*!< Per-species charge density rho_s = q_s * n_s. */
       N_SPECIES_RHOQ
@@ -478,7 +478,7 @@ namespace fsgrids {
    typedef std::span<std::array<Real, fsgrids::potential::N_POTENTIAL>> potentialspan;
    typedef std::span<const std::array<Real, fsgrids::potential::N_POTENTIAL>> constpotentialspan;
    #endif
-   #ifdef FS_AP
+   #ifdef FS_LCCL
    typedef std::span<std::array<Real, fsgrids::speciesrhoq::N_SPECIES_RHOQ>> speciesrhoqspan;
    typedef std::span<const std::array<Real, fsgrids::speciesrhoq::N_SPECIES_RHOQ>> constspeciesrhoqspan;
    typedef std::span<std::array<Real, fsgrids::speciesj::N_SPECIES_J>> speciesjspan;

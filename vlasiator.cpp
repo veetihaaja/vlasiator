@@ -236,7 +236,7 @@ void computeNewTimeStep(dccrg::Dccrg<SpatialCell, dccrg::Cartesian_Geometry>& mp
    }
 }
 
-#ifdef FS_AP
+#ifdef FS_LCCL
 /** Capture per-population charge density rho_s^k = q_s * n_s from the
  * currently valid "_R" moment slot for every particle species into a
  * per-cell/per-population array.
@@ -419,14 +419,14 @@ int simulate(int argn,char* args[]) {
       }
       exit(1);
 #endif
-   } else if (P::fieldSolverMethod == "AP") {
-#ifdef FS_AP
+   } else if (P::fieldSolverMethod == "LCCL") {
+#ifdef FS_LCCL
       if (myRank == MASTER_RANK) {
          cerr << "Asymptotic-Preserving field solver selected by P::fieldSolverMethod" << endl;
       }
 #else
       if (myRank == MASTER_RANK) {
-         cerr << "(MAIN) ERROR: Asymptotic-Preserving (AP) field solver selected by P::fieldSolverMethod but FS_AP was not defined at compile time" << endl;
+         cerr << "(MAIN) ERROR: asymptotic-preserving LCCL field solver selected by P::fieldSolverMethod but FS_LCCL was not defined at compile time" << endl;
       }
       exit(1);
 #endif
@@ -439,7 +439,7 @@ int simulate(int argn,char* args[]) {
    // From here on, P::fieldSolverMethod is known to name a compiled-in scheme, so the
    // two flags below may be used freely without re-checking the string each time.
    const bool fieldSolverIsLDZ = (P::fieldSolverMethod == "LDZ" || P::fieldSolverMethod == "default_fieldsolver");
-   const bool fieldSolverIsAP = (P::fieldSolverMethod == "AP");
+   const bool fieldSolverIsLCCL = (P::fieldSolverMethod == "LCCL");
    const bool fieldSolverIsES = (P::fieldSolverMethod == "ES");
 
    // Verify correct handling of floating point exceptions
@@ -590,7 +590,7 @@ int simulate(int argn,char* args[]) {
 #endif
    fsgrid::FsData<std::array<Real, fsgrids::moments::N_MOMENTS>> moments(fsgridNumElements);
    fsgrid::FsData<std::array<Real, fsgrids::moments::N_MOMENTS>> momentsdt2(fsgridNumElements);
-#ifdef FS_AP
+#ifdef FS_LCCL
    // per-species rho_s^k / J_s^{k*} on the fsgrid side: one
    // FsData object per population, since species count is a
    // runtime quantity
@@ -749,7 +749,7 @@ int simulate(int argn,char* args[]) {
    // Fieldsolver dt limits, and also calculate volumetric B-fields.
    // At restart, all we need at this stage has been read from the restart, the rest will be recomputed in due time.
    if(P::isRestart == false) {
-#ifdef FS_AP
+#ifdef FS_LCCL
       std::vector<fsgrids::speciesrhoqspan> speciesRhoQView;
       std::vector<fsgrids::speciesjspan> speciesJView;
       for (auto& x : fsSpeciesRhoQ) { speciesRhoQView.push_back(x.view()); }
@@ -770,7 +770,7 @@ int simulate(int argn,char* args[]) {
 #endif
          moments.view(),
          momentsdt2.view(),
-#ifdef FS_AP
+#ifdef FS_LCCL
          speciesRhoQView,
          speciesJView,
 #endif
@@ -894,7 +894,7 @@ int simulate(int argn,char* args[]) {
       }
       computeDtTimer.stop();
 
-      if (fieldSolverIsAP) {
+      if (fieldSolverIsLCCL) {
          // The asymptotic-preserving timestepping does not have persistent
          // time offsets carried across iterations, so unlike the old leapfrog
          // scheme there is nothing to initialize here: f is exactly f^0. This
@@ -948,8 +948,8 @@ int simulate(int argn,char* args[]) {
       );
       computeMomentsTimer.stop();
 
-      if (fieldSolverIsAP) {
-         // The AP/RME scheme requires Gauss's law to hold at t=0.
+      if (fieldSolverIsLCCL) {
+         // The LCCL/RME scheme requires Gauss's law to hold at t=0.
          // project->setProjectEField is a no-op for every project except ones
          // that override it (currently just Dispersion).
          phiprof::Timer initialEfieldTimer {"initialize-consistent-longitudinal-E"};
@@ -1016,7 +1016,7 @@ int simulate(int argn,char* args[]) {
    // translate((1-FieldSolverTheta)*dt)
 
    // per-species moment ingredients
-#ifdef FS_AP
+#ifdef FS_LCCL
    vector<vector<Real>> speciesRhoQ_k;                 // [popID][cellIndex], rho_s^k
    vector<vector<std::array<Real,3>>> speciesJ_kstar;  // [popID][cellIndex], J_s^{k*}
 #endif
@@ -1346,12 +1346,12 @@ int simulate(int argn,char* args[]) {
       //simulation loop
       // FIXME what if dt changes at a restart??
       if(P::dynamicTimestep  && P::tstep > P::tstep_min) {
-         if (fieldSolverIsAP) {
+         if (fieldSolverIsLCCL) {
             // This block adjusts the leapfrog dt/2 offset when dt changes.
             // That only applies to the old leapfrog scheme and not to the
             // implicit fieldsolver with translate-accelerate-translate cycle.
             stringstream s;
-            s << "The AP (CSL-RME) timestepping scheme currently requires a fixed dt" << endl;
+            s << "The LCCL (CSL-RME) timestepping scheme currently requires a fixed dt" << endl;
             bailout(true, s.str(), __FILE__, __LINE__);
          }
 
@@ -1397,9 +1397,9 @@ int simulate(int argn,char* args[]) {
       if (P::propagateVlasovTranslation || P::propagateVlasovAcceleration) {
          phiprof::Timer timer {"Update system boundaries (Vlasov pre-translation)"};
 
-         // The AP solver's boundary-driven state (Maxwellian's time-file-driven
-         // Bz, etc.) needs to be evaluated at t + theta*dt when were using the AP solver.
-         const Real sysBoundaryEvalFrac = (P::fieldSolverMethod == "AP") ? P::FieldSolverTheta : 0.5;
+         // The LCCL solver's boundary-driven state (Maxwellian's time-file-driven
+         // Bz, etc.) needs to be evaluated at t + theta*dt when were using the LCCL solver.
+         const Real sysBoundaryEvalFrac = (P::fieldSolverMethod == "LCCL") ? P::FieldSolverTheta : 0.5;
          sysBoundaryContainer.updateState(mpiGrid, technical.view(), fsgrid, perb.view(), bgb.view(), P::t + sysBoundaryEvalFrac * P::dt);
 
          // updateState leaves mpiGrid and fsgrid in mismatching states, interpolated moments need to be recalculated
@@ -1422,8 +1422,8 @@ int simulate(int argn,char* args[]) {
          addTimedBarrier("barrier-boundary-conditions");
       }
 
-#ifdef FS_AP
-      if (fieldSolverIsAP) {
+#ifdef FS_LCCL
+      if (fieldSolverIsLCCL) {
          // Capture rho_s^k (per species) before anything moves this step: _R
          // still holds exactly f^k, left over from last iteration's closing
          // (1-FieldSolverTheta)*dt translation
@@ -1431,14 +1431,14 @@ int simulate(int argn,char* args[]) {
       }
 #endif
 
-      // First part of the AP translation-acceleration-translation cycle takes
+      // First part of the LCCL translation-acceleration-translation cycle takes
       // only theta*dt of real-space transport (bringing f to f*); LDZ/ES take
       // the full dt here in a single translation step.
       phiprof::Timer spatialSpaceTimer {"Spatial-space"};
       if( P::propagateVlasovTranslation) {
          Real firstTranslationDt = P::dt;
-#ifdef FS_AP
-         if (fieldSolverIsAP) {
+#ifdef FS_LCCL
+         if (fieldSolverIsLCCL) {
             firstTranslationDt = P::FieldSolverTheta * P::dt;
          }
 #endif
@@ -1456,8 +1456,8 @@ int simulate(int argn,char* args[]) {
          addTimedBarrier("barrier-boundary-conditions");
       }
 
-#ifdef FS_AP
-      if (fieldSolverIsAP) {
+#ifdef FS_LCCL
+      if (fieldSolverIsLCCL) {
          // Capture J_s^{k*} (per species) now that _R moments holds exactly f*'s moments.
          captureSpeciesCurrentDensity(mpiGrid, cells, speciesJ_kstar);
       }
@@ -1489,13 +1489,13 @@ int simulate(int argn,char* args[]) {
          // Copy moments over into the fsgrid.
          feedMomentsIntoFsGrid(mpiGrid, cells, moments, technical.view(), fsgrid, false);
          feedMomentsIntoFsGrid(mpiGrid, cells, momentsdt2, technical.view(), fsgrid, true);
-#ifdef FS_AP
+#ifdef FS_LCCL
          // Copy the per-species rho_s^k / J_s^{k*} over into the fsgrid.
          std::vector<fsgrids::speciesrhoqspan> speciesRhoQView;
          std::vector<fsgrids::speciesjspan> speciesJView;
          for (auto& x : fsSpeciesRhoQ) { speciesRhoQView.push_back(x.view()); }
          for (auto& x : fsSpeciesJ)    { speciesJView.push_back(x.view()); }
-         if (fieldSolverIsAP) {
+         if (fieldSolverIsLCCL) {
             feedSpeciesMomentsIntoFsGrid(mpiGrid, cells, speciesRhoQ_k, speciesJ_kstar, speciesRhoQView, speciesJView);
          }
 #endif
@@ -1520,7 +1520,7 @@ int simulate(int argn,char* args[]) {
 #endif
             moments.view(),
             momentsdt2.view(),
-#ifdef FS_AP
+#ifdef FS_LCCL
             speciesRhoQView,
             speciesJView,
 #endif
@@ -1609,8 +1609,8 @@ int simulate(int argn,char* args[]) {
          addTimedBarrier("barrier-boundary-conditions");
       }
 
-#ifdef FS_AP
-      if (fieldSolverIsAP) {
+#ifdef FS_LCCL
+      if (fieldSolverIsLCCL) {
          // Last part of the translate-accelerate-translate cycle: (1-theta)*dt of
          // real space advection. LDZ/ES took the full dt in one translation step
          // earlier in this iteration and have nothing further to do here.

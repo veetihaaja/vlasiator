@@ -139,11 +139,11 @@ struct Parameters {
 
    static Real maxWaveVelocity;         /*!< Maximum wave velocity allowed in LDZ. */
    static uint maxFieldSolverSubcycles; /*!< Maximum allowed field solver subcycles. */
-   static Real FieldSolverTheta;        /*!< Theta parameters in AP fieldsolver. */
-   static bool apEnforceGaussLaw;       /*!< Should Gauss cleaning be performed after the AP fieldsolver. */
-   static bool apLowPassFilter;         /*!< Should a 3-point binomial low-pass filter be applied to
-                                           E and B after each AP fieldsolver solve? Off by default. */
-   static bool apOutflowAbsorbing;      /*!< Replace the Outflow boundary's normally-pinned E=0 with the
+   static Real FieldSolverTheta;        /*!< Theta parameters in LCCL fieldsolver. */
+   static bool lcclEnforceGaussLaw;       /*!< Should Gauss cleaning be performed after the LCCL fieldsolver. */
+   static bool lcclLowPassFilter;         /*!< Should a 3-point binomial low-pass filter be applied to
+                                           E and B after each LCCL fieldsolver solve? Off by default. */
+   static bool lcclOutflowAbsorbing;      /*!< Replace the Outflow boundary's normally-pinned E=0 with the
                                            absorbing 1D, normal-incidence condition Ey=c*Bz, Ez=-c*By.
                                            Not part of Liu et al. 2025; off by default. */
    static Real resistivity;             /*!< Resistivity in Ohm's law eta*J term. */
