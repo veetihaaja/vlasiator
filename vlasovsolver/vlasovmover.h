@@ -101,6 +101,11 @@ void calculateInterpolatedVelocityMoments(
    const int cp_t
 );
 
+void calculateTrueMomentsPostTranslation(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid);
+void calculateTrueMomentsPostAcceleration(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid);
+
+void initializeTrueMomentSets(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid);
+
 /*!
   \brief Function for interpolating y(x) with y_0(x_0) and y_1(x_1) given.
 */

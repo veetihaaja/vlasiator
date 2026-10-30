@@ -76,35 +76,41 @@ namespace spatial_cell {
    struct Population {
       Real RHO;
       Real V[3];
-      Real RHO_R;
-      Real V_R[3];
-      Real RHO_V;
-      Real V_V[3];
-
+      //Real RHO_R;
+      //Real V_R[3];
+      //Real RHO_V;
+      //Real V_V[3];
       Real P[6];
-      Real P_R[6];
-      Real P_V[6];
+      //Real P_R[6];
+      //Real P_V[6];
+      Real T;
 
-      Real RHO_R_PREV;
-      Real V_R_PREV[3];
-      Real P_R_PREV[6];
-      Real RHO_V_PREV;
-      Real V_V_PREV[3];
-      Real P_V_PREV[6];
+      // Real RHO_R_PREV;
+      // Real V_R_PREV[3];
+      // Real P_R_PREV[6];
+      // Real RHO_V_PREV;
+      // Real V_V_PREV[3];
+      // Real P_V_PREV[6];
 
-      Real RHO_R_PREV_PREV;
-      Real V_R_PREV_PREV[3];
-      Real P_R_PREV_PREV[6];
-      Real RHO_V_PREV_PREV;
-      Real V_V_PREV_PREV[3];
-      Real P_V_PREV_PREV[6];
+      // Real RHO_R_PREV_PREV;
+      // Real V_R_PREV_PREV[3];
+      // Real P_R_PREV_PREV[6];
+      // Real RHO_V_PREV_PREV;
+      // Real V_V_PREV_PREV[3];
+      // Real P_V_PREV_PREV[6];
+
+      // the first element is newest, and they get older with time
+      std::array<MomentSet, TC_INTERPOLATION_POINTS> populationTrueMoments;
+
+      MomentSet moments_R;
+      MomentSet moments_V;
 
       Real RHOLOSSADJUST = 0.0;      /*!< Counter for particle number loss from the destroying blocks in blockadjustment*/
       Real max_dt[2];                                                /**< Element[0] is max_r_dt, element[1] max_v_dt.*/
       Real velocityBlockMinValue;
 
       uint state = LastPropagationState::UNINITIALIZED; // Treat last bit (::ACCELERATED=1u as initialized, used to reset after translation)
-      Real T, T_R, T_V, T_R_PREV, T_V_PREV, T_R_PREV_PREV, T_V_PREV_PREV; // Moment (and latter also VDF) timestamps
+      //Real T, T_R, T_V, T_R_PREV, T_V_PREV, T_R_PREV_PREV, T_V_PREV_PREV; // Moment (and latter also VDF) timestamps
 
       uint ACCSUBCYCLES;          /*!< number of subcyles for each cell*/
       vmesh::LocalID N_blocks;    /**< Number of velocity blocks, used when receiving velocity
@@ -134,26 +140,49 @@ namespace spatial_cell {
          vmesh = new vmesh::VelocityMesh();
          blockContainer = new vmesh::VelocityBlockContainer();
          // Set values to zero in case of zero-block populations
-         RHO = RHO_R = RHO_V = RHOLOSSADJUST = velocityBlockMinValue = ACCSUBCYCLES = N_blocks = 0;
-         RHO_R_PREV = RHO_V_PREV = RHO_R_PREV_PREV = RHO_V_PREV_PREV = 0;
+         /*RHO = RHO_R = RHO_V =*/RHOLOSSADJUST = velocityBlockMinValue = ACCSUBCYCLES = N_blocks = 0;
+         //RHO_R_PREV = RHO_V_PREV = RHO_R_PREV_PREV = RHO_V_PREV_PREV = 0;
          for (uint i=0; i<2; ++i) {
             max_dt[i] = 0;
          }
-         for (uint i=0; i<3; ++i) {
-            V[i] = V_R[i] = V_V[i] = 0;
-            V_R_PREV[i] = V_V_PREV[i] = V_R_PREV_PREV[i] = V_V_PREV_PREV[i] = 0;
-         }
-         for (uint i=0; i<6; i++) {
-            P[i] = P_R[i] = P_V[i] = 0;
-            P_R_PREV[i] = P_V_PREV[i] = P_R_PREV_PREV[i] = P_V_PREV_PREV[i] = 0;
-         }
+         // for (uint i=0; i<3; ++i) {
+         //    V[i] = V_R[i] = V_V[i] = 0;
+         //    V_R_PREV[i] = V_V_PREV[i] = V_R_PREV_PREV[i] = V_V_PREV_PREV[i] = 0;
+         // }
+         // for (uint i=0; i<6; i++) {
+         //    P[i] = P_R[i] = P_V[i] = 0;
+         //    P_R_PREV[i] = P_V_PREV[i] = P_R_PREV_PREV[i] = P_V_PREV_PREV[i] = 0;
+         // }
          state = LastPropagationState::UNINITIALIZED;
-         T = T_R = T_V = T_R_PREV = T_V_PREV = T_R_PREV_PREV = T_V_PREV_PREV = 0.0;
+         //T = T_R = T_V = T_R_PREV = T_V_PREV = T_R_PREV_PREV = T_V_PREV_PREV = 0.0;
          velocity_block_with_content_list = new std::vector<vmesh::GlobalID>(1);
          velocity_block_with_no_content_list = new std::vector<vmesh::GlobalID>(1);
          velocity_block_with_content_list->clear();
          velocity_block_with_no_content_list->clear();
          velocity_block_with_content_list_size = 0;
+
+         moments_R.rho = 0.0;
+         moments_V.rho = 0.0;
+         for (uint coord=0; coord<3; coord++) {
+            moments_R.V[coord] = 0.0;
+            moments_V.V[coord] = 0.0;
+         }
+         for (uint coord=0; coord<6; coord++) {
+            moments_R.P[coord] = 0.0;
+            moments_V.P[coord] = 0.0;
+         }
+
+         for (uint p=0; p<populationTrueMoments.size(); p++) {
+            populationTrueMoments[p] = MomentSet();
+
+            populationTrueMoments[p].rho = 0.0;
+            for (uint coord=0; coord<3; coord++) {
+               populationTrueMoments[p].V[coord] = 0.0;
+            }
+            for (uint coord=0; coord<6; coord++) {
+               populationTrueMoments[p].P[coord] = 0.0;
+            }
+         }
       }
       ~Population() {
          delete vmesh;
@@ -166,13 +195,13 @@ namespace spatial_cell {
          vmesh = new vmesh::VelocityMesh(*(other.vmesh));
          blockContainer = new vmesh::VelocityBlockContainer(*(other.blockContainer));
 
-         RHO = other.RHO;
-         RHO_R = other.RHO_R;
-         RHO_V = other.RHO_V;
-         RHO_R_PREV = other.RHO_R_PREV;
-         RHO_V_PREV = other.RHO_V_PREV;
-         RHO_R_PREV_PREV = other.RHO_R_PREV_PREV;
-         RHO_V_PREV_PREV = other.RHO_V_PREV_PREV;
+         // RHO = other.RHO;
+         // RHO_R = other.RHO_R;
+         // RHO_V = other.RHO_V;
+         // RHO_R_PREV = other.RHO_R_PREV;
+         // RHO_V_PREV = other.RHO_V_PREV;
+         // RHO_R_PREV_PREV = other.RHO_R_PREV_PREV;
+         // RHO_V_PREV_PREV = other.RHO_V_PREV_PREV;
          RHOLOSSADJUST = other.RHOLOSSADJUST;
          velocityBlockMinValue = other.velocityBlockMinValue;
          ACCSUBCYCLES = other.ACCSUBCYCLES;
@@ -180,34 +209,36 @@ namespace spatial_cell {
          for (uint i=0; i<2; ++i) {
             max_dt[i] = other.max_dt[i];
          }
-         for (uint i=0; i<3; ++i) {
-            V[i] = other.V[i];
-            V_R[i] = other.V_R[i];
-            V_V[i] = other.V_V[i];
-            V_R_PREV[i] = other.V_R_PREV[i];
-            V_V_PREV[i] = other.V_V_PREV[i];
-            V_R_PREV_PREV[i] = other.V_R_PREV_PREV[i];
-            V_V_PREV_PREV[i] = other.V_V_PREV_PREV[i];
-         }
-         for (uint i=0; i<6; i++) {
-            P[i] = other.P[i];
-            P_R[i] = other.P_R[i];
-            P_V[i] = other.P_V[i];
-            P_R_PREV[i] = other.P_R_PREV[i];
-            P_V_PREV[i] = other.P_V_PREV[i];
-            P_R_PREV_PREV[i] = other.P_R_PREV_PREV[i];
-            P_V_PREV_PREV[i] = other.P_V_PREV_PREV[i];
-         }
+         // for (uint i=0; i<3; ++i) {
+         //    V[i] = other.V[i];
+         //    V_R[i] = other.V_R[i];
+         //    V_V[i] = other.V_V[i];
+         //    V_R_PREV[i] = other.V_R_PREV[i];
+         //    V_V_PREV[i] = other.V_V_PREV[i];
+         //    V_R_PREV_PREV[i] = other.V_R_PREV_PREV[i];
+         //    V_V_PREV_PREV[i] = other.V_V_PREV_PREV[i];
+         // }
+         // for (uint i=0; i<6; i++) {
+         //    P[i] = other.P[i];
+         //    P_R[i] = other.P_R[i];
+         //    P_V[i] = other.P_V[i];
+         //    P_R_PREV[i] = other.P_R_PREV[i];
+         //    P_V_PREV[i] = other.P_V_PREV[i];
+         //    P_R_PREV_PREV[i] = other.P_R_PREV_PREV[i];
+         //    P_V_PREV_PREV[i] = other.P_V_PREV_PREV[i];
+         // }
 
          state = other.state;
-         T = other.T;
-         T_R = other.T_R;
-         T_V = other.T_V;
-         T_R_PREV = other.T_R_PREV;
-         T_V_PREV = other.T_V_PREV;
-         T_R_PREV_PREV = other.T_R_PREV_PREV;
-         T_V_PREV_PREV = other.T_V_PREV_PREV;
-
+         // T = other.T;
+         // T_R = other.T_R;
+         // T_V = other.T_V;
+         // T_R_PREV = other.T_R_PREV;
+         // T_V_PREV = other.T_V_PREV;
+         // T_R_PREV_PREV = other.T_R_PREV_PREV;
+         // T_V_PREV_PREV = other.T_V_PREV_PREV;
+         populationTrueMoments = other.populationTrueMoments;
+         moments_R = other.moments_R;
+         moments_V = other.moments_V;
 
          // velocity_block_contents lists to be owned by pops
          velocity_block_with_content_list = new std::vector<vmesh::GlobalID>(*(other.velocity_block_with_no_content_list));
@@ -223,13 +254,13 @@ namespace spatial_cell {
          vmesh = new vmesh::VelocityMesh(*(other.vmesh));
          blockContainer = new vmesh::VelocityBlockContainer(*(other.blockContainer));
 
-         RHO = other.RHO;
-         RHO_R = other.RHO_R;
-         RHO_V = other.RHO_V;
-         RHO_R_PREV = other.RHO_R_PREV;
-         RHO_V_PREV = other.RHO_V_PREV;
-         RHO_R_PREV_PREV = other.RHO_R_PREV_PREV;
-         RHO_V_PREV_PREV = other.RHO_V_PREV_PREV;
+         // RHO = other.RHO;
+         // RHO_R = other.RHO_R;
+         // RHO_V = other.RHO_V;
+         // RHO_R_PREV = other.RHO_R_PREV;
+         // RHO_V_PREV = other.RHO_V_PREV;
+         // RHO_R_PREV_PREV = other.RHO_R_PREV_PREV;
+         // RHO_V_PREV_PREV = other.RHO_V_PREV_PREV;
          RHOLOSSADJUST = other.RHOLOSSADJUST;
          velocityBlockMinValue = other.velocityBlockMinValue;
          ACCSUBCYCLES = other.ACCSUBCYCLES;
@@ -237,33 +268,36 @@ namespace spatial_cell {
          for (uint i=0; i<2; ++i) {
             max_dt[i] = other.max_dt[i];
          }
-         for (uint i=0; i<3; ++i) {
-            V[i] = other.V[i];
-            V_R[i] = other.V_R[i];
-            V_V[i] = other.V_V[i];
-            V_R_PREV[i] = other.V_R_PREV[i];
-            V_V_PREV[i] = other.V_V_PREV[i];
-            V_R_PREV_PREV[i] = other.V_R_PREV_PREV[i];
-            V_V_PREV_PREV[i] = other.V_V_PREV_PREV[i];
-         }
-         for (uint i=0; i<6; i++) {
-            P[i] = other.P[i];
-            P_R[i] = other.P_R[i];
-            P_V[i] = other.P_V[i];
-            P_R_PREV[i] = other.P_R_PREV[i];
-            P_V_PREV[i] = other.P_V_PREV[i];
-            P_R_PREV_PREV[i] = other.P_R_PREV_PREV[i];
-            P_V_PREV_PREV[i] = other.P_V_PREV_PREV[i];
-         }
+         // for (uint i=0; i<3; ++i) {
+         //    V[i] = other.V[i];
+         //    V_R[i] = other.V_R[i];
+         //    V_V[i] = other.V_V[i];
+         //    V_R_PREV[i] = other.V_R_PREV[i];
+         //    V_V_PREV[i] = other.V_V_PREV[i];
+         //    V_R_PREV_PREV[i] = other.V_R_PREV_PREV[i];
+         //    V_V_PREV_PREV[i] = other.V_V_PREV_PREV[i];
+         // }
+         // for (uint i=0; i<6; i++) {
+         //    P[i] = other.P[i];
+         //    P_R[i] = other.P_R[i];
+         //    P_V[i] = other.P_V[i];
+         //    P_R_PREV[i] = other.P_R_PREV[i];
+         //    P_V_PREV[i] = other.P_V_PREV[i];
+         //    P_R_PREV_PREV[i] = other.P_R_PREV_PREV[i];
+         //    P_V_PREV_PREV[i] = other.P_V_PREV_PREV[i];
+         // }
 
          state = other.state;
-         T = other.T;
-         T_R = other.T_R;
-         T_V = other.T_V;
-         T_R_PREV = other.T_R_PREV;
-         T_V_PREV = other.T_V_PREV;
-         T_R_PREV_PREV = other.T_R_PREV_PREV;
-         T_V_PREV_PREV = other.T_V_PREV_PREV;
+         // T = other.T;
+         // T_R = other.T_R;
+         // T_V = other.T_V;
+         // T_R_PREV = other.T_R_PREV;
+         // T_V_PREV = other.T_V_PREV;
+         // T_R_PREV_PREV = other.T_R_PREV_PREV;
+         // T_V_PREV_PREV = other.T_V_PREV_PREV;
+         populationTrueMoments = other.populationTrueMoments;
+         moments_R = other.moments_R;
+         moments_V = other.moments_V;
          
          velocity_block_with_content_list = new std::vector<vmesh::GlobalID>(*(other.velocity_block_with_content_list));
          velocity_block_with_no_content_list = new std::vector<vmesh::GlobalID>(*(other.velocity_block_with_no_content_list));
@@ -274,6 +308,10 @@ namespace spatial_cell {
 
       Population& operator=(const Population&& other) = delete; // Move assignment not implemented
 
+      void addNewMomentSet(MomentSet momentSet) {
+         std::rotate(populationTrueMoments.rbegin(), populationTrueMoments.rbegin() + 1, populationTrueMoments.rend());
+         populationTrueMoments[0] = momentSet;
+      }
 
       void ResizeClear(const uint newSize) {
          // Resizes the vmesh localToGlobalMap, clears the vmesh GlobalToLocalMap,
@@ -284,21 +322,44 @@ namespace spatial_cell {
          blockContainer->setNewSize(newSize);
       }
       void Scale(creal factor) {
-         RHO *= factor;
-         RHO_R *= factor;
-         RHO_V *= factor;
-         RHO_R_PREV *= factor;
-         RHO_V_PREV *= factor;
-         RHO_R_PREV_PREV *= factor;
-         RHO_V_PREV_PREV *= factor;
-         for (uint i=0; i<3; ++i) {
-            P[i] *= factor;
-            P_R[i] *= factor;
-            P_V[i] *= factor;
-            P_R_PREV[i] *= factor;
-            P_V_PREV[i] *= factor;
-            P_R_PREV_PREV[i] *= factor;
-            P_V_PREV_PREV[i] *= factor;
+         // RHO *= factor;
+         // RHO_R *= factor;
+         // RHO_V *= factor;
+         // RHO_R_PREV *= factor;
+         // RHO_V_PREV *= factor;
+         // RHO_R_PREV_PREV *= factor;
+         // RHO_V_PREV_PREV *= factor;
+         // for (uint i=0; i<3; ++i) {
+         //    P[i] *= factor;
+         //    P_R[i] *= factor;
+         //    P_V[i] *= factor;
+         //    P_R_PREV[i] *= factor;
+         //    P_V_PREV[i] *= factor;
+         //    P_R_PREV_PREV[i] *= factor;
+         //    P_V_PREV_PREV[i] *= factor;
+         // }
+
+         moments_R.rho *= factor;
+         moments_V.rho *= factor;
+
+         for (uint coord=0; coord<3; coord++) {
+            moments_R.V[coord] *= factor;
+            moments_V.V[coord] *= factor;
+         }
+         for (uint coord=0; coord<6; coord++) {
+            moments_R.P[coord] *= factor;
+            moments_V.P[coord] *= factor;
+         }
+
+         for (uint p=0; p<populationTrueMoments.size(); p++) {
+            populationTrueMoments[p].rho *= factor;
+
+            for (uint coord=0; coord<3; coord++) {
+               populationTrueMoments[p].V[coord] *= factor;
+            }
+            for (uint coord=0; coord<6; coord++) {
+               populationTrueMoments[p].P[coord] *= factor;
+            }
          }
          // Now loop over whole velocity space and scale the values
          for (vmesh::LocalID blockLID=0; blockLID < vmesh->size(); ++blockLID) {
@@ -471,6 +532,8 @@ namespace spatial_cell {
       bool cellIsTimeclassRelevant();
       void assignCellTimeclass();
 
+      void addNewMomentSet(const MomentSet momentSet);
+
       uint64_t get_cell_memory_capacity();
       uint64_t get_cell_memory_size();
       void merge_values(const uint popID, const int timeclass=-1);
@@ -539,6 +602,10 @@ namespace spatial_cell {
       *   varying timeclass synchronizations. This keeps track which levels are requested of this
       *   cell. Populations struct contains mappings of these timeclasses to ghost vmeshes. */
 
+      std::array<MomentSet, TC_INTERPOLATION_POINTS> cellTrueMoments;
+
+      MomentSet moments_R;
+      MomentSet moments_V;
 
       inline std::set<int> get_all_ghosts();
       //SpatialCell& operator=(const SpatialCell& other);

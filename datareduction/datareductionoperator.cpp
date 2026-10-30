@@ -2318,10 +2318,12 @@ namespace DRO {
       epsilon = 0.0;
 
       // get rho and bulk speed
-      rho = cell->get_population(popID).RHO_V;
-      V0[0] = cell->get_population(popID).V_V[0];
-      V0[1] = cell->get_population(popID).V_V[1];
-      V0[2] = cell->get_population(popID).V_V[2];
+      rho = cell->get_population(popID).moments_V.rho;
+
+      for (uint i = 0; i<3; i++) {
+         V0[i] = cell->get_population(popID).moments_V.V[i];
+      }
+
 
       // calculate temperature from the pressure tensor
       Real PTensor[3] = {};

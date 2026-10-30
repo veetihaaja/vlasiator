@@ -1830,29 +1830,29 @@ bool exec_readGrid(dccrg::Dccrg<SpatialCell, dccrg::Cartesian_Geometry>& mpiGrid
    if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"pressure_dt2",CellParams::P_11_DT2,6,mpiGrid); }
    if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"bulkvelocities_dt2",CellParams::VX_DT2,3,mpiGrid); }
 
-   if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"densities_r",CellParams::RHOM_R,2,mpiGrid); }
-   if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"pressure_r",CellParams::P_11_R,6,mpiGrid); }
-   if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"bulkvelocities_r",CellParams::VX_R,3,mpiGrid); }
+   // if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"densities_r",CellParams::RHOM_R,2,mpiGrid); }
+   // if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"pressure_r",CellParams::P_11_R,6,mpiGrid); }
+   // if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"bulkvelocities_r",CellParams::VX_R,3,mpiGrid); }
 
-   if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"densities_v",CellParams::RHOM_V,2,mpiGrid); }
-   if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"pressure_v",CellParams::P_11_V,6,mpiGrid); }
-   if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"bulkvelocities_v",CellParams::VX_V,3,mpiGrid); }
+   // if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"densities_v",CellParams::RHOM_V,2,mpiGrid); }
+   // if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"pressure_v",CellParams::P_11_V,6,mpiGrid); }
+   // if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"bulkvelocities_v",CellParams::VX_V,3,mpiGrid); }
 
-   if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"densities_r_prev",CellParams::RHOM_R_PREV,2,mpiGrid); }
-   if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"pressure_r_prev",CellParams::P_11_R_PREV,6,mpiGrid); }
-   if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"bulkvelocities_r_prev",CellParams::VX_R_PREV,3,mpiGrid); }
+   // if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"densities_r_prev",CellParams::RHOM_R_PREV,2,mpiGrid); }
+   // if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"pressure_r_prev",CellParams::P_11_R_PREV,6,mpiGrid); }
+   // if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"bulkvelocities_r_prev",CellParams::VX_R_PREV,3,mpiGrid); }
 
-   if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"densities_v_prev",CellParams::RHOM_V_PREV,2,mpiGrid); }
-   if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"pressure_v_prev",CellParams::P_11_V_PREV,6,mpiGrid); }
-   if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"bulkvelocities_v_prev",CellParams::VX_V_PREV,3,mpiGrid); }
+   // if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"densities_v_prev",CellParams::RHOM_V_PREV,2,mpiGrid); }
+   // if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"pressure_v_prev",CellParams::P_11_V_PREV,6,mpiGrid); }
+   // if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"bulkvelocities_v_prev",CellParams::VX_V_PREV,3,mpiGrid); }
 
-   if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"densities_r_prev_prev",CellParams::RHOM_R_PREV_PREV,2,mpiGrid); }
-   if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"pressure_r_prev_prev",CellParams::P_11_R_PREV_PREV,6,mpiGrid); }
-   if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"bulkvelocities_r_prev_prev",CellParams::VX_R_PREV_PREV,3,mpiGrid); }
+   // if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"densities_r_prev_prev",CellParams::RHOM_R_PREV_PREV,2,mpiGrid); }
+   // if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"pressure_r_prev_prev",CellParams::P_11_R_PREV_PREV,6,mpiGrid); }
+   // if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"bulkvelocities_r_prev_prev",CellParams::VX_R_PREV_PREV,3,mpiGrid); }
 
-   if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"densities_v_prev_prev",CellParams::RHOM_V_PREV_PREV,2,mpiGrid); }
-   if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"pressure_v_prev_prev",CellParams::P_11_V_PREV_PREV,6,mpiGrid); }
-   if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"bulkvelocities_v_prev_prev",CellParams::VX_V_PREV_PREV,3,mpiGrid); }
+   // if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"densities_v_prev_prev",CellParams::RHOM_V_PREV_PREV,2,mpiGrid); }
+   // if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"pressure_v_prev_prev",CellParams::P_11_V_PREV_PREV,6,mpiGrid); }
+   // if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"bulkvelocities_v_prev_prev",CellParams::VX_V_PREV_PREV,3,mpiGrid); }
 
    if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"LB_weight",CellParams::LBWEIGHTCOUNTER,1,mpiGrid); }
    if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"timeclass",CellParams::TIMECLASS,1,mpiGrid); }

@@ -28,6 +28,7 @@
 #include <vector>
 #include <span>
 #include "definitions.h"
+#include <iostream>
 
 // Include architecture specific definitions
 #include "arch/arch_device_api.h"
@@ -66,6 +67,7 @@ void bailout(
 
 #define MASTER_RANK 0
 
+#define TC_INTERPOLATION_POINTS 4
 
 /* Maximum number of blocks in each dimension in velocity space. The
    size of velocity space defined in cfg can at maximum be this large
@@ -115,6 +117,24 @@ namespace Timeclasses {
    };
 }
 
+typedef struct {
+   Real rho;
+   Real rhom;
+   Real rhoq;
+   Real V[3]; // V1, V2, V3
+   Real P[6]; // P11, P22, P33, P23, P13, P12
+   Real t; // timestamp, tell what time the moments are calculated to
+
+   void print() {
+
+      std::cout << "timestamp: " << t << "\n";
+      std::cout << "rho: " << rho << "\n";
+      std::cout << "rhom: " << rhom << "\n";
+      std::cout << "rhoq: " << rhoq << "\n";
+      std::cout << "V: " << V[0] << ", " << V[1] << ", " << V[2] << "\n";
+      std::cout << "P: " << P[0] << ", " << P[1] << ", " << P[2] << ", " << P[3] << ", " << P[4] << ", " << P[5] << "\n";
+   }
+} MomentSet;
 
 /*! A namespace for storing indices into an array which contains
  * the physical parameters of each velocity block.*/
@@ -186,83 +206,86 @@ namespace CellParams {
       VZ_DT2,  /*!< Vz. Calculated by Vlasov propagator, used to propagate BX,BY,BZ.*/
       T_DT2,   /*!< Timestamp for the above set of moments */
 
-      RHOM_R,     /*!< RHO after propagation in ordinary space*/
-      RHOQ_R,     /*!< RHOQ after propagation in ordinary space*/
-      P_11_R,   /*!< P_xx component after propagation in ordinary space */
-      P_22_R,   /*!< P_yy component after propagation in ordinary space */
-      P_33_R,   /*!< P_zz component after propagation in ordinary space */
-      P_23_R,   /*!< P_yz component after propagation in ordinary space */
-      P_13_R,   /*!< P_xz component after propagation in ordinary space */
-      P_12_R,   /*!< P_xy component after propagation in ordinary space */
-      VX_R,   /*!< VX after propagation in ordinary space*/
-      VY_R,   /*!< VY after propagation in ordinary space*/
-      VZ_R,   /*!< VZ after propagation in ordinary space*/
-      T_R,   /*!< Timestamp for the above set of moments */
+      T_R,  
+      T_V,
 
-      RHOM_R_PREV, /* !< Previous value of RHOM_R, used for timeclass interpolation */
-      RHOQ_R_PREV, /* !< Previous value of RHOQ_R, used for timeclass interpolation */
-      P_11_R_PREV, /* !< Previous value of P_11_R, used for timeclass interpolation */
-      P_22_R_PREV, /* !< Previous value of P_22_R, used for timeclass interpolation */
-      P_33_R_PREV, /* !< Previous value of P_33_R, used for timeclass interpolation */
-      P_23_R_PREV, /* !< Previous value of P_23_R, used for timeclass interpolation */
-      P_13_R_PREV, /* !< Previous value of P_13_R, used for timeclass interpolation */
-      P_12_R_PREV, /* !< Previous value of P_12_R, used for timeclass interpolation */
-      VX_R_PREV, /* !< Previous value of VX_R, used for timeclass interpolation */
-      VY_R_PREV, /* !< Previous value of VY_R, used for timeclass interpolation */
-      VZ_R_PREV, /* !< Previous value of VZ_R, used for timeclass interpolation */
-      T_R_PREV,   /*!< Timestamp for the above set of moments */
+      // RHOM_R,     /*!< RHO after propagation in ordinary space*/
+      // RHOQ_R,     /*!< RHOQ after propagation in ordinary space*/
+      // P_11_R,   /*!< P_xx component after propagation in ordinary space */
+      // P_22_R,   /*!< P_yy component after propagation in ordinary space */
+      // P_33_R,   /*!< P_zz component after propagation in ordinary space */
+      // P_23_R,   /*!< P_yz component after propagation in ordinary space */
+      // P_13_R,   /*!< P_xz component after propagation in ordinary space */
+      // P_12_R,   /*!< P_xy component after propagation in ordinary space */
+      // VX_R,   /*!< VX after propagation in ordinary space*/
+      // VY_R,   /*!< VY after propagation in ordinary space*/
+      // VZ_R,   /*!< VZ after propagation in ordinary space*/
+      // T_R,   /*!< Timestamp for the above set of moments */
 
-      RHOM_R_PREV_PREV, /* !< Value of RHOM_R from two updates back*/
-      RHOQ_R_PREV_PREV, /* !< Value of RHOQ_R from two updates back*/
-      P_11_R_PREV_PREV, /* !< Value of P_11_R from two updates back*/
-      P_22_R_PREV_PREV, /* !< Value of P_22_R from two updates back*/
-      P_33_R_PREV_PREV, /* !< Value of P_33_R from two updates back*/
-      P_23_R_PREV_PREV, /* !< Value of P_23_R from two updates back*/
-      P_13_R_PREV_PREV, /* !< Value of P_13_R from two updates back*/
-      P_12_R_PREV_PREV, /* !< Value of P_12_R from two updates back*/
-      VX_R_PREV_PREV, /* !< Value of VX_R from two updates back*/
-      VY_R_PREV_PREV, /* !< Value of VY_R from two updates back*/
-      VZ_R_PREV_PREV, /* !< Value of VZ_R from two updates back*/
-      T_R_PREV_PREV,   /*!< Timestamp for the above set of moments */
+      // RHOM_R_PREV, /* !< Previous value of RHOM_R, used for timeclass interpolation */
+      // RHOQ_R_PREV, /* !< Previous value of RHOQ_R, used for timeclass interpolation */
+      // P_11_R_PREV, /* !< Previous value of P_11_R, used for timeclass interpolation */
+      // P_22_R_PREV, /* !< Previous value of P_22_R, used for timeclass interpolation */
+      // P_33_R_PREV, /* !< Previous value of P_33_R, used for timeclass interpolation */
+      // P_23_R_PREV, /* !< Previous value of P_23_R, used for timeclass interpolation */
+      // P_13_R_PREV, /* !< Previous value of P_13_R, used for timeclass interpolation */
+      // P_12_R_PREV, /* !< Previous value of P_12_R, used for timeclass interpolation */
+      // VX_R_PREV, /* !< Previous value of VX_R, used for timeclass interpolation */
+      // VY_R_PREV, /* !< Previous value of VY_R, used for timeclass interpolation */
+      // VZ_R_PREV, /* !< Previous value of VZ_R, used for timeclass interpolation */
+      // T_R_PREV,   /*!< Timestamp for the above set of moments */
 
-      RHOM_V,     /*!< RHOM after propagation in velocity space*/
-      RHOQ_V,     /*!< RHOQ after propagation in velocity space*/
-      P_11_V,   /*!< P_xx component after propagation in velocity space */
-      P_22_V,   /*!< P_yy component after propagation in velocity space */
-      P_33_V,   /*!< P_zz component after propagation in velocity space */
-      P_23_V,   /*!< P_yz component after propagation in velocity space */
-      P_13_V,   /*!< P_xy component after propagation in velocity space */
-      P_12_V,   /*!< P_xz component after propagation in velocity space */
-      VX_V,   /*!< VX after propagation in velocity space*/
-      VY_V,   /*!< VY after propagation in velocity space*/
-      VZ_V,   /*!< VZ after propagation in velocity space*/
-      T_V,   /*!< Timestamp for the above set of moments */
+      // RHOM_R_PREV_PREV, /* !< Value of RHOM_R from two updates back*/
+      // RHOQ_R_PREV_PREV, /* !< Value of RHOQ_R from two updates back*/
+      // P_11_R_PREV_PREV, /* !< Value of P_11_R from two updates back*/
+      // P_22_R_PREV_PREV, /* !< Value of P_22_R from two updates back*/
+      // P_33_R_PREV_PREV, /* !< Value of P_33_R from two updates back*/
+      // P_23_R_PREV_PREV, /* !< Value of P_23_R from two updates back*/
+      // P_13_R_PREV_PREV, /* !< Value of P_13_R from two updates back*/
+      // P_12_R_PREV_PREV, /* !< Value of P_12_R from two updates back*/
+      // VX_R_PREV_PREV, /* !< Value of VX_R from two updates back*/
+      // VY_R_PREV_PREV, /* !< Value of VY_R from two updates back*/
+      // VZ_R_PREV_PREV, /* !< Value of VZ_R from two updates back*/
+      // T_R_PREV_PREV,   /*!< Timestamp for the above set of moments */
 
-      RHOM_V_PREV, /* !< Previous value of RHOM_V, used for timeclass interpolation */
-      RHOQ_V_PREV, /* !< Previous value of RHOQ_V, used for timeclass interpolation */
-      P_11_V_PREV, /* !< Previous value of P_11_V, used for timeclass interpolation */
-      P_22_V_PREV, /* !< Previous value of P_22_V, used for timeclass interpolation */
-      P_33_V_PREV, /* !< Previous value of P_33_V, used for timeclass interpolation */
-      P_23_V_PREV, /* !< Previous value of P_23_V, used for timeclass interpolation */
-      P_13_V_PREV, /* !< Previous value of P_13_V, used for timeclass interpolation */
-      P_12_V_PREV, /* !< Previous value of P_12_V, used for timeclass interpolation */
-      VX_V_PREV, /* !< Previous value of VX_V, used for timeclass interpolation */
-      VY_V_PREV, /* !< Previous value of VY_V, used for timeclass interpolation */
-      VZ_V_PREV, /* !< Previous value of VZ_V, used for timeclass interpolation */
-      T_V_PREV,   /*!< Timestamp for the above set of moments */
+      // RHOM_V,     /*!< RHOM after propagation in velocity space*/
+      // RHOQ_V,     /*!< RHOQ after propagation in velocity space*/
+      // P_11_V,   /*!< P_xx component after propagation in velocity space */
+      // P_22_V,   /*!< P_yy component after propagation in velocity space */
+      // P_33_V,   /*!< P_zz component after propagation in velocity space */
+      // P_23_V,   /*!< P_yz component after propagation in velocity space */
+      // P_13_V,   /*!< P_xy component after propagation in velocity space */
+      // P_12_V,   /*!< P_xz component after propagation in velocity space */
+      // VX_V,   /*!< VX after propagation in velocity space*/
+      // VY_V,   /*!< VY after propagation in velocity space*/
+      // VZ_V,   /*!< VZ after propagation in velocity space*/
+      // T_V,   /*!< Timestamp for the above set of moments */
 
-      RHOM_V_PREV_PREV, /* !< Value of RHOM_V from two updates back*/
-      RHOQ_V_PREV_PREV, /* !< Value of RHOQ_V from two updates back*/
-      P_11_V_PREV_PREV, /* !< Value of P_11_V from two updates back*/
-      P_22_V_PREV_PREV, /* !< Value of P_22_V from two updates back*/
-      P_33_V_PREV_PREV, /* !< Value of P_33_V from two updates back*/
-      P_23_V_PREV_PREV, /* !< Value of P_23_V from two updates back*/
-      P_13_V_PREV_PREV, /* !< Value of P_13_V from two updates back*/
-      P_12_V_PREV_PREV, /* !< Value of P_12_V from two updates back*/
-      VX_V_PREV_PREV, /* !< Value of VX_V from two updates back*/
-      VY_V_PREV_PREV, /* !< Value of VY_V from two updates back*/
-      VZ_V_PREV_PREV, /* !< Value of VZ_V from two updates back*/
-      T_V_PREV_PREV,   /*!< Timestamp for the above set of moments */
+      // RHOM_V_PREV, /* !< Previous value of RHOM_V, used for timeclass interpolation */
+      // RHOQ_V_PREV, /* !< Previous value of RHOQ_V, used for timeclass interpolation */
+      // P_11_V_PREV, /* !< Previous value of P_11_V, used for timeclass interpolation */
+      // P_22_V_PREV, /* !< Previous value of P_22_V, used for timeclass interpolation */
+      // P_33_V_PREV, /* !< Previous value of P_33_V, used for timeclass interpolation */
+      // P_23_V_PREV, /* !< Previous value of P_23_V, used for timeclass interpolation */
+      // P_13_V_PREV, /* !< Previous value of P_13_V, used for timeclass interpolation */
+      // P_12_V_PREV, /* !< Previous value of P_12_V, used for timeclass interpolation */
+      // VX_V_PREV, /* !< Previous value of VX_V, used for timeclass interpolation */
+      // VY_V_PREV, /* !< Previous value of VY_V, used for timeclass interpolation */
+      // VZ_V_PREV, /* !< Previous value of VZ_V, used for timeclass interpolation */
+      // T_V_PREV,   /*!< Timestamp for the above set of moments */
+
+      // RHOM_V_PREV_PREV, /* !< Value of RHOM_V from two updates back*/
+      // RHOQ_V_PREV_PREV, /* !< Value of RHOQ_V from two updates back*/
+      // P_11_V_PREV_PREV, /* !< Value of P_11_V from two updates back*/
+      // P_22_V_PREV_PREV, /* !< Value of P_22_V from two updates back*/
+      // P_33_V_PREV_PREV, /* !< Value of P_33_V from two updates back*/
+      // P_23_V_PREV_PREV, /* !< Value of P_23_V from two updates back*/
+      // P_13_V_PREV_PREV, /* !< Value of P_13_V from two updates back*/
+      // P_12_V_PREV_PREV, /* !< Value of P_12_V from two updates back*/
+      // VX_V_PREV_PREV, /* !< Value of VX_V from two updates back*/
+      // VY_V_PREV_PREV, /* !< Value of VY_V from two updates back*/
+      // VZ_V_PREV_PREV, /* !< Value of VZ_V from two updates back*/
+      // T_V_PREV_PREV,   /*!< Timestamp for the above set of moments */
       
       // P_23,     /*!< Pressure P_yz component, computed by Vlasov propagator. */
       // P_13,     /*!< Pressure P_xz component, computed by Vlasov propagator. */

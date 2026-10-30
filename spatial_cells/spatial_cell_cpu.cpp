@@ -53,6 +53,36 @@ namespace spatial_cell {
          this->parameters[i]=0.0;
       }
 
+      this->moments_R.rhom = 0.0;
+      this->moments_V.rhom = 0.0; 
+
+      this->moments_R.rhoq = 0.0;      
+      this->moments_V.rhoq = 0.0;
+
+      for (uint coord=0; coord<3; coord++) {
+         this->moments_R.V[coord] = 0.0;
+         this->moments_V.V[coord] = 0.0;
+      }
+      for (uint coord=0; coord<6; coord++) {
+         this->moments_R.P[coord] = 0.0;
+         this->moments_V.P[coord] = 0.0;
+      }
+
+      // initialize moment sets to 0
+      for (uint p=0; p<this->cellTrueMoments.size(); p++) {
+         this->cellTrueMoments[p] = MomentSet();
+
+         this->cellTrueMoments[p].rhom = 0.0;
+         this->cellTrueMoments[p].rhoq = 0.0;
+
+         for (uint coord=0; coord<3; coord++) {
+            this->cellTrueMoments[p].V[coord] = 0.0;
+         }
+         for (uint coord=0; coord<6; coord++) {
+            this->cellTrueMoments[p].P[coord] = 0.0;
+         }
+      }
+
       // reset BVOL derivatives
       for (unsigned int i = 0; i < bvolderivatives::N_BVOL_DERIVATIVES; i++) {
          this->derivativesBVOL[i]=0;
@@ -113,6 +143,9 @@ namespace spatial_cell {
       for (unsigned int i=0; i<CellParams::N_SPATIAL_CELL_PARAMS; ++i) {
          parameters[i] = other.parameters[i];
       }
+      cellTrueMoments = other.cellTrueMoments;
+      moments_R = other.moments_R;
+      moments_V = other.moments_V;
       for (unsigned int i=0; i<WID3; ++i) {
          null_block_data[i] = 0.0;
       }
@@ -151,6 +184,9 @@ namespace spatial_cell {
       for (unsigned int i=0; i<CellParams::N_SPATIAL_CELL_PARAMS; ++i) {
          parameters[i] = other.parameters[i];
       }
+      cellTrueMoments = other.cellTrueMoments;
+      moments_R = other.moments_R;
+      moments_V = other.moments_V;
       for (unsigned int i=0; i<WID3; ++i) {
          null_block_data[i] = 0.0;
       }
@@ -322,6 +358,11 @@ namespace spatial_cell {
       std::vector<SpatialCell*> neighbor_ptrs;
       update_velocity_block_content_lists(popID, timeclass);
       adjust_velocity_blocks(neighbor_ptrs,popID,doDeleteEmpty,timeclass);
+   }
+
+   void SpatialCell::addNewMomentSet(const MomentSet momentSet) {
+      std::rotate(this->cellTrueMoments.rbegin(), this->cellTrueMoments.rbegin() + 1, this->cellTrueMoments.rend());
+      this->cellTrueMoments[0] = momentSet;
    }
 
    /*!

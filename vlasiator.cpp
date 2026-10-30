@@ -1552,6 +1552,12 @@ int simulate(int argn,char* args[]) {
       phiprof::Timer momentsTimer {"Compute interp moments"};
       //std::cout << "for dt2 in main loop at t="<<P::t<<"\n";
 
+      std::cout << "moments of cell 5 after translation\n";
+      auto SC = mpiGrid[getLocalCells()[5]];
+      for (uint i=0; i<4; i++) {
+         SC->cellTrueMoments[i].print();
+      }
+
       interpolateMomentsForTimeclasses(
          mpiGrid,
          P::t,
