@@ -1229,7 +1229,7 @@ void setAccelerationTimeGhosts( SpatialCell* spatial_cell, const uint popID){
                spatial_cell->set_ghost_population(spatial_cell->get_population(popID,spatial_cell->get_tc()),popID,i);
 
             }
-            else if (spatial_cell->get_timeclass_turn_v(i) || (P::tstep == 0 && P::fractionalTimestep == 0)) {
+            else if (spatial_cell->get_timeclass_turn_v(i) ) {//|| (P::tstep == 0 && P::fractionalTimestep == 0)) {
                
                // if it is slower-tc's turn, we are synced at after-trans state
                // -> Copy state, but needs to acc by half-tc-0-dt ("always init")
@@ -1346,7 +1346,7 @@ void setAccelerationPayloads(vector<AccelerationPayload>& outvec, SpatialCell* s
 
                outvec.push_back(AccelerationPayload(i, spatial_cell,  dt/pow(2,tc_d)));
             }
-            else if (spatial_cell->get_timeclass_turn_v(i) || (P::tstep == 0 && P::fractionalTimestep == 0)) {
+            else if (spatial_cell->get_timeclass_turn_v(i) ) {//|| (P::tstep == 0 && P::fractionalTimestep == 0)) {
                
                // if it is slower-tc's turn, we are synced at after-trans state
                // -> Copy state, but needs to acc by half-tc-0-dt ("always init")
@@ -1757,16 +1757,16 @@ Real interpolation(std::vector<Real> x, std::vector<Real> y, const Real t, const
    // epsilon added to account for float fuckery
 
    if (t < x[0]*(1.0 - 1e-6) || t > x[x.size()-1]*(1.0 + 1e-6)) {
-      std::cerr << "The target time is outside the range of the x values!\n";
-      std::cerr << "t = " << t << ", x[0] = " << x[0] << ", x[x.size()-1] = " << x[x.size()-1] << "\n";
-      std::cerr << "x = [";
-      for (uint i=0; i<x.size(); ++i) {
-         std::cerr << x[i];
-         if (i < x.size()-1) {
-            std::cerr << ", ";
-         }
-      }
-      std::cerr << "]\n";
+      //std::cerr << "The target time is outside the range of the x values!\n";
+      //std::cerr << "t = " << t << ", x[0] = " << x[0] << ", x[x.size()-1] = " << x[x.size()-1] << "\n";
+      // std::cerr << "x = [";
+      // for (uint i=0; i<x.size(); ++i) {
+      //    std::cerr << x[i];
+      //    if (i < x.size()-1) {
+      //       std::cerr << ", ";
+      //    }
+      // }
+      // std::cerr << "]\n";
       //assert(false);
    }
 

@@ -1092,41 +1092,42 @@ int simulate(int argn,char* args[]) {
       for (uint i = 0; i < P::systemWriteTimeInterval.size(); i++) {
          // if (true || (P::systemWriteTimeInterval[i] >= 0.0 &&
          //     P::t >= P::systemWrites[i] * P::systemWriteTimeInterval[i] - DT_EPSILON)) {
-            if (P::systemWriteTimeInterval[i] >= 0.0 &&
-                P::t >= P::systemWrites[i] * P::systemWriteTimeInterval[i] - DT_EPSILON) {
-            // If we have only just restarted, the bulk file should already exist from the previous slot.
-            if ((P::tstep == P::tstep_min) && (P::tstep>0)) {
-               P::systemWrites[i]++;
-               // Special case for large timesteps
-               int index2=(int)((P::t+P::dt)/P::systemWriteTimeInterval[i]);
-               if (index2>P::systemWrites[i]) P::systemWrites[i]=index2;
-               continue;
-            }
-
-            // Calculate these so refinement parameters can be tuned based on the vlsv
-            calculateScaledDeltasSimple(mpiGrid);
-
-            // Call the reductions (e.g. field tracing)
-            FieldTracing::reduceData(technical.view(), fsgrid, perb.view(), dperb.view(), mpiGrid, SBC::ionosphereGrid.nodes);
-
-            phiprof::Timer writeSysTimer {"write-system"};
-            logFile << "(IO): Writing spatial cell and reduced system data to disk, tstep = " << P::tstep << " t = " << P::t << endl << writeVerbose;
-            const bool writeGhosts = true;
-
-            if (writeGrid(
-                   mpiGrid,
-                   fieldSolverData,
-                   technical.view(),
-                   version,
-                   config,
-                   &outputReducer,
-                   i,
-                   P::systemStripeFactor,
-                   writeGhosts,
-                   P::systemWriteDistributionCompressed
-               ) == false
-            ) {
-               cerr << "FAILED TO WRITE GRID AT " << __FILE__ << " " << __LINE__ << endl;
+            if (P::systemWriteTimeInterval[i] >= 0.0 && (
+                P::t >= P::systemWrites[i] * P::systemWriteTimeInterval[i] - DT_EPSILON ||
+                true /* to a parameter "P::writeEverytime" */) ) {
+               // If we have only just restarted, the bulk file should already exist from the previous slot.
+               if ((P::tstep == P::tstep_min) && (P::tstep>0)) {
+                  P::systemWrites[i]++;
+                  // Special case for large timesteps
+                  int index2=(int)((P::t+P::dt)/P::systemWriteTimeInterval[i]);
+                  if (index2>P::systemWrites[i]) P::systemWrites[i]=index2;
+                  continue;
+               }
+   
+               // Calculate these so refinement parameters can be tuned based on the vlsv
+               calculateScaledDeltasSimple(mpiGrid);
+   
+               // Call the reductions (e.g. field tracing)
+               FieldTracing::reduceData(technical.view(), fsgrid, perb.view(), dperb.view(), mpiGrid, SBC::ionosphereGrid.nodes);
+   
+               phiprof::Timer writeSysTimer {"write-system"};
+               logFile << "(IO): Writing spatial cell and reduced system data to disk, tstep = " << P::tstep << " t = " << P::t << endl << writeVerbose;
+               const bool writeGhosts = true;
+   
+               if (writeGrid(
+                      mpiGrid,
+                      fieldSolverData,
+                      technical.view(),
+                      version,
+                      config,
+                      &outputReducer,
+                      i,
+                      P::systemStripeFactor,
+                      writeGhosts,
+                      P::systemWriteDistributionCompressed
+                  ) == false
+               ) {
+                  cerr << "FAILED TO WRITE GRID AT " << __FILE__ << " " << __LINE__ << endl;
             }
             P::systemWrites[i]++;
             // Special case for large timesteps
@@ -1333,7 +1334,7 @@ int simulate(int argn,char* args[]) {
       for(size_t i=0; i<cells.size(); i++) {
          for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
             for (int tc =0; tc <= P::currentMaxTimeclass; ++tc){
-               if(mpiGrid[cells[i]]->get_timeclass_turn_v(tc) ){ // TODO filter properly
+               if(mpiGrid[cells[i]]->get_timeclass_turn_r(tc) ){ // TODO filter properly
                   computedCells += (uint64_t)mpiGrid[cells[i]]->get_number_of_velocity_blocks(popID, tc)*WID3;
                }
             }
