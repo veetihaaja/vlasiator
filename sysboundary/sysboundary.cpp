@@ -733,7 +733,7 @@ void SysBoundary::applySysBoundaryVlasovConditions(dccrg::Dccrg<SpatialCell, dcc
             const CellID cellID = localCells[c];
             SpatialCell* SC = mpiGrid[cellID];
 
-            if (SC->get_timeclass_turn_v() == true) {
+            if (SC->get_timeclass_turn_r()) {
                timeclassCells.push_back(cellID);
             }
          }
@@ -768,7 +768,7 @@ void SysBoundary::applySysBoundaryVlasovConditions(dccrg::Dccrg<SpatialCell, dcc
             const CellID cellID = boundaryCells[c];
             SpatialCell* SC = mpiGrid[cellID];
 
-            if (SC->get_timeclass_turn_v() == true) {
+            if (SC->get_timeclass_turn_r() == true) {
                timeclassBoundaryCells.push_back(cellID);
             }
          }

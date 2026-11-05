@@ -441,10 +441,16 @@ namespace spatial_cell {
       // If on max timeclass, we propagate on each loop.
       int mod = 1 << (P::currentMaxTimeclass - (int)tc);
       bool ret;
+
+      // if this is the initializing half step, we do propagate
+      if (P::tc_leapfrog_init == false) {
+         return true;
+      }
+
       if(P::tc_propagate_mode_forward){
          ret = ((P::fractionalTimestep % mod) == 0); // the simple, not-very-leapfroggy mode
       }else{
-         ret = ((P::fractionalTimestep % mod) == (int)mod/2);
+         ret = ((P::fractionalTimestep % mod) == (int)(mod - 1));
       }
 
       return ret;
