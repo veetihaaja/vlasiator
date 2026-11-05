@@ -1334,7 +1334,7 @@ int simulate(int argn,char* args[]) {
       for(size_t i=0; i<cells.size(); i++) {
          for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
             for (int tc =0; tc <= P::currentMaxTimeclass; ++tc){
-               if(mpiGrid[cells[i]]->get_timeclass_turn_r(tc) ){ // TODO filter properly
+               if(mpiGrid[cells[i]]->get_timeclass_turn_r(tc) || mpiGrid[cells[i]]->get_timeclass_turn_v(tc)){ // TODO filter properly
                   computedCells += (uint64_t)mpiGrid[cells[i]]->get_number_of_velocity_blocks(popID, tc)*WID3;
                }
             }
