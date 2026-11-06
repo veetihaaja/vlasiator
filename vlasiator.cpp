@@ -996,6 +996,28 @@ int simulate(int argn,char* args[]) {
    double beforeStep=P::tstep_min;
    Real compress_time=0.0;
 
+
+   // get two cells, one tc0 and one tc1
+
+   SpatialCell* tc0cell = nullptr;
+   SpatialCell* tc1cell = nullptr;
+
+   for (auto c: getLocalCells()) {
+      SpatialCell* SC = mpiGrid[c];
+      if (SC->parameters[CellParams::TIMECLASS] == 0) {
+         tc0cell = SC;
+         break;
+      }
+   }
+
+   for (auto c: getLocalCells()) {
+      SpatialCell* SC = mpiGrid[c];
+      if (SC->parameters[CellParams::TIMECLASS] == 1) {
+         tc1cell = SC;
+         break;
+      }
+   }
+
    while(P::tstep <= P::tstep_max  &&
          P::t-P::dt <= P::t_max+DT_EPSILON &&
          wallTimeRestartCounter <= P::exitAfterRestarts) {
@@ -1079,6 +1101,13 @@ int simulate(int argn,char* args[]) {
       logFile << "(TIMECLASS) P::currentMaxTimeclass: " << P::currentMaxTimeclass << ", P::initialMaxTimeclass: " << P::initialMaxTimeclass << ", P::timeclassDt.at(0): " << P::timeclassDt.at(0) << ", P::dt: " << P::dt << "\n";
 
       timeclassDebugAssertions(mpiGrid);
+
+      if (myRank == MASTER_RANK) {
+         std::cerr << "start of main loop\n";
+         std::cerr << "tstep: " << P::tstep << " t: " << P::t << " fs dt: " << P::dt << " fractionalTimestep: " << P::fractionalTimestep << std::endl;
+         std::cerr << "tc0cell t_v: " << tc0cell->moments_V.t << " tc1cell t_v: " << tc1cell->moments_V.t << std::endl;
+         std::cerr << "tc0cell t_r: " << tc0cell->moments_R.t << " tc1cell t_r: " << tc1cell->moments_R.t << std::endl;
+      }
 
       //std::cout << "start of main simulation loop, below dt, timeclassDts, currentmaxtimeclass" << std::endl;
       //std::cout << P::dt << std::endl;
@@ -1524,6 +1553,13 @@ int simulate(int argn,char* args[]) {
       }
       spatialSpaceTimer.stop(computedCells, "Cells");
 
+      if (myRank == MASTER_RANK) {
+         std::cerr << "post-translation\n";
+         std::cerr << "tstep: " << P::tstep << " t: " << P::t << " fs dt: " << P::dt << " fractionalTimestep: " << P::fractionalTimestep << std::endl;
+         std::cerr << "tc0cell t_v: " << tc0cell->moments_V.t << " tc1cell t_v: " << tc1cell->moments_V.t << std::endl;
+         std::cerr << "tc0cell t_r: " << tc0cell->moments_R.t << " tc1cell t_r: " << tc1cell->moments_R.t << std::endl;
+      }
+
       // Apply boundary conditions
       if (P::propagateVlasovTranslation || P::propagateVlasovAcceleration ) {
          phiprof::Timer timer {"Update system boundaries (Vlasov post-translation)"};
@@ -1534,6 +1570,17 @@ int simulate(int argn,char* args[]) {
 
       phiprof::Timer momentsTimer {"Compute interp moments"};
       //std::cout << "for dt2 in main loop at t="<<P::t<<"\n";
+
+      if (myRank == MASTER_RANK) {
+         std::cerr << "pre-moments\n";
+         std::cerr << "normal target time: " << P::t << " dt2 target time: " << P::t + 0.5*P::dt << std::endl;
+         std::cerr << "newest true moment timestamp for tc0 cell: " << tc0cell->cellTrueMoments[tc0cell->cellTrueMoments.size()-1].t << " for tc1 cell: " << tc1cell->cellTrueMoments[tc1cell->cellTrueMoments.size()-1].t << std::endl;
+         if (P::t + 0.5 * P::dt > tc0cell->cellTrueMoments[tc0cell->cellTrueMoments.size()-1].t) {
+            std::cerr << "tc0 cell is EXTRAPOLATING\n" << std::endl;
+         } else {
+            std::cerr << "tc0 cell is INTERPOLATING\n" << std::endl;
+         }
+      }
 
       interpolateMomentsForTimeclasses(
          mpiGrid,
@@ -1607,6 +1654,13 @@ int simulate(int argn,char* args[]) {
          addTimedBarrier("barrier-after-field-solver");
       }
 
+      if (myRank == MASTER_RANK) {
+         std::cerr << "post-field-solve\n";
+         std::cerr << "tstep: " << P::tstep << " t: " << P::t << " fs dt: " << P::dt << " fractionalTimestep: " << P::fractionalTimestep << std::endl;
+         std::cerr << "tc0cell t_v: " << tc0cell->moments_V.t << " tc1cell t_v: " << tc1cell->moments_V.t << std::endl;
+         std::cerr << "tc0cell t_r: " << tc0cell->moments_R.t << " tc1cell t_r: " << tc1cell->moments_R.t << std::endl;
+      }
+
       if(FieldTracing::fieldTracingParameters.useCache) {
          FieldTracing::resetReconstructionCoefficientsCache();
       }
@@ -1658,6 +1712,13 @@ int simulate(int argn,char* args[]) {
       }
       vspaceTimer.stop(computedCells, "Cells");
       addTimedBarrier("barrier-after-acceleration");
+
+      if (myRank == MASTER_RANK) {
+         std::cerr << "post-acceleration\n";
+         std::cerr << "tstep: " << P::tstep << " t: " << P::t << " fs dt: " << P::dt << " fractionalTimestep: " << P::fractionalTimestep << std::endl;
+         std::cerr << "tc0cell t_v: " << tc0cell->moments_V.t << " tc1cell t_v: " << tc1cell->moments_V.t << std::endl;
+         std::cerr << "tc0cell t_r: " << tc0cell->moments_R.t << " tc1cell t_r: " << tc1cell->moments_R.t << std::endl;
+      }
 
       if (P::artificialPADiff){
          phiprof::Timer diffusionTimer {"Pitch-angle diffusion"};
