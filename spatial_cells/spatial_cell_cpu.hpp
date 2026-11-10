@@ -96,14 +96,11 @@ namespace spatial_cell {
       Real velocityBlockMinValue;
 
       uint state = LastPropagationState::UNINITIALIZED; // Treat last bit (::ACCELERATED=1u as initialized, used to reset after translation)
-      //Real T, T_R, T_V, T_R_PREV, T_V_PREV, T_R_PREV_PREV, T_V_PREV_PREV; // Moment (and latter also VDF) timestamps
 
       uint ACCSUBCYCLES;          /*!< number of subcyles for each cell*/
       vmesh::LocalID N_blocks;    /**< Number of velocity blocks, used when receiving velocity
                                    * mesh from remote neighbors using MPI.*/
 
-      // Keep this outside the RHO-to-N_blocks MPI metadata range.
-      // The range is transferred as a contiguous byte block.
       // the first element is oldest, and they get newer with time
       std::vector<MomentSet> populationTrueMoments;
 

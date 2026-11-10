@@ -1664,7 +1664,6 @@ void initializeTrueMomentSets(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry
             // set the timestamp to go backwards in time
             const Real dt = P::timeclassDt[tc]*0.5;
             for (uint mset = 0; mset < pop.populationTrueMoments.size()-1; ++mset) {
-               //std::cerr << "setting pop true moments for cell " << SC->parameters[CellParams::CELLID] << " tc " << tc << " mset " << mset << " dt " << -dt*(pop.populationTrueMoments.size()-1-mset) << "\n";
                pop.populationTrueMoments[mset].t = -dt*(pop.populationTrueMoments.size()-1-mset);
             }
          }
@@ -1836,18 +1835,6 @@ void interpolateMomentsForTimeclasses(
             }
          }
 
-         // for (uint i=0; i<P::tcInterpolationPoints; i++) {
-         //    timestamps[i] = SC->cellTrueMoments[i].t;
-         //    rhoms[i] = SC->cellTrueMoments[i].rhom;
-         //    rhoqs[i] = SC->cellTrueMoments[i].rhoq;
-         //    for (uint j=0; j<3; j++) {
-         //       Vs[j][i] = SC->cellTrueMoments[i].V[j];
-         //    }
-         //    for (uint j=0; j<6; j++) {
-         //       Ps[j][i] = SC->cellTrueMoments[i].P[j];
-         //    }
-         // }
-
          SC->parameters[cp_rhom] = interpolation(std::vector<Real>(timestamps.begin(), timestamps.end()), std::vector<Real>(rhoms.begin(), rhoms.end()), target_time);
          SC->parameters[cp_rhoq] = interpolation(std::vector<Real>(timestamps.begin(), timestamps.end()), std::vector<Real>(rhoqs.begin(), rhoqs.end()), target_time);
          for (uint i=0; i<3; i++) {
@@ -1910,17 +1897,6 @@ void updateParticlePopulations(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometr
                      Ps[j].push_back(pop.populationTrueMoments[i].P[j]);
                   }
                }
-
-               // for (uint i=0; i<(uint)P::tcInterpolationPoints; i++) {
-               //    timestamps[i] = pop.populationTrueMoments[i].t;
-               //    rhos[i] = pop.populationTrueMoments[i].rhom;
-               //    for (uint j=0; j<3; j++) {
-               //       Vs[j][i] = pop.populationTrueMoments[i].V[j];
-               //    }
-               //    for (uint j=0; j<6; j++) {
-               //       Ps[j][i] = pop.populationTrueMoments[i].P[j];
-               //    }
-               // }
 
                pop.RHO = interpolation(std::vector<Real>(timestamps.begin(), timestamps.end()), std::vector<Real>(rhos.begin(), rhos.end()), target_time);
                for (uint i=0; i<3; i++) {

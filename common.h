@@ -204,31 +204,31 @@ namespace CellParams {
       P_12_DT2, /*!< Intermediate step value for RK2 time stepping in field solver. Computed from P_12_R and P_12_V. */
       T_DT2,   /*!< Timestamp for the above set of moments */
 
-      RHOM_R,
-      VX_R,
-      VY_R,
-      VZ_R,
-      RHOQ_R,
-      P_11_R,
-      P_22_R,
-      P_33_R,
-      P_23_R,
-      P_13_R,
-      P_12_R,
-      T_R,
+      RHOM_R,   /*!< Total mass density. Calculated after translation*/
+      VX_R,    /*!< Vx. Calculated after translation*/
+      VY_R,    /*!< Vy. Calculated after translation*/
+      VZ_R,    /*!< Vz. Calculated after translation*/
+      RHOQ_R,  /*!< Total charge density. Calculated after translation*/
+      P_11_R,   /*!< Pressure P_xx component, computed after translation. */
+      P_22_R,  /*!< Pressure P_yy component, computed after translation. */
+      P_33_R,  /*!< Pressure P_zz component, computed after translation. */
+      P_23_R,  /*!< Pressure P_yz component, computed after translation. */
+      P_13_R,  /*!< Pressure P_xz component, computed after translation. */
+      P_12_R,  /*!< Pressure P_xy component, computed after translation. */
+      T_R,  /*!< Timestamp for the above set of moments */
 
-      RHOM_V,
-      VX_V,
-      VY_V,
-      VZ_V,
-      RHOQ_V,
-      P_11_V,
-      P_22_V,
-      P_33_V,
-      P_23_V,
-      P_13_V,
-      P_12_V,
-      T_V,
+      RHOM_V,  /*!< Total mass density. Calculated after acceleration*/
+      VX_V,   /*!< Vx. Calculated after acceleration*/
+      VY_V,  /*!< Vy. Calculated after acceleration*/
+      VZ_V,  /*!< Vz. Calculated after acceleration*/
+      RHOQ_V,  /*!< Total charge density. Calculated after acceleration*/
+      P_11_V,  /*!< Pressure P_xx component, computed after acceleration. */
+      P_22_V,  /*!< Pressure P_yy component, computed after acceleration. */
+      P_33_V,  /*!< Pressure P_zz component, computed after acceleration. */
+      P_23_V,  /*!< Pressure P_yz component, computed after acceleration. */
+      P_13_V,  /*!< Pressure P_xz component, computed after acceleration. */
+      P_12_V,  /*!< Pressure P_xy component, computed after acceleration. */
+      T_V,  /*!< Timestamp for the above set of moments */
 
       EXVOL,    /*!< Volume electric field averaged over spatial cell, x-component.*/
       EYVOL,    /*!< Volume electric field averaged over spatial cell, y-component.*/

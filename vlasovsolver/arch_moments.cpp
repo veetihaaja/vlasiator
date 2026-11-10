@@ -379,7 +379,6 @@ void calculateMoments_V(
 
             cell->parameters[CellParams::RHOM_V] = 0.0;
             cell->parameters[CellParams::RHOQ_V] = 0.0;
-            //cell->moments_V.t = 0.
             for (int i=0; i<3; ++i) {
                cell->parameters[CellParams::VX_V+i]=0.0;
             }
@@ -495,7 +494,6 @@ void calculateMoments_V(
          // Store species' contribution to 2nd bulk velocity moments
          Population &pop = cell->get_population(popID);
          for (size_t i = 0; i < nMom2; ++i) {
-            //pop.P_V[i] = mass * array[i];
             pop.P_V[i] = mass * array[i];
          }
 
