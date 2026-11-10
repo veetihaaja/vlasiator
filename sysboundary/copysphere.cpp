@@ -695,21 +695,21 @@ namespace SBC {
       calculateCellMoments(&templateCell, true, false, true);
 
       // WARNING Time-independence assumed here. Normal moments computed in setProjectCell
-      templateCell.moments_R.rhom = templateCell.parameters[CellParams::RHOM];
-      templateCell.moments_R.rhoq = templateCell.parameters[CellParams::RHOQ];
-      templateCell.moments_R.t = templateCell.parameters[CellParams::T];
+      templateCell.parameters[CellParams::RHOM_R] = templateCell.parameters[CellParams::RHOM];
+      templateCell.parameters[CellParams::RHOQ_R] = templateCell.parameters[CellParams::RHOQ];
+      templateCell.parameters[CellParams::T_R] = templateCell.parameters[CellParams::T];
 
-      templateCell.moments_V.rhom = templateCell.parameters[CellParams::RHOM];
-      templateCell.moments_V.rhoq = templateCell.parameters[CellParams::RHOQ];
-      templateCell.moments_V.t = templateCell.parameters[CellParams::T];
+      templateCell.parameters[CellParams::RHOM_V] = templateCell.parameters[CellParams::RHOM];
+      templateCell.parameters[CellParams::RHOQ_V] = templateCell.parameters[CellParams::RHOQ];
+      templateCell.parameters[CellParams::T_V] = templateCell.parameters[CellParams::T];
       
       for (uint i=0; i<3; i++) {
-         templateCell.moments_R.V[i] = templateCell.parameters[CellParams::VX+i];
-         templateCell.moments_V.V[i] = templateCell.parameters[CellParams::VX+i];
+         templateCell.parameters[CellParams::VX_R + i] = templateCell.parameters[CellParams::VX+i];
+         templateCell.parameters[CellParams::VX_V + i] = templateCell.parameters[CellParams::VX+i];
       }
       for (uint i=0; i<6; i++) {
-         templateCell.moments_R.P[i] = templateCell.parameters[CellParams::P_11+i];
-         templateCell.moments_V.P[i] = templateCell.parameters[CellParams::P_11+i];
+         templateCell.parameters[CellParams::P_11_R + i] = templateCell.parameters[CellParams::P_11+i];
+         templateCell.parameters[CellParams::P_11_V + i] = templateCell.parameters[CellParams::P_11+i];
       }
    }
 

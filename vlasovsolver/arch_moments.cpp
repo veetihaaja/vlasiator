@@ -207,13 +207,13 @@ void calculateMoments_R(
          }
          // Clear old moments to zero value and push the prev-moments downstream
          if (popID == 0) {
-            cell->moments_R.rhom = 0.0;
-            cell->moments_R.rhoq = 0.0;
+            cell->parameters[CellParams::RHOM_R] = 0.0;
+            cell->parameters[CellParams::RHOQ_R] = 0.0;
             for (int i=0; i<3; ++i) {
-               cell->moments_R.V[i]=0;
+               cell->parameters[CellParams::VX_R+i] = 0.0;
             }
             for (int i=0; i<nMom2; ++i) {
-               cell->moments_R.P[i]=0;
+               cell->parameters[CellParams::P_11_R+i] = 0.0;
             }
          }
 
@@ -227,12 +227,12 @@ void calculateMoments_R(
          const uint nBlocks = cell->get_velocity_mesh(popID)->size();
          Population &pop = cell->get_population(popID);
          if (nBlocks == 0) {
-            pop.moments_R.rho = 0;
+            pop.RHO_R = 0;
             for (int i=0; i<3; ++i) {
-               pop.moments_R.V[i]=0;
+               pop.V_R[i]=0;
             }
             for (int i=0; i<nMom2; ++i) {
-               pop.moments_R.P[i]=0;
+               pop.P_R[i]=0;
             }
             continue;
          }
@@ -247,16 +247,16 @@ void calculateMoments_R(
                                    array,
                                    nBlocks);
          // Store species' contribution to bulk velocity moments
-         pop.moments_R.rho = array[0];
+         pop.RHO_R = array[0];
          for (uint i=0; i<3; i++) {
-            pop.moments_R.V[i] = divideIfNonZero(array[i+1], array[0]);
+            pop.V_R[i] = divideIfNonZero(array[i+1], array[0]);
          }
 
-         cell->moments_R.rhom += array[0]*mass;
+         cell->parameters[CellParams::RHOM_R] += array[0]*mass;
          for (uint i=0; i<3; i++) {
-            cell->moments_R.V[i] += array[i+1]*mass;
+            cell->parameters[CellParams::VX_R+i] += array[i+1]*mass;
          }
-         cell->moments_R.rhoq += array[0]*charge;
+         cell->parameters[CellParams::RHOQ_R] += array[0]*charge;
 
       } // for-loop over spatial cells
    } // for-loop over particle species
@@ -271,7 +271,7 @@ void calculateMoments_R(
          continue;
       }
       for (uint i=0; i<3; i++) {
-         cell->moments_R.V[i] = divideIfNonZero(cell->moments_R.V[i], cell->moments_R.rhom);
+         cell->parameters[CellParams::VX_R+i] = divideIfNonZero(cell->parameters[CellParams::VX_R+i], cell->parameters[CellParams::RHOM_R]);
       }
    }
 
@@ -310,19 +310,19 @@ void calculateMoments_R(
 
          // Calculate species' contribution to second velocity moments
          blockVelocitySecondMoments(blockContainer,
-                                    cell->moments_R.V[0],
-                                    cell->moments_R.V[1],
-                                    cell->moments_R.V[2],
+                                    cell->parameters[CellParams::VX_R],
+                                    cell->parameters[CellParams::VY_R],
+                                    cell->parameters[CellParams::VZ_R],
                                     array,
                                     nBlocks);
          // Store species' contribution to 2nd bulk velocity moments
          Population &pop = cell->get_population(popID);
          for (size_t i = 0; i < nMom2; ++i) {
-            pop.moments_R.P[i] = mass * array[i];
+            pop.P_R[i] = mass * array[i];
          }
 
          for (size_t i = 0; i < nMom2; ++i) {
-            cell->moments_R.P[i] += pop.moments_R.P[i];
+            cell->parameters[CellParams::P_11_R+i] += pop.P_R[i];
          }
       } // for-loop over spatial cells
    } // for-loop over particle species
@@ -377,14 +377,14 @@ void calculateMoments_V(
          // Clear old moments to zero value
          if (popID == 0) {
 
-            cell->moments_V.rhom = 0.0;
-            cell->moments_V.rhoq = 0.0;
+            cell->parameters[CellParams::RHOM_V] = 0.0;
+            cell->parameters[CellParams::RHOQ_V] = 0.0;
             //cell->moments_V.t = 0.
             for (int i=0; i<3; ++i) {
-               cell->moments_V.V[i]=0.0;
+               cell->parameters[CellParams::VX_V+i]=0.0;
             }
             for (int i=0; i<nMom2; ++i) {
-               cell->moments_V.P[i]=0.0;
+               cell->parameters[CellParams::P_11_V+i]=0.0;
             }
          }
 
@@ -398,12 +398,12 @@ void calculateMoments_V(
          const uint nBlocks = cell->get_velocity_mesh(popID)->size();
          Population &pop = cell->get_population(popID);
          if (nBlocks == 0) {
-            pop.moments_V.rho = 0;
+            pop.RHO_V = 0;
             for (int i=0; i<3; ++i) {
-               pop.moments_V.V[i]=0;
+               pop.V_V[i]=0;
             }
             for (int i=0; i<nMom2; ++i) {
-               pop.moments_V.P[i]=0;
+               pop.P_V[i]=0;
             }
             continue;
          }
@@ -419,17 +419,17 @@ void calculateMoments_V(
                                    array,
                                    nBlocks);
          // Store species' contribution to bulk velocity moments
-         pop.moments_V.rho = array[0];
+         pop.RHO_V = array[0];
 
          for (uint i=0; i<3; i++) {
-            pop.moments_V.V[i] = divideIfNonZero(array[i+1], array[0]);
+            pop.V_V[i] = divideIfNonZero(array[i+1], array[0]);
          }
 
-         cell->moments_V.rhom += array[0]*mass;
+         cell->parameters[CellParams::RHOM_V] += array[0]*mass;
          for (uint i=0; i<3; i++) {
-            cell->moments_V.V[i] += array[i+1] * mass;
+            cell->parameters[CellParams::VX_V+i] += array[i+1] * mass;
          }
-         cell->moments_V.rhoq += array[0]*charge;
+         cell->parameters[CellParams::RHOQ_V] += array[0]*charge;
 
       } // for-loop over spatial cells
    } // for-loop over particle species
@@ -445,7 +445,7 @@ void calculateMoments_V(
       }
 
       for (uint i=0; i<3; i++) {
-         cell->moments_V.V[i] = divideIfNonZero(cell->moments_V.V[i], cell->moments_V.rhom);
+         cell->parameters[CellParams::VX_V+i] = divideIfNonZero(cell->parameters[CellParams::VX_V+i], cell->parameters[CellParams::RHOM_V]);
       }
 
    }
@@ -487,20 +487,20 @@ void calculateMoments_V(
 
          // Calculate species' contribution to second velocity moments
          blockVelocitySecondMoments(blockContainer,
-                                    cell->moments_V.V[0],
-                                    cell->moments_V.V[1],
-                                    cell->moments_V.V[2],
+                                    cell->parameters[CellParams::VX_V],
+                                    cell->parameters[CellParams::VY_V],
+                                    cell->parameters[CellParams::VZ_V],
                                     array,
                                     nBlocks);
          // Store species' contribution to 2nd bulk velocity moments
          Population &pop = cell->get_population(popID);
          for (size_t i = 0; i < nMom2; ++i) {
             //pop.P_V[i] = mass * array[i];
-            pop.moments_V.P[i] = mass * array[i];
+            pop.P_V[i] = mass * array[i];
          }
 
          for (size_t i = 0; i < nMom2; ++i) {
-            cell->moments_V.P[i] += pop.moments_V.P[i];
+            cell->parameters[CellParams::P_11_V+i] += pop.P_V[i];
          }
       } // for-loop over spatial cells
    } // for-loop over particle species

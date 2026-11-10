@@ -81,8 +81,15 @@ namespace spatial_cell {
       Real P[6];
       Real T;
 
-      MomentSet moments_R;
-      MomentSet moments_V;
+      Real RHO_R;
+      Real V_R[3];
+      Real P_R[6];
+      Real T_R;
+
+      Real RHO_V;
+      Real V_V[3];
+      Real P_V[6];
+      Real T_V;
 
       Real RHOLOSSADJUST = 0.0;      /*!< Counter for particle number loss from the destroying blocks in blockadjustment*/
       Real max_dt[2];                                                /**< Element[0] is max_r_dt, element[1] max_v_dt.*/
@@ -143,17 +150,17 @@ namespace spatial_cell {
          velocity_block_with_no_content_list->clear();
          velocity_block_with_content_list_size = 0;
 
-         moments_R.rho = 0.0;
-         moments_V.rho = 0.0;
-         moments_R.t = 0.0;
-         moments_V.t = 0.0;
+         RHO_R = 0.0;
+         RHO_V = 0.0;
+         T_R = 0.0;
+         T_V = 0.0;
          for (uint coord=0; coord<3; coord++) {
-            moments_R.V[coord] = 0.0;
-            moments_V.V[coord] = 0.0;
+            V_R[coord] = 0.0;
+            V_V[coord] = 0.0;
          }
          for (uint coord=0; coord<6; coord++) {
-            moments_R.P[coord] = 0.0;
-            moments_V.P[coord] = 0.0;
+            P_R[coord] = 0.0;
+            P_V[coord] = 0.0;
          }
 
          for (uint p=0; p<(uint)P::tcInterpolationPoints; p++) {
@@ -198,8 +205,22 @@ namespace spatial_cell {
          state = other.state;
          T = other.T;
          populationTrueMoments = other.populationTrueMoments;
-         moments_R = other.moments_R;
-         moments_V = other.moments_V;
+         RHO_R = other.RHO_R;
+         for (uint coord=0; coord<3; coord++) {
+            V_R[coord] = other.V_R[coord];
+         }
+         for (uint coord=0; coord<6; coord++) {
+            P_R[coord] = other.P_R[coord];
+         }
+         T_R = other.T_R;
+         RHO_V = other.RHO_V;
+         for (uint coord=0; coord<3; coord++) {
+            V_V[coord] = other.V_V[coord];
+         }
+         for (uint coord=0; coord<6; coord++) {
+            P_V[coord] = other.P_V[coord];
+         }
+         T_V = other.T_V;
 
          // velocity_block_contents lists to be owned by pops
          velocity_block_with_content_list = new std::vector<vmesh::GlobalID>(*(other.velocity_block_with_no_content_list));
@@ -233,9 +254,25 @@ namespace spatial_cell {
          state = other.state;
          T = other.T;
          populationTrueMoments = other.populationTrueMoments;
-         moments_R = other.moments_R;
-         moments_V = other.moments_V;
-         
+
+         RHO_R = other.RHO_R;
+         for (uint coord=0; coord<3; coord++) {
+            V_R[coord] = other.V_R[coord];
+         }
+         for (uint coord=0; coord<6; coord++) {
+            P_R[coord] = other.P_R[coord];
+         }
+         T_R = other.T_R;
+
+         RHO_V = other.RHO_V;
+         for (uint coord=0; coord<3; coord++) {
+            V_V[coord] = other.V_V[coord];
+         }
+         for (uint coord=0; coord<6; coord++) {
+            P_V[coord] = other.P_V[coord];
+         }
+         T_V = other.T_V;
+
          velocity_block_with_content_list = new std::vector<vmesh::GlobalID>(*(other.velocity_block_with_content_list));
          velocity_block_with_no_content_list = new std::vector<vmesh::GlobalID>(*(other.velocity_block_with_no_content_list));
          velocity_block_with_content_list_size = other.velocity_block_with_content_list_size;
@@ -269,16 +306,16 @@ namespace spatial_cell {
             P[i] *= factor;
          }
 
-         moments_R.rho *= factor;
-         moments_V.rho *= factor;
+         RHO_R *= factor;
+         RHO_V *= factor;
 
          for (uint coord=0; coord<3; coord++) {
-            moments_R.V[coord] *= factor;
-            moments_V.V[coord] *= factor;
+            V_R[coord] *= factor;
+            V_V[coord] *= factor;
          }
          for (uint coord=0; coord<6; coord++) {
-            moments_R.P[coord] *= factor;
-            moments_V.P[coord] *= factor;
+            P_R[coord] *= factor;
+            P_V[coord] *= factor;
          }
 
          for (uint p=0; p<populationTrueMoments.size(); p++) {
@@ -533,9 +570,6 @@ namespace spatial_cell {
       *   cell. Populations struct contains mappings of these timeclasses to ghost vmeshes. */
 
       std::vector<MomentSet> cellTrueMoments;
-
-      MomentSet moments_R;
-      MomentSet moments_V;
 
       inline std::set<int> get_all_ghosts();
       //SpatialCell& operator=(const SpatialCell& other);

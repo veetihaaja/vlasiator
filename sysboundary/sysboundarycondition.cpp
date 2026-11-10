@@ -382,11 +382,34 @@ namespace SBC {
    ) {
       if (popID == 0) {
          if (copy_V_moments) {
-            to->moments_V = from->moments_V;
+            to->parameters[CellParams::RHOM_V] = from->parameters[CellParams::RHOM_V];
+            to->parameters[CellParams::VX_V] = from->parameters[CellParams::VX_V];
+            to->parameters[CellParams::VY_V] = from->parameters[CellParams::VY_V];
+            to->parameters[CellParams::VZ_V] = from->parameters[CellParams::VZ_V];
+            to->parameters[CellParams::RHOQ_V] = from->parameters[CellParams::RHOQ_V];
+            to->parameters[CellParams::P_11_V] = from->parameters[CellParams::P_11_V];
+            to->parameters[CellParams::P_22_V] = from->parameters[CellParams::P_22_V];
+            to->parameters[CellParams::P_33_V] = from->parameters[CellParams::P_33_V];
+            to->parameters[CellParams::P_23_V] = from->parameters[CellParams::P_23_V];
+            to->parameters[CellParams::P_13_V] = from->parameters[CellParams::P_13_V];
+            to->parameters[CellParams::P_12_V] = from->parameters[CellParams::P_12_V];
+            to->parameters[CellParams::T_V] = from->parameters[CellParams::T_V];
          } else {
-            to->moments_R = from->moments_R;
+            to->parameters[CellParams::RHOM_R] = from->parameters[CellParams::RHOM_R];
+            to->parameters[CellParams::VX_R] = from->parameters[CellParams::VX_R];
+            to->parameters[CellParams::VY_R] = from->parameters[CellParams::VY_R];
+            to->parameters[CellParams::VZ_R] = from->parameters[CellParams::VZ_R];
+            to->parameters[CellParams::RHOQ_R] = from->parameters[CellParams::RHOQ_R];
+            to->parameters[CellParams::P_11_R] = from->parameters[CellParams::P_11_R];
+            to->parameters[CellParams::P_22_R] = from->parameters[CellParams::P_22_R];
+            to->parameters[CellParams::P_33_R] = from->parameters[CellParams::P_33_R];
+            to->parameters[CellParams::P_23_R] = from->parameters[CellParams::P_23_R];
+            to->parameters[CellParams::P_13_R] = from->parameters[CellParams::P_13_R];
+            to->parameters[CellParams::P_12_R] = from->parameters[CellParams::P_12_R];
+            to->parameters[CellParams::T_R] = from->parameters[CellParams::T_R];
          }
       }
+      
 
       if(copyMomentsOnly) {
          to->get_population(popID).RHO = from->get_population(popID).RHO;       
@@ -401,9 +424,23 @@ namespace SBC {
          to->get_population(popID).populationTrueMoments = from->get_population(popID).populationTrueMoments;
 
          if (copy_V_moments) {
-            to->get_population(popID).moments_V = from->get_population(popID).moments_V;
+            to->get_population(popID).RHO_V = from->get_population(popID).RHO_V;
+            for (uint i=0; i<3; i++) {
+               to->get_population(popID).V_V[i] = from->get_population(popID).V_V[i];
+            }
+            for (uint i=0; i<6; i++) {
+               to->get_population(popID).P_V[i] = from->get_population(popID).P_V[i];
+            }
+            to->get_population(popID).T_V = from->get_population(popID).T_V;
          } else {
-            to->get_population(popID).moments_R = from->get_population(popID).moments_R;
+            to->get_population(popID).RHO_R = from->get_population(popID).RHO_R;
+            for (uint i=0; i<3; i++) {
+               to->get_population(popID).V_R[i] = from->get_population(popID).V_R[i];
+            }
+            for (uint i=0; i<6; i++) {
+               to->get_population(popID).P_R[i] = from->get_population(popID).P_R[i];
+            }
+            to->get_population(popID).T_R = from->get_population(popID).T_R;
          }
       } else {
          to->set_population(from->get_population(popID), popID);

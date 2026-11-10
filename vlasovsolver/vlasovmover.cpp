@@ -78,16 +78,16 @@ void calculateTrueMomentsPostAcceleration(dccrg::Dccrg<SpatialCell,dccrg::Cartes
       if (cell->get_timeclass_turn_v()) {         // if the cell has just calculated _V moments
          MomentSet momentSet = MomentSet();
 
-         momentSet.rhom = 0.5 * (cell->moments_R.rhom + cell->moments_V.rhom);
-         momentSet.rhoq = 0.5 * (cell->moments_R.rhoq + cell->moments_V.rhoq);
+         momentSet.rhom = 0.5 * (cell->parameters[CellParams::RHOM_R] + cell->parameters[CellParams::RHOM_V]);
+         momentSet.rhoq = 0.5 * (cell->parameters[CellParams::RHOQ_R] + cell->parameters[CellParams::RHOQ_V]);
 
          for (int i=0; i<3; ++i) {
-            momentSet.V[i] = 0.5 * (cell->moments_R.V[i] + cell->moments_V.V[i]);
+            momentSet.V[i] = 0.5 * (cell->parameters[CellParams::VX_R+i] + cell->parameters[CellParams::VX_V+i]);
          }
          for (int i=0; i<6; ++i) {
-            momentSet.P[i] = 0.5 * (cell->moments_R.P[i] + cell->moments_V.P[i]);
+            momentSet.P[i] = 0.5 * (cell->parameters[CellParams::P_11_R+i] + cell->parameters[CellParams::P_11_V+i]);
          }
-         momentSet.t = min(cell->moments_R.t, cell->moments_V.t);
+         momentSet.t = min(cell->parameters[CellParams::T_R], cell->parameters[CellParams::T_V]);
          cell->addNewMomentSet(momentSet);
       }
 
@@ -98,15 +98,15 @@ void calculateTrueMomentsPostAcceleration(dccrg::Dccrg<SpatialCell,dccrg::Cartes
             if (cell->get_timeclass_turn_v(tc)) {
                MomentSet momentSet = MomentSet();
 
-               momentSet.rho = 0.5 * (pop.moments_R.rho + pop.moments_V.rho);
+               momentSet.rho = 0.5 * (pop.RHO_R + pop.RHO_V);
 
                for (int i=0; i<3; ++i) {
-                  momentSet.V[i] = 0.5 * (pop.moments_R.V[i] + pop.moments_V.V[i]);
+                  momentSet.V[i] = 0.5 * (pop.V_R[i] + pop.V_V[i]);
                }
                for (int i=0; i<6; ++i) {
-                  momentSet.P[i] = 0.5 * (pop.moments_R.P[i] + pop.moments_V.P[i]);
+                  momentSet.P[i] = 0.5 * (pop.P_R[i] + pop.P_V[i]);
                }
-               momentSet.t = min(pop.moments_R.t, pop.moments_V.t);
+               momentSet.t = min(pop.T_R, pop.T_V);
                pop.addNewMomentSet(momentSet);
             }
          }
@@ -128,16 +128,16 @@ void calculateTrueMomentsPostTranslation(dccrg::Dccrg<SpatialCell,dccrg::Cartesi
       if (cell->get_timeclass_turn_r()) {         // if the cell has just calculated _V moments
          MomentSet momentSet = MomentSet();
 
-         momentSet.rhom = 0.5 * (cell->moments_R.rhom + cell->moments_V.rhom);
-         momentSet.rhoq = 0.5 * (cell->moments_R.rhoq + cell->moments_V.rhoq);
+         momentSet.rhom = 0.5 * (cell->parameters[CellParams::RHOM_R] + cell->parameters[CellParams::RHOM_V]);
+         momentSet.rhoq = 0.5 * (cell->parameters[CellParams::RHOQ_R] + cell->parameters[CellParams::RHOQ_V]);
 
          for (int i=0; i<3; ++i) {
-            momentSet.V[i] = 0.5 * (cell->moments_R.V[i] + cell->moments_V.V[i]);
+            momentSet.V[i] = 0.5 * (cell->parameters[CellParams::VX_R+i] + cell->parameters[CellParams::VX_V+i]);
          }
          for (int i=0; i<6; ++i) {
-            momentSet.P[i] = 0.5 * (cell->moments_R.P[i] + cell->moments_V.P[i]);
+            momentSet.P[i] = 0.5 * (cell->parameters[CellParams::P_11_R+i] + cell->parameters[CellParams::P_11_V+i]);
          }
-         momentSet.t = min(cell->moments_R.t, cell->moments_V.t);
+         momentSet.t = min(cell->parameters[CellParams::T_R], cell->parameters[CellParams::T_V]);
          cell->addNewMomentSet(momentSet);
       }
 
@@ -148,15 +148,15 @@ void calculateTrueMomentsPostTranslation(dccrg::Dccrg<SpatialCell,dccrg::Cartesi
             if (cell->get_timeclass_turn_r(tc)) {
                MomentSet momentSet = MomentSet();
 
-               momentSet.rho = 0.5 * (pop.moments_R.rho + pop.moments_V.rho);
+               momentSet.rho = 0.5 * (pop.RHO_R + pop.RHO_V);
 
                for (int i=0; i<3; ++i) {
-                  momentSet.V[i] = 0.5 * (pop.moments_R.V[i] + pop.moments_V.V[i]);
+                  momentSet.V[i] = 0.5 * (pop.V_R[i] + pop.V_V[i]);
                }
                for (int i=0; i<6; ++i) {
-                  momentSet.P[i] = 0.5 * (pop.moments_R.P[i] + pop.moments_V.P[i]);
+                  momentSet.P[i] = 0.5 * (pop.P_R[i] + pop.P_V[i]);
                }
-               momentSet.t = min(pop.moments_R.t, pop.moments_V.t);
+               momentSet.t = min(pop.T_R, pop.T_V);
                pop.addNewMomentSet(momentSet);
             }
          }
@@ -297,7 +297,7 @@ void calculateSpatialTranslation(
    for(CellID c : local_propagated_cells)
    {
       if(mpiGrid[c]->get_timeclass_turn_r())
-         mpiGrid[c]->moments_R.t += dt;
+         mpiGrid[c]->parameters[CellParams::T_R] += dt;
    }
    phiprof::Timer btpostimer {"barrier-trans-post-trans",{"Barriers","MPI"}};
    MPI_Barrier(MPI_COMM_WORLD);
@@ -599,11 +599,11 @@ void calculateSpatialGhostTranslation(
    for(CellID c : source_cells){
       if(tictoc == Timeclasses::TIC){
          if (t0 == 1e18 && do_translate_cell(mpiGrid[c]) && mpiGrid[c]->has_source_timeclass_tic(tc)){
-            t0 = mpiGrid[c]->get_population(popID, tc).moments_V.t;
+            t0 = mpiGrid[c]->get_population(popID, tc).T_V;
          }
       }else{
          if (t0 == 1e18 && do_translate_cell(mpiGrid[c]) && mpiGrid[c]->has_source_timeclass_toc(tc)){
-            t0 = mpiGrid[c]->get_population(popID, tc).moments_V.t;
+            t0 = mpiGrid[c]->get_population(popID, tc).T_V;
          }
       }
    }
@@ -612,14 +612,14 @@ void calculateSpatialGhostTranslation(
       if (tictoc == Timeclasses::TIC && !mpiGrid[c]->has_source_timeclass_tic(tc)) continue;
       if (tictoc == Timeclasses::TOC && !mpiGrid[c]->has_source_timeclass_toc(tc)) continue;
       Population& pop = mpiGrid[c]->get_population(popID, tc);
-      if(abs(t0 - pop.moments_V.t) > dt/1e6){ // some scaled epsilon
-         std::cerr << *source_cells.begin() << " and " << c << " have differing source times: " << t0 << " and " << pop.moments_V.t << ", respectively. Delta " << pop.moments_V.t - t0 << std::endl;
+      if(abs(t0 - pop.T_V) > dt/1e6){ // some scaled epsilon
+         std::cerr << *source_cells.begin() << " and " << c << " have differing source times: " << t0 << " and " << pop.T_V << ", respectively. Delta " << pop.T_V - t0 << std::endl;
       }
    }
    for(CellID c : target_cells)
    {
       Population& pop = mpiGrid[c]->get_population(popID, tc);
-      Real popt = pop.moments_R.t;
+      Real popt = pop.T_R;
       Real ddt = P::timeclassDt[tc];
       if(pop.state & (1u << LastPropagationState::TRANSLATED_X)){
          popt += ddt/expected_translations;
@@ -635,7 +635,7 @@ void calculateSpatialGhostTranslation(
          (int)(bool)(pop.state & (1u << LastPropagationState::TRANSLATED_Z)) == expected_translations){
          // pop.T_R_PREV_PREV = pop.T_R_PREV;
          // pop.T_R_PREV = pop.T_R;
-         pop.moments_R.t = popt;
+         pop.T_R = popt;
          pop.state = pop.state | (1u << LastPropagationState::TRANSLATED);
          pop.state = pop.state & ~(1u << LastPropagationState::TRANSLATED_X);
          pop.state = pop.state & ~(1u << LastPropagationState::TRANSLATED_Y);
@@ -659,7 +659,7 @@ void calculateSpatialGhostTranslation(
       phiprof::Timer copyghostInner {"restore copies"};
       for (auto c : copy_ghosts) {
          mpiGrid[c.first]->get_population(popID, tc) = c.second;
-         mpiGrid[c.first]->get_population(popID, tc).moments_R.t += dt;
+         mpiGrid[c.first]->get_population(popID, tc).T_R += dt;
       }
    }
    copy_ghosts.clear();
@@ -785,7 +785,7 @@ void calculateSpatialTranslation(
                const CellID cellID = tc_propagated_cells.at(tc).at(c);
                SpatialCell* SC = mpiGrid[cellID];
 
-               SC->moments_R.t += P::timeclassDt[SC->parameters[CellParams::TIMECLASS]];
+               SC->parameters[CellParams::T_R] += P::timeclassDt[SC->parameters[CellParams::TIMECLASS]];
                
             }
          }
@@ -804,7 +804,7 @@ void calculateSpatialTranslation(
    for (size_t c=0; c<localCells.size(); ++c) {
       auto cell = mpiGrid[localCells[c]];
       if(cell->get_timeclass_turn_r() && dt > 0.0){
-         cell->moments_R.t += dt*P::timeclassDt[cell->parameters[CellParams::TIMECLASS]];
+         cell->parameters[CellParams::T_R] += dt*P::timeclassDt[cell->parameters[CellParams::TIMECLASS]];
       }
    }
    
@@ -1130,7 +1130,7 @@ void calculateAcceleration(const uint popID,const int globalMaxSubcycles,const i
 
    for (auto& payload:acceleratedCells){
       spatial_cell::Population& pop = payload.cellptr->get_population(popID, payload.timeclass);
-      pop.moments_V.t += pop.subcycleDt;
+      pop.T_V += pop.subcycleDt;
    }
    semilagAccTimer.stop();
 
@@ -1606,7 +1606,7 @@ void calculateAcceleration(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& 
 
    for (auto cell : cellsToPropagateSet){
       if(mpiGrid[cell]->get_timeclass_turn_v()){
-         mpiGrid[cell]->moments_V.t += dt*mpiGrid[cell]->get_tc_dt();
+         mpiGrid[cell]->parameters[CellParams::T_V] += dt*mpiGrid[cell]->get_tc_dt();
       }
    }
    
@@ -1699,29 +1699,29 @@ void calculateInterpolatedVelocityMoments(
       const CellID cellID = cells[c];
       SpatialCell* SC = mpiGrid[cellID];
 
-      SC->parameters[cp_rhom] = 0.5 * (SC->moments_R.rhom + SC->moments_V.rhom);
-      SC->parameters[cp_rhoq] = 0.5 * (SC->moments_R.rhoq + SC->moments_V.rhoq);
-      SC->parameters[cp_t] = min(SC->moments_R.t, SC->moments_V.t);
+      SC->parameters[cp_rhom] = 0.5 * (SC->parameters[CellParams::RHOM_R] + SC->parameters[CellParams::RHOM_V]);
+      SC->parameters[cp_rhoq] = 0.5 * (SC->parameters[CellParams::RHOQ_R] + SC->parameters[CellParams::RHOQ_V]);
+      SC->parameters[cp_t] = min(SC->parameters[CellParams::T_R], SC->parameters[CellParams::T_V]);
       for (uint i=0; i<3; i++) {
-         SC->parameters[cp_vx + i] = 0.5 * (SC->moments_R.V[i] + SC->moments_V.V[i]);
+         SC->parameters[cp_vx + i] = 0.5 * (SC->parameters[CellParams::VX_R + i] + SC->parameters[CellParams::VX_V + i]);
       }
       for (uint i=0; i<6; i++) {
-         SC->parameters[cp_p11 + i] = 0.5 * (SC->moments_R.P[i] + SC->moments_V.P[i]);
+         SC->parameters[cp_p11 + i] = 0.5 * (SC->parameters[CellParams::P_11_R + i] + SC->parameters[CellParams::P_11_V + i]);
       }
 
       for (int timeclass = 0; timeclass <=P::currentMaxTimeclass; timeclass++){   
          for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
             spatial_cell::Population& pop = SC->get_population(popID, timeclass);
 
-            pop.RHO = 0.5 * (pop.moments_R.rho + pop.moments_V.rho);
-            pop.T = min(pop.moments_R.t, pop.moments_V.t);
+            pop.RHO = 0.5 * (pop.RHO_R + pop.RHO_V);
+            pop.T = min(pop.T_R, pop.T_V);
 
             for (uint i=0; i<3; i++) {
-               pop.V[i] = 0.5 * (pop.moments_R.V[i] + pop.moments_V.V[i]);
+               pop.V[i] = 0.5 * (pop.V_R[i] + pop.V_V[i]);
             }
 
             for (uint i=0; i<6; i++) {
-               pop.P[i] = 0.5 * (pop.moments_R.P[i] + pop.moments_V.P[i]);
+               pop.P[i] = 0.5 * (pop.P_R[i] + pop.P_V[i]);
             }
          }
       }
@@ -1806,14 +1806,14 @@ void interpolateMomentsForTimeclasses(
 
       if (P::currentMaxTimeclass == 0 || timeclass == P::currentMaxTimeclass) {
 
-         SC->parameters[cp_rhom] = 0.5 * (SC->moments_R.rhom + SC->moments_V.rhom);
-         SC->parameters[cp_rhoq] = 0.5 * (SC->moments_R.rhoq + SC->moments_V.rhoq);
-         SC->parameters[cp_t] = min(SC->moments_R.t, SC->moments_V.t);
+         SC->parameters[cp_rhom] = 0.5 * (SC->parameters[CellParams::RHOM_R] + SC->parameters[CellParams::RHOM_V]);
+         SC->parameters[cp_rhoq] = 0.5 * (SC->parameters[CellParams::RHOQ_R] + SC->parameters[CellParams::RHOQ_V]);
+         SC->parameters[cp_t] = min(SC->parameters[CellParams::T_R], SC->parameters[CellParams::T_V]);
          for (uint i=0; i<3; i++) {
-            SC->parameters[cp_vx + i] = 0.5 * (SC->moments_R.V[i] + SC->moments_V.V[i]);
+            SC->parameters[cp_vx + i] = 0.5 * (SC->parameters[CellParams::VX_R + i] + SC->parameters[CellParams::VX_V + i]);
          }
          for (uint i=0; i<6; i++) {
-            SC->parameters[cp_p11 + i] = 0.5 * (SC->moments_R.P[i] + SC->moments_V.P[i]);
+            SC->parameters[cp_p11 + i] = 0.5 * (SC->parameters[CellParams::P_11_R + i] + SC->parameters[CellParams::P_11_V + i]);
          }
 
       } else { // this block if timeclass != maxTC
@@ -1878,15 +1878,15 @@ void updateParticlePopulations(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometr
             for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
                spatial_cell::Population& pop = SC->get_population(popID, timeclass);
 
-               pop.RHO = 0.5 * (pop.moments_R.rho + pop.moments_V.rho);
-               pop.T = min(pop.moments_R.t, pop.moments_V.t);
+               pop.RHO = 0.5 * (pop.RHO_R + pop.RHO_V);
+               pop.T = min(pop.T_R, pop.T_V);
 
                for (uint i=0; i<3; i++) {
-                  pop.V[i] = 0.5 * (pop.moments_R.V[i] + pop.moments_V.V[i]);
+                  pop.V[i] = 0.5 * (pop.V_R[i] + pop.V_V[i]);
                }
 
                for (uint i=0; i<6; i++) {
-                  pop.P[i] = 0.5 * (pop.moments_R.P[i] + pop.moments_V.P[i]);
+                  pop.P[i] = 0.5 * (pop.P_R[i] + pop.P_V[i]);
                }
             }
    

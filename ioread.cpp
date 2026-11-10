@@ -1317,16 +1317,8 @@ static bool _readCellMomentSet(vlsv::ParallelReader& file, const vector<uint64_t
       uint cell = fileCells[localCellStartOffset + i];
       // get pointer to appropriate cell set
       fileReal* ptrToMomentSet;
-      if (variableName=="moments_r") {
-         ptrToMomentSet = reinterpret_cast<fileReal*>(&(mpiGrid[cell]->moments_R));     
-      } else if (variableName=="moments_v") {
-         ptrToMomentSet = reinterpret_cast<fileReal*>(&(mpiGrid[cell]->moments_V));     
-      } else if (variableName=="truemomentsvector") {
-         ptrToMomentSet = reinterpret_cast<fileReal*>(&(mpiGrid[cell]->cellTrueMoments[0]));      
-      } else {
-         logFile << "ERROR READING MOMENTSET\n";
-         return false;
-      }
+      ptrToMomentSet = reinterpret_cast<fileReal*>(&(mpiGrid[cell]->cellTrueMoments[0]));      
+
       for (uint j = 0; j < vectorSize; j++) {
          ptrToMomentSet[j] = buffer[i * vectorSize + j];
       }
@@ -2063,8 +2055,18 @@ bool exec_readGrid(dccrg::Dccrg<SpatialCell, dccrg::Cartesian_Geometry>& mpiGrid
    if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"pressure_dt2",CellParams::P_11_DT2,6,mpiGrid); }
    if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"bulkvelocities_dt2",CellParams::VX_DT2,3,mpiGrid); }
 
-   if(success) { success=readCellMomentSet(file,fileCells,localCellStartOffset,localCells,"moments_r",13,mpiGrid); }
-   if(success) { success=readCellMomentSet(file,fileCells,localCellStartOffset,localCells,"moments_v",13,mpiGrid); }
+   if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"rhom_r",CellParams::RHOM_R,1,mpiGrid); }
+   if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"rhoq_r",CellParams::RHOQ_R,1,mpiGrid); }
+   if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"pressure_r",CellParams::P_11_R,6,mpiGrid); }
+   if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"bulkvelocities_r",CellParams::VX_R,3,mpiGrid); }
+   if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"time_r",CellParams::T_R,1,mpiGrid); }
+
+   if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"rhom_v",CellParams::RHOM_V,1,mpiGrid); }
+   if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"rhoq_v",CellParams::RHOQ_V,1,mpiGrid); }
+   if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"pressure_v",CellParams::P_11_V,6,mpiGrid); }
+   if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"bulkvelocities_v",CellParams::VX_V,3,mpiGrid); }
+   if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"time_v",CellParams::T_V,1,mpiGrid); }
+
    if(success) { success=readCellMomentSet(file,fileCells,localCellStartOffset,localCells,"truemomentsvector",13 * P::tcInterpolationPoints,mpiGrid); }
 
    if(success) { success=readCellParamsVariable(file,fileCells,localCellStartOffset,localCells,"LB_weight",CellParams::LBWEIGHTCOUNTER,1,mpiGrid); }

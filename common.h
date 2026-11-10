@@ -204,6 +204,32 @@ namespace CellParams {
       P_12_DT2, /*!< Intermediate step value for RK2 time stepping in field solver. Computed from P_12_R and P_12_V. */
       T_DT2,   /*!< Timestamp for the above set of moments */
 
+      RHOM_R,
+      VX_R,
+      VY_R,
+      VZ_R,
+      RHOQ_R,
+      P_11_R,
+      P_22_R,
+      P_33_R,
+      P_23_R,
+      P_13_R,
+      P_12_R,
+      T_R,
+
+      RHOM_V,
+      VX_V,
+      VY_V,
+      VZ_V,
+      RHOQ_V,
+      P_11_V,
+      P_22_V,
+      P_33_V,
+      P_23_V,
+      P_13_V,
+      P_12_V,
+      T_V,
+
       EXVOL,    /*!< Volume electric field averaged over spatial cell, x-component.*/
       EYVOL,    /*!< Volume electric field averaged over spatial cell, y-component.*/
       EZVOL,    /*!< Volume electric field averaged over spatial cell, z-component.*/

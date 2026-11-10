@@ -140,11 +140,7 @@ namespace DRO {
       
       const char* momentSetPtr;
       // get pointer to the wanted moment set
-      if (_RVT == "R") {
-         momentSetPtr = reinterpret_cast<const char*>(&(cell->moments_R));      
-      } else if (_RVT == "V") {
-         momentSetPtr = reinterpret_cast<const char*>(&(cell->moments_V));      
-      } else if (_RVT == "LAST") {
+      if (_RVT == "LAST") {
          momentSetPtr = reinterpret_cast<const char*>(&(cell->cellTrueMoments[cell->cellTrueMoments.size()-1]));      
       } else if (_RVT == "ALL") {
          momentSetPtr = reinterpret_cast<const char*>(&(cell->cellTrueMoments[0]));      
@@ -2377,10 +2373,10 @@ namespace DRO {
       epsilon = 0.0;
 
       // get rho and bulk speed
-      rho = cell->get_population(popID).moments_V.rho;
+      rho = cell->get_population(popID).RHO_V;
 
       for (uint i = 0; i<3; i++) {
-         V0[i] = cell->get_population(popID).moments_V.V[i];
+         V0[i] = cell->get_population(popID).V_V[i];
       }
 
 

@@ -2258,8 +2258,18 @@ bool writeRestart(
    restartReducer.addOperator(new DRO::DataReductionOperatorCellParams("pressure_dt2",CellParams::P_11_DT2,6));
    restartReducer.addOperator(new DRO::DataReductionOperatorCellParams("bulkvelocities_dt2",CellParams::VX_DT2,3));
 
-   restartReducer.addOperator(new DRO::DataReductionOperatorCellMomentSet("moments_r",0,13, "R"));
-   restartReducer.addOperator(new DRO::DataReductionOperatorCellMomentSet("moments_v",0,13, "V"));
+   restartReducer.addOperator(new DRO::DataReductionOperatorCellParams("rhom_r",CellParams::RHOM_R,1));
+   restartReducer.addOperator(new DRO::DataReductionOperatorCellParams("rhoq_r",CellParams::RHOQ_R,1));
+   restartReducer.addOperator(new DRO::DataReductionOperatorCellParams("pressure_r",CellParams::P_11_R,6));
+   restartReducer.addOperator(new DRO::DataReductionOperatorCellParams("bulkvelocities_r",CellParams::VX_R,3));
+   restartReducer.addOperator(new DRO::DataReductionOperatorCellParams("time_r",CellParams::T_R,1));
+
+   restartReducer.addOperator(new DRO::DataReductionOperatorCellParams("rhom_v",CellParams::RHOM_V,1));
+   restartReducer.addOperator(new DRO::DataReductionOperatorCellParams("rhoq_v",CellParams::RHOQ_V,1));
+   restartReducer.addOperator(new DRO::DataReductionOperatorCellParams("pressure_v",CellParams::P_11_V,6));
+   restartReducer.addOperator(new DRO::DataReductionOperatorCellParams("bulkvelocities_v",CellParams::VX_V,3));
+   restartReducer.addOperator(new DRO::DataReductionOperatorCellParams("time_v",CellParams::T_V,1));
+
    restartReducer.addOperator(new DRO::DataReductionOperatorCellMomentSet("truemomentsvector",0,13 * P::tcInterpolationPoints, "ALL"));   
   
    restartReducer.addOperator(new DRO::DataReductionOperatorCellParams("timeclass",CellParams::TIMECLASS,1));
