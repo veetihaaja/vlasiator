@@ -81,9 +81,6 @@ namespace spatial_cell {
       Real P[6];
       Real T;
 
-      // the first element is oldest, and they get newer with time
-      std::vector<MomentSet> populationTrueMoments;
-
       MomentSet moments_R;
       MomentSet moments_V;
 
@@ -97,6 +94,12 @@ namespace spatial_cell {
       uint ACCSUBCYCLES;          /*!< number of subcyles for each cell*/
       vmesh::LocalID N_blocks;    /**< Number of velocity blocks, used when receiving velocity
                                    * mesh from remote neighbors using MPI.*/
+
+      // Keep this outside the RHO-to-N_blocks MPI metadata range.
+      // The range is transferred as a contiguous byte block.
+      // the first element is oldest, and they get newer with time
+      std::vector<MomentSet> populationTrueMoments;
+
       vmesh::VelocityMesh *vmesh; /**< Velocity mesh. Contains all velocity blocks that exist
                                    * in this spatial cell. Cells are identified by their unique
                                    * global IDs.*/

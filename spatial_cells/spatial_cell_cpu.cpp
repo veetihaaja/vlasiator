@@ -656,7 +656,9 @@ namespace spatial_cell {
                   const uint _activePopId = index.first;
                   const int _activeTimeclass = index.second;
                   Population& _pop = get_population(_activePopId, _activeTimeclass);
-                  _pop.N_blocks = get_velocity_blocks(_activePopId, _activeTimeclass)->size();
+                  if (!receiving) {
+                     _pop.N_blocks = get_velocity_blocks(_activePopId, _activeTimeclass)->size();
+                  }
 
                   // send velocity block list size
                   displacements.push_back((uint8_t*) &(_pop.N_blocks) - (uint8_t*) this);
@@ -673,7 +675,9 @@ namespace spatial_cell {
                   const uint _activePopId = index.first;
                   const int _activeTimeclass = index.second;
                   Population& _pop = get_population(_activePopId, _activeTimeclass);
-                  _pop.N_blocks = get_velocity_blocks(_activePopId, _activeTimeclass)->size();
+                  if (!receiving) {
+                     _pop.N_blocks = get_velocity_blocks(_activePopId, _activeTimeclass)->size();
+                  }
                   // STAGE1 should have been done, otherwise we have problems...
                   if (receiving) {
                      //mpi_number_of_blocks transferred earlier
@@ -752,7 +756,7 @@ namespace spatial_cell {
    
    
                   displacements.push_back((uint8_t*) get_data(_activePopId, _activeTimeclass) - (uint8_t*) this);
-                  block_lengths.push_back(sizeof(Realf) * WID3 * get_velocity_blocks(_activePopId, _activeTimeclass)->size());
+                  block_lengths.push_back(sizeof(Realf) * WID3 * _pop.N_blocks);
                }
             }
    
@@ -768,7 +772,9 @@ namespace spatial_cell {
             //add data to send/recv to displacement and block length lists
             if ((SpatialCell::mpi_transfer_type & Transfer::VEL_BLOCK_LIST_STAGE1) != 0) {
                //first copy values in case this is the send operation
-               pop.N_blocks = get_velocity_blocks(activePopID, activeTimeclass)->size();
+               if (!receiving) {
+                  pop.N_blocks = get_velocity_blocks(activePopID, activeTimeclass)->size();
+               }
    
                // send velocity block list size
                displacements.push_back((uint8_t*) &(pop.N_blocks) - (uint8_t*) this);
@@ -839,7 +845,7 @@ namespace spatial_cell {
                               transfer << "VEL_BLOCK_DATA ";
    
                displacements.push_back((uint8_t*) get_data(activePopID, activeTimeclass) - (uint8_t*) this);
-               block_lengths.push_back(sizeof(Realf) * WID3 * get_velocity_blocks(activePopID, activeTimeclass)->size());
+               block_lengths.push_back(sizeof(Realf) * WID3 * pop.N_blocks);
             }
      
 
@@ -891,11 +897,11 @@ namespace spatial_cell {
 
             // also send here the cell's momentSets_R and _V and the vector of true moments
 
-            displacements.push_back((uint8_t*) &(this->moments_R) - (uint8_t*) this);
-            block_lengths.push_back(sizeof(MomentSet));
+            // displacements.push_back((uint8_t*) &(this->moments_R) - (uint8_t*) this);
+            // block_lengths.push_back(sizeof(MomentSet));
 
-            displacements.push_back((uint8_t*) &(this->moments_V) - (uint8_t*) this);
-            block_lengths.push_back(sizeof(MomentSet));
+            // displacements.push_back((uint8_t*) &(this->moments_V) - (uint8_t*) this);
+            // block_lengths.push_back(sizeof(MomentSet));
 
             displacements.push_back((uint8_t*) &(this->cellTrueMoments[0]) - (uint8_t*) this);
             block_lengths.push_back(sizeof(MomentSet) * this->cellTrueMoments.size());

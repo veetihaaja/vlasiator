@@ -1664,7 +1664,7 @@ void initializeTrueMomentSets(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry
             // set the timestamp to go backwards in time
             const Real dt = P::timeclassDt[tc]*0.5;
             for (uint mset = 0; mset < pop.populationTrueMoments.size()-1; ++mset) {
-               std::cerr << "setting pop true moments for cell " << SC->parameters[CellParams::CELLID] << " tc " << tc << " mset " << mset << " dt " << -dt*(pop.populationTrueMoments.size()-1-mset) << "\n";
+               //std::cerr << "setting pop true moments for cell " << SC->parameters[CellParams::CELLID] << " tc " << tc << " mset " << mset << " dt " << -dt*(pop.populationTrueMoments.size()-1-mset) << "\n";
                pop.populationTrueMoments[mset].t = -dt*(pop.populationTrueMoments.size()-1-mset);
             }
          }

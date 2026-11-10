@@ -862,7 +862,7 @@ int simulate(int argn,char* args[]) {
       uint64_t globalBadCells = 0;
       MPI_Allreduce(&localBadCells, &globalBadCells, 1, MPI_UINT64_T, MPI_SUM, MPI_COMM_WORLD);
 
-      if (globalBadCells != 0) {
+      if (globalBadCells != 0 && P::currentMaxTimeclass != 0) { // this doesnt need to be checked if were not using timeclasses
          // find out the smallest possible value to modify the base dt with, to make all timeclasses happy
          Real globalSmallestDt = getNewSmallestDtToKeepTimeclassesHappy(mpiGrid, badTcCells);
          dtWasMinimizedToKeepTimeclassesHappy = true;
