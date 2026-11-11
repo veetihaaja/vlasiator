@@ -97,10 +97,14 @@ void calculateInterpolatedVelocityMoments(
 void calculateTrueMomentsPostTranslation(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid);
 void calculateTrueMomentsPostAcceleration(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid);
 
+/*!
+  \brief Initializes a functions true moment set vector with the newest moment set calculated, used to
+  fill the vector with data at initialization
+*/
 void initializeTrueMomentSets(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid);
 
 /*!
-  \brief Function for interpolating y(x) with y_0(x_0) and y_1(x_1) given.
+  \brief Function for interpolating y(x) with vector y and x given for point t. If t is not withing the range of x, it instead extrapolates.
 */
 Real interpolation(const std::vector<Real> x, const std::vector<Real> y, const Real t, const std::string interpolationType = "linear");
 
@@ -118,6 +122,10 @@ void interpolateMomentsForTimeclasses(
    const int cp_t
 );
 
+
+/*!
+  \brief Function for interpolating moments on a population basis, same principle as the above function.
+*/
 void updateParticlePopulations(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry>& mpiGrid, const Real target_time);
 
 /*!

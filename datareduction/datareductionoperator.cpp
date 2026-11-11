@@ -110,20 +110,20 @@ namespace DRO {
       return true;
    }
 
-   DataReductionOperatorCellMomentSet::DataReductionOperatorCellMomentSet(const std::string& name,const unsigned int byteOffsetOfStruct,const unsigned int _vectorSize, const std::string& RVT) :
-      DataReductionOperator(), _byteOffsetOfStruct {byteOffsetOfStruct}, vectorSize {_vectorSize}, variableName {name}, _RVT {RVT} {}
-   DataReductionOperatorCellMomentSet::~DataReductionOperatorCellMomentSet() { }
+   DataReductionOperatorCellMomentVector::DataReductionOperatorCellMomentVector(const std::string& name,const unsigned int _vectorSize) :
+      DataReductionOperator(), vectorSize {_vectorSize}, dataName {name} {}
+   DataReductionOperatorCellMomentVector::~DataReductionOperatorCellMomentVector() { }
 
-   bool DataReductionOperatorCellMomentSet::getDataVectorInfo(std::string& dataType,unsigned int& dataSize,unsigned int& _vectorSize) const {
+   bool DataReductionOperatorCellMomentVector::getDataVectorInfo(std::string& dataType,unsigned int& dataSize,unsigned int& _vectorSize) const {
       dataType = "float";
       dataSize =  sizeof(Real);
       _vectorSize = vectorSize;
       return true;
    }
 
-   std::string DataReductionOperatorCellMomentSet::getName() const {return variableName;}
+   std::string DataReductionOperatorCellMomentVector::getName() const {return dataName;}
 
-   bool DataReductionOperatorCellMomentSet::reduceData(const SpatialCell* cell,char* buffer) {
+   bool DataReductionOperatorCellMomentVector::reduceData(const SpatialCell* cell,char* buffer) {
       const char* ptr = reinterpret_cast<const char*>(data);
       for (uint i = 0; i < vectorSize*sizeof(Real); ++i){
          buffer[i] = ptr[i];
@@ -131,36 +131,63 @@ namespace DRO {
       return true;
    }
 
-   bool DataReductionOperatorCellMomentSet::reduceDiagnostic(const SpatialCell* cell,Real* buffer){
+   bool DataReductionOperatorCellMomentVector::reduceDiagnostic(const SpatialCell* cell,Real* buffer){
       //If vectorSize is >1 it still works, we just give the first value and no other ones..
       *buffer=data[0];
       return true;
    }
-   bool DataReductionOperatorCellMomentSet::setSpatialCell(const SpatialCell* cell) {
-      
-      const char* momentSetPtr;
-      // get pointer to the wanted moment set
-      if (_RVT == "LAST") {
-         momentSetPtr = reinterpret_cast<const char*>(&(cell->cellTrueMoments[cell->cellTrueMoments.size()-1]));      
-      } else if (_RVT == "ALL") {
-         momentSetPtr = reinterpret_cast<const char*>(&(cell->cellTrueMoments[0]));      
+
+   bool DataReductionOperatorCellMomentVector::setSpatialCell(const SpatialCell* cell) {
+
+      if (dataName == "true_rhom_vector") {
+         for (uint i=0; i<vectorSize; i++) {
+            if(!std::isfinite(cell->trueRhom[i])) {
+               string message = "The DataReductionOperator " + this->getName() + " returned a nan or an inf in its " + std::to_string(i) + "-component.";
+               bailout(true, message, __FILE__, __LINE__);
+            }
+         }
+         data = cell->trueRhom.data();
+      } else if (dataName == "true_rhoq_vector") {
+         for (uint i=0; i<vectorSize; i++) {
+            if(!std::isfinite(cell->trueRhoq[i])) {
+               string message = "The DataReductionOperator " + this->getName() + " returned a nan or an inf in its " + std::to_string(i) + "-component.";
+               bailout(true, message, __FILE__, __LINE__);
+            }
+         }
+         data = cell->trueRhoq.data();
+      } else if (dataName == "true_V_vector") {
+         for (uint i=0; i<vectorSize/3; i++) { // this vectorsize is all the members of the vector
+            for (uint j=0; j<3; j++) {
+               if(!std::isfinite(cell->trueV[i][j])) {
+                  string message = "The DataReductionOperator " + this->getName() + " returned a nan or an inf in its " + std::to_string(i) + "-component.";
+                  bailout(true, message, __FILE__, __LINE__);
+               }
+            }
+         }
+         data = cell->trueV[0].data();
+      } else if (dataName == "true_P_vector") {
+         for (uint i=0; i<vectorSize/6; i++) {
+            for (uint j=0; j<6; j++) {
+               if(!std::isfinite(cell->trueP[i][j])) {
+                  string message = "The DataReductionOperator " + this->getName() + " returned a nan or an inf in its " + std::to_string(i) + "-component.";
+                  bailout(true, message, __FILE__, __LINE__);
+               }
+            }
+         }
+         data = cell->trueP[0].data();
+      } else if (dataName == "timestamp_vector") {
+         for (uint i=0; i<vectorSize; i++) {
+            if(!std::isfinite(cell->timestamps[i])) {
+               string message = "The DataReductionOperator " + this->getName() + " returned a nan or an inf in its " + std::to_string(i) + "-component.";
+               bailout(true, message, __FILE__, __LINE__);
+            }
+         }
+         data = cell->timestamps.data();
       } else {
-         momentSetPtr = nullptr;
-         string message = "Invalid moment set specified!\n";
+         string message = "The DataReductionOperator " + this->getName() + " is not a valid input!.";
          bailout(true, message, __FILE__, __LINE__);
       }
 
-      const Real* momentPtr = reinterpret_cast<const Real*>(
-         momentSetPtr + _byteOffsetOfStruct
-      );
-
-      for (uint i=0; i<vectorSize; i++) {
-         if(!std::isfinite(momentPtr[i])) {
-            string message = "The DataReductionOperator " + this->getName() + " returned a nan or an inf in its " + std::to_string(i) + "-component.";
-            bailout(true, message, __FILE__, __LINE__);
-         }
-      }
-      data = momentPtr;
       return true;
    }
 

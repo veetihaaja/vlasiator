@@ -2270,7 +2270,11 @@ bool writeRestart(
    restartReducer.addOperator(new DRO::DataReductionOperatorCellParams("bulkvelocities_v",CellParams::VX_V,3));
    restartReducer.addOperator(new DRO::DataReductionOperatorCellParams("time_v",CellParams::T_V,1));
 
-   restartReducer.addOperator(new DRO::DataReductionOperatorCellMomentSet("truemomentsvector",0,13 * P::tcInterpolationPoints, "ALL"));   
+   restartReducer.addOperator(new DRO::DataReductionOperatorCellMomentVector("true_rhom_vector", P::tcInterpolationPoints));
+   restartReducer.addOperator(new DRO::DataReductionOperatorCellMomentVector("true_rhoq_vector", P::tcInterpolationPoints));
+   restartReducer.addOperator(new DRO::DataReductionOperatorCellMomentVector("true_V_vector", P::tcInterpolationPoints * 3));
+   restartReducer.addOperator(new DRO::DataReductionOperatorCellMomentVector("true_P_vector", P::tcInterpolationPoints * 6));
+   restartReducer.addOperator(new DRO::DataReductionOperatorCellMomentVector("timestamp_vector", P::tcInterpolationPoints));
   
    restartReducer.addOperator(new DRO::DataReductionOperatorCellParams("timeclass",CellParams::TIMECLASS,1));
    restartReducer.addOperator(new DRO::DataReductionOperatorCellParams("timeclass_dt",CellParams::TIMECLASSDT,1));

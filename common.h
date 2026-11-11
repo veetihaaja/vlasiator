@@ -115,25 +115,6 @@ namespace Timeclasses {
    };
 }
 
-typedef struct {
-   Real rho;
-   Real rhom;
-   Real rhoq;
-   Real V[3]; // V1, V2, V3
-   Real P[6]; // P11, P22, P33, P23, P13, P12
-   Real t; // timestamp, tell what time the moments are calculated to
-
-   void print() {
-
-      std::cout << "timestamp: " << t << "\n";
-      std::cout << "rho: " << rho << "\n";
-      std::cout << "rhom: " << rhom << "\n";
-      std::cout << "rhoq: " << rhoq << "\n";
-      std::cout << "V: " << V[0] << ", " << V[1] << ", " << V[2] << "\n";
-      std::cout << "P: " << P[0] << ", " << P[1] << ", " << P[2] << ", " << P[3] << ", " << P[4] << ", " << P[5] << "\n";
-   }
-} MomentSet;
-
 /*! A namespace for storing indices into an array which contains
  * the physical parameters of each velocity block.*/
 namespace BlockParams {

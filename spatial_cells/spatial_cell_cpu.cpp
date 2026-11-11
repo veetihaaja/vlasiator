@@ -20,6 +20,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <algorithm>
+#include <array>
 #include <cstdint>
 #include <unordered_set>
 
@@ -54,21 +56,19 @@ namespace spatial_cell {
          this->parameters[i]=0.0;
       }
 
-      // initialize moment sets to 0
-      for (uint p=0; p<(uint)P::tcInterpolationPoints; p++) {
-         this->cellTrueMoments.push_back(MomentSet());
+      // initialize true moment vectors to 0
+      this->trueRhom.resize(P::tcInterpolationPoints);
+      this->trueRhoq.resize(P::tcInterpolationPoints);
+      this->trueV.resize(P::tcInterpolationPoints);
+      this->trueP.resize(P::tcInterpolationPoints);
+      this->timestamps.resize(P::tcInterpolationPoints);
 
-         this->cellTrueMoments[p].rhom = 0.0;
-         this->cellTrueMoments[p].rhoq = 0.0;
-
-         this->cellTrueMoments[p].t = 0.0;
-
-         for (uint coord=0; coord<3; coord++) {
-            this->cellTrueMoments[p].V[coord] = 0.0;
-         }
-         for (uint coord=0; coord<6; coord++) {
-            this->cellTrueMoments[p].P[coord] = 0.0;
-         }
+      for (uint i = 0; i < (uint)P::tcInterpolationPoints; i++) {
+         this->trueRhom[i] = 0.0;
+         this->trueRhoq[i] = 0.0;
+         this->trueV[i] = {0.0, 0.0, 0.0};
+         this->trueP[i] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+         this->timestamps[i] = 0.0;
       }
 
       // reset BVOL derivatives
@@ -131,7 +131,13 @@ namespace spatial_cell {
       for (unsigned int i=0; i<CellParams::N_SPATIAL_CELL_PARAMS; ++i) {
          parameters[i] = other.parameters[i];
       }
-      cellTrueMoments = other.cellTrueMoments;
+      for (unsigned int i=0; i<(uint)P::tcInterpolationPoints; ++i) {
+         trueRhom[i] = other.trueRhom[i];
+         trueRhoq[i] = other.trueRhoq[i];
+         trueV[i] = other.trueV[i];
+         trueP[i] = other.trueP[i];
+         timestamps[i] = other.timestamps[i];
+      }
       for (unsigned int i=0; i<WID3; ++i) {
          null_block_data[i] = 0.0;
       }
@@ -170,7 +176,13 @@ namespace spatial_cell {
       for (unsigned int i=0; i<CellParams::N_SPATIAL_CELL_PARAMS; ++i) {
          parameters[i] = other.parameters[i];
       }
-      cellTrueMoments = other.cellTrueMoments;
+      for (unsigned int i=0; i<(uint)P::tcInterpolationPoints; ++i) {
+         trueRhom[i] = other.trueRhom[i];
+         trueRhoq[i] = other.trueRhoq[i];
+         trueV[i] = other.trueV[i];
+         trueP[i] = other.trueP[i];
+         timestamps[i] = other.timestamps[i];
+      }
       for (unsigned int i=0; i<WID3; ++i) {
          null_block_data[i] = 0.0;
       }
@@ -344,9 +356,18 @@ namespace spatial_cell {
       adjust_velocity_blocks(neighbor_ptrs,popID,doDeleteEmpty,timeclass);
    }
 
-   void SpatialCell::addNewMomentSet(const MomentSet momentSet) {
-      std::rotate(this->cellTrueMoments.begin(), this->cellTrueMoments.begin() + 1, this->cellTrueMoments.end());
-      this->cellTrueMoments.back() = momentSet;
+   void SpatialCell::addNewValuesToTrueMoments(const Real& rhom, const Real& rhoq, const std::array<Real, 3>& v, const std::array<Real, 6>& p, const Real& timestamp) {
+      std::rotate(this->trueRhom.begin(), this->trueRhom.begin() + 1, this->trueRhom.end());
+      std::rotate(this->trueRhoq.begin(), this->trueRhoq.begin() + 1, this->trueRhoq.end());
+      std::rotate(this->trueV.begin(), this->trueV.begin() + 1, this->trueV.end());
+      std::rotate(this->trueP.begin(), this->trueP.begin() + 1, this->trueP.end());
+      std::rotate(this->timestamps.begin(), this->timestamps.begin() + 1, this->timestamps.end());
+
+      this->trueRhom.back() = rhom;
+      this->trueRhoq.back() = rhoq;
+      this->trueV.back() = v;
+      this->trueP.back() = p;
+      this->timestamps.back() = timestamp;
    }
 
    /*!
@@ -875,8 +896,20 @@ namespace spatial_cell {
 
             // also send here the cell's true moment vector
 
-            displacements.push_back((uint8_t*) &(this->cellTrueMoments[0]) - (uint8_t*) this);
-            block_lengths.push_back(sizeof(MomentSet) * this->cellTrueMoments.size());
+            displacements.push_back((uint8_t*) this->trueRhom.data() - (uint8_t*) this);
+            block_lengths.push_back(sizeof(Real) * this->trueRhom.size());
+
+            displacements.push_back((uint8_t*) this->trueRhoq.data() - (uint8_t*) this);
+            block_lengths.push_back(sizeof(Real) * this->trueRhoq.size());
+
+            displacements.push_back((uint8_t*) this->trueV[0].data() - (uint8_t*) this);
+            block_lengths.push_back(sizeof(Real) * 3 * this->trueV.size());
+
+            displacements.push_back((uint8_t*) this->trueP[0].data() - (uint8_t*) this);
+            block_lengths.push_back(sizeof(Real) * 6 * this->trueP.size());
+
+            displacements.push_back((uint8_t*) this->timestamps.data() - (uint8_t*) this);
+            block_lengths.push_back(sizeof(Real) * this->timestamps.size());
 
          }
 

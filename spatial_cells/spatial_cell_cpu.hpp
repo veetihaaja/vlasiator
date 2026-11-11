@@ -102,7 +102,10 @@ namespace spatial_cell {
                                    * mesh from remote neighbors using MPI.*/
 
       // the first element is oldest, and they get newer with time
-      std::vector<MomentSet> populationTrueMoments;
+      std::vector<Real> popTrueRho;
+      std::vector<std::array<Real, 3>> popTrueV;
+      std::vector<std::array<Real, 6>> popTrueP;
+      std::vector<Real> popTimestamp;
 
       vmesh::VelocityMesh *vmesh; /**< Velocity mesh. Contains all velocity blocks that exist
                                    * in this spatial cell. Cells are identified by their unique
@@ -160,17 +163,16 @@ namespace spatial_cell {
             P_V[coord] = 0.0;
          }
 
-         for (uint p=0; p<(uint)P::tcInterpolationPoints; p++) {
-            populationTrueMoments.push_back(MomentSet());
+         popTrueRho.resize(P::tcInterpolationPoints);
+         popTrueV.resize(P::tcInterpolationPoints);
+         popTrueP.resize(P::tcInterpolationPoints);
+         popTimestamp.resize(P::tcInterpolationPoints);
 
-            populationTrueMoments[p].rho = 0.0;
-            populationTrueMoments[p].t = 0.0;
-            for (uint coord=0; coord<3; coord++) {
-               populationTrueMoments[p].V[coord] = 0.0;
-            }
-            for (uint coord=0; coord<6; coord++) {
-               populationTrueMoments[p].P[coord] = 0.0;
-            }
+         for (uint i = 0; i < (uint)P::tcInterpolationPoints; i++) {
+            popTrueRho[i] = 0.0;
+            popTrueV[i] = {0.0, 0.0, 0.0};
+            popTrueP[i] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+            popTimestamp[i] = 0.0;
          }
       }
       ~Population() {
@@ -201,7 +203,10 @@ namespace spatial_cell {
 
          state = other.state;
          T = other.T;
-         populationTrueMoments = other.populationTrueMoments;
+         popTrueRho = other.popTrueRho;
+         popTrueV = other.popTrueV;
+         popTrueP = other.popTrueP;
+         popTimestamp = other.popTimestamp;
          RHO_R = other.RHO_R;
          for (uint coord=0; coord<3; coord++) {
             V_R[coord] = other.V_R[coord];
@@ -250,7 +255,11 @@ namespace spatial_cell {
 
          state = other.state;
          T = other.T;
-         populationTrueMoments = other.populationTrueMoments;
+         
+         popTrueRho = other.popTrueRho;
+         popTrueV = other.popTrueV;
+         popTrueP = other.popTrueP;
+         popTimestamp = other.popTimestamp;
 
          RHO_R = other.RHO_R;
          for (uint coord=0; coord<3; coord++) {
@@ -279,9 +288,16 @@ namespace spatial_cell {
 
       Population& operator=(const Population&& other) = delete; // Move assignment not implemented
 
-      void addNewMomentSet(MomentSet momentSet) {
-         std::rotate(populationTrueMoments.begin(), populationTrueMoments.begin() + 1, populationTrueMoments.end());
-         populationTrueMoments.back() = momentSet;
+      void addNewValuesToTrueMoments(const Real& rho, const std::array<Real, 3>& v, const std::array<Real, 6>& p, const Real& timestamp) {
+         std::rotate(this->popTrueRho.begin(), this->popTrueRho.begin() + 1, this->popTrueRho.end());
+         std::rotate(this->popTrueV.begin(), this->popTrueV.begin() + 1, this->popTrueV.end());
+         std::rotate(this->popTrueP.begin(), this->popTrueP.begin() + 1, this->popTrueP.end());
+         std::rotate(this->popTimestamp.begin(), this->popTimestamp.begin() + 1, this->popTimestamp.end());
+         
+         this->popTrueRho.back() = rho;
+         this->popTrueV.back() = v;
+         this->popTrueP.back() = p;
+         this->popTimestamp.back() = timestamp;
       }
 
       void ResizeClear(const uint newSize) {
@@ -315,14 +331,14 @@ namespace spatial_cell {
             P_V[coord] *= factor;
          }
 
-         for (uint p=0; p<populationTrueMoments.size(); p++) {
-            populationTrueMoments[p].rho *= factor;
+         for (uint p=0; p<(uint)P::tcInterpolationPoints; p++) {
+            popTrueRho[p] *= factor;
 
             for (uint coord=0; coord<3; coord++) {
-               populationTrueMoments[p].V[coord] *= factor;
+               popTrueV[p][coord] *= factor;
             }
             for (uint coord=0; coord<6; coord++) {
-               populationTrueMoments[p].P[coord] *= factor;
+               popTrueP[p][coord] *= factor;
             }
          }
          // Now loop over whole velocity space and scale the values
@@ -496,7 +512,7 @@ namespace spatial_cell {
       bool cellIsTimeclassRelevant();
       void assignCellTimeclass();
 
-      void addNewMomentSet(const MomentSet momentSet);
+      void addNewValuesToTrueMoments(const Real& rhom, const Real& rhoq, const std::array<Real, 3>& v, const std::array<Real, 6>& p, const Real& timestamp);
 
       uint64_t get_cell_memory_capacity();
       uint64_t get_cell_memory_size();
@@ -566,7 +582,11 @@ namespace spatial_cell {
       *   varying timeclass synchronizations. This keeps track which levels are requested of this
       *   cell. Populations struct contains mappings of these timeclasses to ghost vmeshes. */
 
-      std::vector<MomentSet> cellTrueMoments;
+      std::vector<Real> trueRhom;
+      std::vector<Real> trueRhoq;
+      std::vector<std::array<Real, 3>> trueV;
+      std::vector<std::array<Real, 6>> trueP;
+      std::vector<Real> timestamps;
 
       inline std::set<int> get_all_ghosts();
       //SpatialCell& operator=(const SpatialCell& other);

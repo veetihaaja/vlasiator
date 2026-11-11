@@ -193,22 +193,22 @@ namespace SBC {
             cell->parameters[CellParams::P_12_DT2] = cell->parameters[CellParams::P_12];
             cell->parameters[CellParams::T_DT2] = cell->parameters[CellParams::T];
 
-            cell->parameters[CellParams::RHOM_R] = cell->parameters[CellParams::RHOM];
-            cell->parameters[CellParams::RHOQ_R] = cell->parameters[CellParams::RHOQ];
-            cell->parameters[CellParams::T_R] = cell->parameters[CellParams::T];
+            // cell->parameters[CellParams::RHOM_R] = cell->parameters[CellParams::RHOM];
+            // cell->parameters[CellParams::RHOQ_R] = cell->parameters[CellParams::RHOQ];
+            // cell->parameters[CellParams::T_R] = cell->parameters[CellParams::T];
 
-            cell->parameters[CellParams::RHOM_V] = cell->parameters[CellParams::RHOM];
-            cell->parameters[CellParams::RHOQ_V] = cell->parameters[CellParams::RHOQ];
-            cell->parameters[CellParams::T_V] = cell->parameters[CellParams::T];
+            // cell->parameters[CellParams::RHOM_V] = cell->parameters[CellParams::RHOM];
+            // cell->parameters[CellParams::RHOQ_V] = cell->parameters[CellParams::RHOQ];
+            // cell->parameters[CellParams::T_V] = cell->parameters[CellParams::T];
 
-            for (uint i=0; i<3; i++) {
-               cell->parameters[CellParams::VX_R + i] = cell->parameters[CellParams::VX+i];
-               cell->parameters[CellParams::VX_V + i] = cell->parameters[CellParams::VX+i];
-            }
-            for (uint i=0; i<6; i++) {
-               cell->parameters[CellParams::P_11_R + i] = cell->parameters[CellParams::P_11+i];
-               cell->parameters[CellParams::P_11_V + i] = cell->parameters[CellParams::P_11+i];
-            }
+            // for (uint i=0; i<3; i++) {
+            //    cell->parameters[CellParams::VX_R + i] = cell->parameters[CellParams::VX+i];
+            //    cell->parameters[CellParams::VX_V + i] = cell->parameters[CellParams::VX+i];
+            // }
+            // for (uint i=0; i<6; i++) {
+            //    cell->parameters[CellParams::P_11_R + i] = cell->parameters[CellParams::P_11+i];
+            //    cell->parameters[CellParams::P_11_V + i] = cell->parameters[CellParams::P_11+i];
+            // }
          }
       }
    }

@@ -76,19 +76,23 @@ void calculateTrueMomentsPostAcceleration(dccrg::Dccrg<SpatialCell,dccrg::Cartes
       SpatialCell* cell = mpiGrid[cellID];
 
       if (cell->get_timeclass_turn_v()) {         // if the cell has just calculated _V moments
-         MomentSet momentSet = MomentSet();
+         Real rhom;
+         Real rhoq;
+         std::array<Real, 3> V;
+         std::array<Real, 6> P;
+         Real timestamp;
 
-         momentSet.rhom = 0.5 * (cell->parameters[CellParams::RHOM_R] + cell->parameters[CellParams::RHOM_V]);
-         momentSet.rhoq = 0.5 * (cell->parameters[CellParams::RHOQ_R] + cell->parameters[CellParams::RHOQ_V]);
+         rhom = 0.5 * (cell->parameters[CellParams::RHOM_R] + cell->parameters[CellParams::RHOM_V]);
+         rhoq = 0.5 * (cell->parameters[CellParams::RHOQ_R] + cell->parameters[CellParams::RHOQ_V]);
 
          for (int i=0; i<3; ++i) {
-            momentSet.V[i] = 0.5 * (cell->parameters[CellParams::VX_R+i] + cell->parameters[CellParams::VX_V+i]);
+            V[i] = 0.5 * (cell->parameters[CellParams::VX_R+i] + cell->parameters[CellParams::VX_V+i]);
          }
          for (int i=0; i<6; ++i) {
-            momentSet.P[i] = 0.5 * (cell->parameters[CellParams::P_11_R+i] + cell->parameters[CellParams::P_11_V+i]);
+            P[i] = 0.5 * (cell->parameters[CellParams::P_11_R+i] + cell->parameters[CellParams::P_11_V+i]);
          }
-         momentSet.t = min(cell->parameters[CellParams::T_R], cell->parameters[CellParams::T_V]);
-         cell->addNewMomentSet(momentSet);
+         timestamp = min(cell->parameters[CellParams::T_R], cell->parameters[CellParams::T_V]);
+         cell->addNewValuesToTrueMoments(rhom, rhoq, V, P, timestamp);
       }
 
       // do the same for populations, check all timeclasses
@@ -96,18 +100,21 @@ void calculateTrueMomentsPostAcceleration(dccrg::Dccrg<SpatialCell,dccrg::Cartes
          for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
             Population &pop = cell->get_population(popID, tc);
             if (cell->get_timeclass_turn_v(tc)) {
-               MomentSet momentSet = MomentSet();
-
-               momentSet.rho = 0.5 * (pop.RHO_R + pop.RHO_V);
+               Real rho;
+               std::array<Real, 3> V;
+               std::array<Real, 6> P;
+               Real timestamp;
+               
+               rho = 0.5 * (pop.RHO_R + pop.RHO_V);
 
                for (int i=0; i<3; ++i) {
-                  momentSet.V[i] = 0.5 * (pop.V_R[i] + pop.V_V[i]);
+                  V[i] = 0.5 * (pop.V_R[i] + pop.V_V[i]);
                }
                for (int i=0; i<6; ++i) {
-                  momentSet.P[i] = 0.5 * (pop.P_R[i] + pop.P_V[i]);
+                  P[i] = 0.5 * (pop.P_R[i] + pop.P_V[i]);
                }
-               momentSet.t = min(pop.T_R, pop.T_V);
-               pop.addNewMomentSet(momentSet);
+               timestamp = min(pop.T_R, pop.T_V);
+               pop.addNewValuesToTrueMoments(rho, V, P, timestamp);
             }
          }
       }
@@ -125,20 +132,24 @@ void calculateTrueMomentsPostTranslation(dccrg::Dccrg<SpatialCell,dccrg::Cartesi
       const CellID cellID = cells[c];
       SpatialCell* cell = mpiGrid[cellID];
 
-      if (cell->get_timeclass_turn_r()) {         // if the cell has just calculated _V moments
-         MomentSet momentSet = MomentSet();
+      if (cell->get_timeclass_turn_r()) {         // if the cell has just calculated _R moments
+         Real rhom;
+         Real rhoq;
+         std::array<Real, 3> V;
+         std::array<Real, 6> P;
+         Real timestamp;
 
-         momentSet.rhom = 0.5 * (cell->parameters[CellParams::RHOM_R] + cell->parameters[CellParams::RHOM_V]);
-         momentSet.rhoq = 0.5 * (cell->parameters[CellParams::RHOQ_R] + cell->parameters[CellParams::RHOQ_V]);
+         rhom = 0.5 * (cell->parameters[CellParams::RHOM_R] + cell->parameters[CellParams::RHOM_V]);
+         rhoq = 0.5 * (cell->parameters[CellParams::RHOQ_R] + cell->parameters[CellParams::RHOQ_V]);
 
          for (int i=0; i<3; ++i) {
-            momentSet.V[i] = 0.5 * (cell->parameters[CellParams::VX_R+i] + cell->parameters[CellParams::VX_V+i]);
+            V[i] = 0.5 * (cell->parameters[CellParams::VX_R+i] + cell->parameters[CellParams::VX_V+i]);
          }
          for (int i=0; i<6; ++i) {
-            momentSet.P[i] = 0.5 * (cell->parameters[CellParams::P_11_R+i] + cell->parameters[CellParams::P_11_V+i]);
+            P[i] = 0.5 * (cell->parameters[CellParams::P_11_R+i] + cell->parameters[CellParams::P_11_V+i]);
          }
-         momentSet.t = min(cell->parameters[CellParams::T_R], cell->parameters[CellParams::T_V]);
-         cell->addNewMomentSet(momentSet);
+         timestamp = min(cell->parameters[CellParams::T_R], cell->parameters[CellParams::T_V]);
+         cell->addNewValuesToTrueMoments(rhom, rhoq, V, P, timestamp);
       }
 
       // do the same for populations, check all timeclasses
@@ -146,18 +157,21 @@ void calculateTrueMomentsPostTranslation(dccrg::Dccrg<SpatialCell,dccrg::Cartesi
          for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
             Population &pop = cell->get_population(popID, tc);
             if (cell->get_timeclass_turn_r(tc)) {
-               MomentSet momentSet = MomentSet();
-
-               momentSet.rho = 0.5 * (pop.RHO_R + pop.RHO_V);
+               Real rho;
+               std::array<Real, 3> V;
+               std::array<Real, 6> P;
+               Real timestamp;
+               
+               rho = 0.5 * (pop.RHO_R + pop.RHO_V);
 
                for (int i=0; i<3; ++i) {
-                  momentSet.V[i] = 0.5 * (pop.V_R[i] + pop.V_V[i]);
+                  V[i] = 0.5 * (pop.V_R[i] + pop.V_V[i]);
                }
                for (int i=0; i<6; ++i) {
-                  momentSet.P[i] = 0.5 * (pop.P_R[i] + pop.P_V[i]);
+                  P[i] = 0.5 * (pop.P_R[i] + pop.P_V[i]);
                }
-               momentSet.t = min(pop.T_R, pop.T_V);
-               pop.addNewMomentSet(momentSet);
+               timestamp = min(pop.T_R, pop.T_V);
+               pop.addNewValuesToTrueMoments(rho, V, P, timestamp);
             }
          }
       }
@@ -1657,25 +1671,30 @@ void initializeTrueMomentSets(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometry
       for (uint popID=0; popID<getObjectWrapper().particleSpecies.size(); ++popID) {
          for (int tc=0; tc<=P::currentMaxTimeclass; tc++) {
             Population& pop = SC->get_population(popID, tc);
-            for (uint mset = 0; mset < pop.populationTrueMoments.size()-1; ++mset) {
-               pop.populationTrueMoments[mset] = pop.populationTrueMoments.back();
+            for (uint mset = 0; mset < (uint)P::tcInterpolationPoints; ++mset) {
+               pop.popTrueRho[mset] = pop.popTrueRho.back();
+               pop.popTrueV[mset] = pop.popTrueV.back();
+               pop.popTrueP[mset] = pop.popTrueP.back();
             }
 
             // set the timestamp to go backwards in time
             const Real dt = P::timeclassDt[tc]*0.5;
-            for (uint mset = 0; mset < pop.populationTrueMoments.size()-1; ++mset) {
-               pop.populationTrueMoments[mset].t = -dt*(pop.populationTrueMoments.size()-1-mset);
+            for (uint mset = 0; mset < (uint)P::tcInterpolationPoints; ++mset) {
+               pop.popTimestamp[mset] = -dt*(pop.popTimestamp.size()-1-mset);
             }
          }
       }
-      for (uint mset = 0; mset < SC->cellTrueMoments.size()-1; ++mset) {
-         SC->cellTrueMoments[mset] = SC->cellTrueMoments.back();
+      for (uint mset = 0; mset < (uint)P::tcInterpolationPoints; ++mset) {
+         SC->trueRhom[mset] = SC->trueRhom.back();
+         SC->trueRhoq[mset] = SC->trueRhoq.back();
+         SC->trueV[mset] = SC->trueV.back();
+         SC->trueP[mset] = SC->trueP.back();
       }
 
       // set the timestamp to go backwards in time
       const Real dt = P::timeclassDt[SC->get_tc()];
-      for (uint mset = 0; mset < SC->cellTrueMoments.size()-1; ++mset) {
-         SC->cellTrueMoments[mset].t -= dt*(SC->cellTrueMoments.size()-1-mset);
+      for (uint mset = 0; mset < (uint)P::tcInterpolationPoints; ++mset) {
+         SC->timestamps[mset] -= dt*(SC->timestamps.size()-1-mset);
       }
    }
 }
@@ -1727,10 +1746,6 @@ void calculateInterpolatedVelocityMoments(
    }
 }
 
-bool areEqualFloat(const Real a, const Real b, const Real epsilon=1.0e-6) {
-   return std::fabs(a - b) <= epsilon * std::max(std::fabs(a), std::fabs(b));
-}
-
 Real interpolation(std::vector<Real> x, std::vector<Real> y, const Real t, const std::string interpolationType) {
 
    assert(x.size() == y.size() && "The inputs are not the same size!\n");
@@ -1759,7 +1774,7 @@ Real interpolation(std::vector<Real> x, std::vector<Real> y, const Real t, const
    
       for (uint i=0; i<x.size()-1; ++i) {
 
-         if (areEqualFloat(t, x[i])) {
+         if (abs(t - x[i]) < 1e-6) {
             return y[i];
          }
 
@@ -1823,15 +1838,17 @@ void interpolateMomentsForTimeclasses(
          std::array<std::vector<Real>, 3> Vs;
          std::array<std::vector<Real>, 6> Ps;
 
+         timestamps = SC->timestamps;
+         rhoms = SC->trueRhom;
+         rhoqs = SC->trueRhoq;
+
+         // we have to change the layout of V and P from vector of arrays to array of vectors
          for (uint i=0; i<(uint)P::tcInterpolationPoints; i++) {
-            timestamps.push_back(SC->cellTrueMoments[i].t);
-            rhoms.push_back(SC->cellTrueMoments[i].rhom);
-            rhoqs.push_back(SC->cellTrueMoments[i].rhoq);
             for (uint j=0; j<3; j++) {
-               Vs[j].push_back(SC->cellTrueMoments[i].V[j]);
+               Vs[j].push_back(SC->trueV[i][j]);
             }
             for (uint j=0; j<6; j++) {
-               Ps[j].push_back(SC->cellTrueMoments[i].P[j]);
+               Ps[j].push_back(SC->trueP[i][j]);
             }
          }
 
@@ -1887,14 +1904,16 @@ void updateParticlePopulations(dccrg::Dccrg<SpatialCell,dccrg::Cartesian_Geometr
                std::array<std::vector<Real>, 3> Vs;
                std::array<std::vector<Real>, 6> Ps;
 
+               timestamps = pop.popTimestamp;
+               rhos = pop.popTrueRho;
+
+               // we have to change the layout of V and P from vector of arrays to array of vectors
                for (uint i=0; i<(uint)P::tcInterpolationPoints; i++) {
-                  timestamps.push_back(pop.populationTrueMoments[i].t);
-                  rhos.push_back(pop.populationTrueMoments[i].rho);
                   for (uint j=0; j<3; j++) {
-                     Vs[j].push_back(pop.populationTrueMoments[i].V[j]);
+                     Vs[j].push_back(pop.popTrueV[i][j]);
                   }
                   for (uint j=0; j<6; j++) {
-                     Ps[j].push_back(pop.populationTrueMoments[i].P[j]);
+                     Ps[j].push_back(pop.popTrueP[i][j]);
                   }
                }
 

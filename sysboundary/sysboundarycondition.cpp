@@ -421,7 +421,10 @@ namespace SBC {
             to->get_population(popID).P[i] = from->get_population(popID).P[i];
          }
 
-         to->get_population(popID).populationTrueMoments = from->get_population(popID).populationTrueMoments;
+         to->get_population(popID).popTrueRho = from->get_population(popID).popTrueRho;
+         to->get_population(popID).popTrueV = from->get_population(popID).popTrueV;
+         to->get_population(popID).popTrueP = from->get_population(popID).popTrueP;
+         to->get_population(popID).popTimestamp = from->get_population(popID).popTimestamp;
 
          if (copy_V_moments) {
             to->get_population(popID).RHO_V = from->get_population(popID).RHO_V;
