@@ -20,8 +20,10 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include "spatial_cell_cpu.hpp"
 #include <algorithm>
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <unordered_set>
 
@@ -863,6 +865,20 @@ namespace spatial_cell {
                for (int timeclass=0; timeclass <= P::currentMaxTimeclass; ++timeclass){
                   displacements.push_back((uint8_t*) &(get_population(popID, timeclass).RHO) - (uint8_t*)this);
                   block_lengths.push_back(offsetof(spatial_cell::Population, N_blocks));
+                  
+                  // also send here the true moment vectors of the population
+                  displacements.push_back((uint8_t*) get_population(popID, timeclass).popTrueRho.data() - (uint8_t*)this);
+                  block_lengths.push_back(sizeof(Real) * P::tcInterpolationPoints);
+
+                  displacements.push_back((uint8_t*) get_population(popID, timeclass).popTrueV.data() - (uint8_t*)this);
+                  block_lengths.push_back(sizeof(Real) * 3 * P::tcInterpolationPoints);
+
+                  displacements.push_back((uint8_t*) get_population(popID, timeclass).popTrueP.data() - (uint8_t*)this);
+                  block_lengths.push_back(sizeof(Real) * 6 * P::tcInterpolationPoints);
+
+                  displacements.push_back((uint8_t*) get_population(popID, timeclass).popTimestamp.data() - (uint8_t*)this);
+                  block_lengths.push_back(sizeof(Real) * P::tcInterpolationPoints);                  
+                  
                }
             }
          }
@@ -1019,6 +1035,20 @@ namespace spatial_cell {
                for (int timeclass=0; timeclass <= P::currentMaxTimeclass; ++timeclass){
                   displacements.push_back((uint8_t*) &(get_population(popID, timeclass).RHO) - (uint8_t*)this);
                   block_lengths.push_back(offsetof(spatial_cell::Population, N_blocks));
+                  
+                  // also send here the true moment vectors of the population
+                  displacements.push_back((uint8_t*) get_population(popID, timeclass).popTrueRho.data() - (uint8_t*)this);
+                  block_lengths.push_back(sizeof(Real) * P::tcInterpolationPoints);
+
+                  displacements.push_back((uint8_t*) get_population(popID, timeclass).popTrueV.data() - (uint8_t*)this);
+                  block_lengths.push_back(sizeof(Real) * 3 * P::tcInterpolationPoints);
+
+                  displacements.push_back((uint8_t*) get_population(popID, timeclass).popTrueP.data() - (uint8_t*)this);
+                  block_lengths.push_back(sizeof(Real) * 6 * P::tcInterpolationPoints);
+
+                  displacements.push_back((uint8_t*) get_population(popID, timeclass).popTimestamp.data() - (uint8_t*)this);
+                  block_lengths.push_back(sizeof(Real) * P::tcInterpolationPoints);                  
+                  
                }
             }
          }
