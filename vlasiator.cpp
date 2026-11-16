@@ -1105,10 +1105,20 @@ int simulate(int argn,char* args[]) {
       timeclassDebugAssertions(mpiGrid);
 
       if (myRank == MASTER_RANK && P::currentMaxTimeclass != 0) {
-         std::cerr << "start of main loop\n";
+         std::cerr << "\n########################################## start of main loop #############################################\n";
          std::cerr << "tstep: " << P::tstep << " t: " << P::t << " fs dt: " << P::dt << " fractionalTimestep: " << P::fractionalTimestep << std::endl;
-         std::cerr << "tc0cell t_v: " << tc0cell->parameters[CellParams::T_V] << " tc1cell t_v: " << tc1cell->parameters[CellParams::T_V] << std::endl;
-         std::cerr << "tc0cell t_r: " << tc0cell->parameters[CellParams::T_R] << " tc1cell t_r: " << tc1cell->parameters[CellParams::T_R] << std::endl;
+         std::cerr << "tc0cell t_v: " << tc0cell->parameters[CellParams::T_V] << " tc0cell t_r: " << tc0cell->parameters[CellParams::T_R] << std::endl;
+         std::cerr << "tc1cell t_v: " << tc1cell->parameters[CellParams::T_V] << " tc1cell t_r: " << tc1cell->parameters[CellParams::T_R] << std::endl;
+         std::cerr << "tc0 cell true timestamps: ";
+         for (auto time : tc0cell->timestamps) {
+            std::cerr << time << " ";
+         }
+         std::cerr << " \n";
+         std::cerr << "tc1 cell true timestamps: ";
+         for (auto time : tc1cell->timestamps) {
+            std::cerr << time << " ";
+         }
+         std::cerr << " \n \n";
       }
 
       //std::cout << "start of main simulation loop, below dt, timeclassDts, currentmaxtimeclass" << std::endl;
@@ -1556,10 +1566,19 @@ int simulate(int argn,char* args[]) {
       spatialSpaceTimer.stop(computedCells, "Cells");
 
       if (myRank == MASTER_RANK && P::currentMaxTimeclass != 0) {
-         std::cerr << "post-translation\n";
-         std::cerr << "tstep: " << P::tstep << " t: " << P::t << " fs dt: " << P::dt << " fractionalTimestep: " << P::fractionalTimestep << std::endl;
-         std::cerr << "tc0cell t_v: " << tc0cell->parameters[CellParams::T_V] << " tc1cell t_v: " << tc1cell->parameters[CellParams::T_V] << std::endl;
-         std::cerr << "tc0cell t_r: " << tc0cell->parameters[CellParams::T_R] << " tc1cell t_r: " << tc1cell->parameters[CellParams::T_R] << std::endl;
+         std::cerr << "\npost-translation\n";
+         std::cerr << "tc0cell t_v: " << tc0cell->parameters[CellParams::T_V] << " tc0cell t_r: " << tc0cell->parameters[CellParams::T_R] << std::endl;
+         std::cerr << "tc1cell t_v: " << tc1cell->parameters[CellParams::T_V] << " tc1cell t_r: " << tc1cell->parameters[CellParams::T_R] << std::endl;
+         std::cerr << "tc0 cell true timestamps: ";
+         for (auto time : tc0cell->timestamps) {
+            std::cerr << time << " ";
+         }
+         std::cerr << " \n";
+         std::cerr << "tc1 cell true timestamps: ";
+         for (auto time : tc1cell->timestamps) {
+            std::cerr << time << " ";
+         }
+         std::cerr << " \n";
       }
 
       // Apply boundary conditions
@@ -1574,9 +1593,9 @@ int simulate(int argn,char* args[]) {
       //std::cout << "for dt2 in main loop at t="<<P::t<<"\n";
 
       if (myRank == MASTER_RANK && P::currentMaxTimeclass != 0) {
-         std::cerr << "pre-moments\n";
-         std::cerr << "normal target time: " << P::t << " dt2 target time: " << P::t + 0.5*P::dt << std::endl;
-         std::cerr << "newest true moment timestamp for tc0 cell: " << tc0cell->timestamps[P::tcInterpolationPoints-1] << " for tc1 cell: " << tc1cell->timestamps[P::tcInterpolationPoints-1] << std::endl;
+         std::cerr << "\npre-moments\n";
+         std::cerr << "normal target time: " << P::t << "\ndt2 target time: " << P::t + 0.5*P::dt << std::endl;
+         std::cerr << "newest true moment timestamp for tc0 cell: " << tc0cell->timestamps[P::tcInterpolationPoints-1] << "\nfor tc1 cell: " << tc1cell->timestamps[P::tcInterpolationPoints-1] << std::endl;
          if (P::t + 0.5 * P::dt > tc0cell->timestamps[P::tcInterpolationPoints-1]) {
             std::cerr << "tc0 cell is EXTRAPOLATING\n" << std::endl;
          } else {
@@ -1657,10 +1676,19 @@ int simulate(int argn,char* args[]) {
       }
 
       if (myRank == MASTER_RANK && P::currentMaxTimeclass != 0) {
-         std::cerr << "post-field-solve\n";
-         std::cerr << "tstep: " << P::tstep << " t: " << P::t << " fs dt: " << P::dt << " fractionalTimestep: " << P::fractionalTimestep << std::endl;
-         std::cerr << "tc0cell t_v: " << tc0cell->parameters[CellParams::T_V] << " tc1cell t_v: " << tc1cell->parameters[CellParams::T_V] << std::endl;
-         std::cerr << "tc0cell t_r: " << tc0cell->parameters[CellParams::T_R] << " tc1cell t_r: " << tc1cell->parameters[CellParams::T_R] << std::endl;
+         std::cerr << "\npost-field-solve\n";
+         std::cerr << "tc0cell t_v: " << tc0cell->parameters[CellParams::T_V] << " tc0cell t_r: " << tc0cell->parameters[CellParams::T_R] << std::endl;
+         std::cerr << "tc1cell t_v: " << tc1cell->parameters[CellParams::T_V] << " tc1cell t_r: " << tc1cell->parameters[CellParams::T_R] << std::endl;
+         std::cerr << "tc0 cell true timestamps: ";
+         for (auto time : tc0cell->timestamps) {
+            std::cerr << time << " ";
+         }
+         std::cerr << " \n";
+         std::cerr << "tc1 cell true timestamps: ";
+         for (auto time : tc1cell->timestamps) {
+            std::cerr << time << " ";
+         }
+         std::cerr << " \n";
       }
 
       if(FieldTracing::fieldTracingParameters.useCache) {
@@ -1716,10 +1744,19 @@ int simulate(int argn,char* args[]) {
       addTimedBarrier("barrier-after-acceleration");
 
       if (myRank == MASTER_RANK && P::currentMaxTimeclass != 0) {
-         std::cerr << "post-acceleration\n";
-         std::cerr << "tstep: " << P::tstep << " t: " << P::t << " fs dt: " << P::dt << " fractionalTimestep: " << P::fractionalTimestep << std::endl;
-         std::cerr << "tc0cell t_v: " << tc0cell->parameters[CellParams::T_V] << " tc1cell t_v: " << tc1cell->parameters[CellParams::T_V] << std::endl;
-         std::cerr << "tc0cell t_r: " << tc0cell->parameters[CellParams::T_R] << " tc1cell t_r: " << tc1cell->parameters[CellParams::T_R] << std::endl;
+         std::cerr << "\npost-acceleration\n";
+         std::cerr << "tc0cell t_v: " << tc0cell->parameters[CellParams::T_V] << " tc0cell t_r: " << tc0cell->parameters[CellParams::T_R] << std::endl;
+         std::cerr << "tc1cell t_v: " << tc1cell->parameters[CellParams::T_V] << " tc1cell t_r: " << tc1cell->parameters[CellParams::T_R] << std::endl;
+         std::cerr << "tc0 cell true timestamps: ";
+         for (auto time : tc0cell->timestamps) {
+            std::cerr << time << " ";
+         }
+         std::cerr << " \n";
+         std::cerr << "tc1 cell true timestamps: ";
+         for (auto time : tc1cell->timestamps) {
+            std::cerr << time << " ";
+         }
+         std::cerr << " \n";
       }
 
       if (P::artificialPADiff){
